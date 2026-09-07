@@ -6,7 +6,7 @@ ExecutiveOS is self-hosted, multi-user, and bilingual-ready (English and Arabic 
 
 ## Status
 
-Pre-implementation. This repository holds the product and engineering specification (revised after an external review on 2026-09-07; see `SPEC-REVIEW.md` and `docs/REVIEW-RESPONSE.md`). Read `docs/README.md` for the reading order.
+Runnable development preview: setup/login, Home, administration surfaces, and a PostgreSQL-backed People slice in English and Arabic. WI-0001 is incomplete: the full audit gate, several core hardening requirements, and framework behaviors remain outstanding. See `HANDOFF.md` for verified behavior and the exact gaps. The v1 module table below describes the intended product, not completed modules.
 
 ## Modules (v1)
 
@@ -31,7 +31,7 @@ Next.js (App Router) · TypeScript strict · PostgreSQL 16 · Drizzle ORM · Zod
 
 ## Run with Docker
 
-WI-0001 is being implemented; see `HANDOFF.md` for the current milestone and verification status. The commands below are the intended completed-stack workflow, not a claim that the in-progress branch already serves the application.
+The production-shaped image and Compose stack have been built and run locally. First boot applies migrations and prints `SETUP_TOKEN`. Open http://localhost:3000 and complete setup; then sign in with the account you created.
 
 ```bash
 cp .env.example .env
@@ -52,7 +52,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 The development override publishes PostgreSQL on localhost only. Use a separate disposable database for `DATABASE_URL_TEST`; never point tests at production.
 
-Once the implementation and audit scripts are complete, run checks inside the development container:
+The complete audit gate is not green yet. Checks run from the source checkout with Node 22; the exact Docker tooling commands used for this preview are in `HANDOFF.md`:
 
 ```bash
 docker compose exec app pnpm test
@@ -60,7 +60,15 @@ docker compose exec app pnpm test:e2e
 docker compose exec app pnpm audit:all
 ```
 
-Restore is destructive and requires explicit confirmation, as specified by ADR 0008:
+After setup, load the six invented preview people (repeat-safe):
+
+```bash
+docker compose exec app pnpm db:seed
+```
+
+Screenshots are under `docs/screenshots/`; unsuffixed screenshots use the dark theme, and `-light.png` files show the light theme.
+
+Restore replaces the target database and requires explicit confirmation, as specified by ADR 0008:
 
 ```bash
 docker compose exec app pnpm backup:restore /var/lib/executiveos/backups/BACKUP_ID --confirm
