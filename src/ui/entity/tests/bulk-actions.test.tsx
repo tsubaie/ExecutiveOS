@@ -13,7 +13,11 @@ const items: Entity[] = [
 function mount(actions: BulkAction<Entity>[], clear = vi.fn()) {
   cleanup();
   render(
-    <NextIntlClientProvider locale="en" messages={en}>
+    <NextIntlClientProvider
+      locale="en"
+      messages={en}
+      formats={{ number: { integer: { maximumFractionDigits: 0 } } }}
+    >
       <EntityBulkBar items={items} actions={actions} clear={clear} />
     </NextIntlClientProvider>,
   );

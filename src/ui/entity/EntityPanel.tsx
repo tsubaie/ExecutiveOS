@@ -83,7 +83,10 @@ function usePanelController<T extends Entity, P extends object, C>(
   const navigate: NavigationGuard = async (proceed) => {
     const active = document.activeElement;
     if (active instanceof HTMLElement && root.current?.contains(active)) active.blur();
-    const invalid = root.current?.querySelector<HTMLInputElement>('input:invalid,textarea:invalid');
+    // Only autosaved fields block; an empty required input in a secondary form must not.
+    const invalid = root.current?.querySelector<HTMLInputElement>(
+      '[data-autosave] input:invalid,[data-autosave] textarea:invalid',
+    );
     if (invalid) {
       invalid.reportValidity();
       return;

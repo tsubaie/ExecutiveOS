@@ -1,6 +1,6 @@
 # Hand-off: chore/oss-readiness — publication surface
 
-Status: complete for its scope. The full `pnpm audit:all` gate runs once on this final branch; its summary is appended below when it finishes.
+Status: complete. The full `pnpm audit:all` gate passed on this final branch (summary below).
 
 ## Summary
 
@@ -26,3 +26,28 @@ None.
 
 - A `CHANGELOG.md` and the release checklist in `docs/09` § F remain for the 1.0 hardening phase.
 - The Docker image publication and the clean-VM quick-start drill are release tasks.
+
+## Final `pnpm audit:all` summary (final branch, tooling container, isolated `executiveos_e2e_test` and `executiveos_test` databases)
+
+```text
+lint, typecheck: pass
+depcruise: no dependency violations found (267 modules, 867 dependencies cruised)
+audit:structure: 0 violation(s), 0 warning(s)
+audit:i18n: 0 violation(s), 17 warning(s)          dynamic keys per file
+audit:portability: 0 violation(s), 0 warning(s)
+audit:docs: 0 violation(s), 11 warning(s)          coverage gaps in accepted specs
+audit:schema: 0 violation(s), 0 warning(s)
+audit:tests: 0 violation(s), 5 warning(s)          missing layers for accepted modules
+audit:deps: 0 violation(s), 0 warning(s)
+audit:secrets: 0 violation(s), 0 warning(s)
+test: 29 files, 106 tests passed
+build: pass (pre-existing Edge-runtime warnings from src/instrumentation.ts)
+audit:bundle: 0 violation(s), 1 warning(s)         166 KB gzipped root bundle
+test:e2e: 35 passed (desktop and mobile projects)
+audit:openapi: 0 violation(s), 0 warning(s)
+audit:a11y: 0 violation(s), 0 warning(s)           11 routes in en, ar
+audit:perf: 0 violation(s), 5 warning(s)           2–8 ms, 2–4 queries per golden path
+audit:dupes: 0 violation(s), 0 warning(s)
+```
+
+The first pass of this gate exposed one defect from the entity-framework branch: the navigation guard checked every invalid input in the panel, and the empty required "add subtask" field blocked every navigation. The guard is now scoped to autosaved fields (`data-autosave`), the spec sentence for EP-B11 says so, and the browser stages were rerun on a fresh build.

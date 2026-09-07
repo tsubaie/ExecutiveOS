@@ -29,7 +29,11 @@ export function TaskFields({
     save,
   );
   return (
-    <fieldset disabled={disabled} className="grid min-w-0 gap-4">
+    <fieldset
+      disabled={disabled}
+      data-autosave={save ? true : undefined}
+      className="grid min-w-0 gap-4"
+    >
       <TaskTitle editor={editor} />
       <TaskProperties initial={initial} save={save} />
       <TaskDescription editor={editor} />
