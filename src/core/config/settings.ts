@@ -65,9 +65,6 @@ export const settingKeys = Object.keys(settingsRegistry).filter(isSettingKey);
 export function isSettingKey(key: string): key is SettingKey {
   return Object.hasOwn(settingsRegistry, key);
 }
-export function settingEntry<K extends SettingKey>(key: K): SettingEntry {
-  return settingsRegistry[key];
-}
 const secretLike = /secret|password|token$|api.?key/iu;
 for (const key of settingKeys)
   if (secretLike.test(key)) throw new Error(`Secret-like setting key: ${key}`);

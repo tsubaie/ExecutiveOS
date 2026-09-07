@@ -1,0 +1,23 @@
+name: Feature request
+description: Propose a behavior that is not in the specification
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What an executive office cannot do today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: As it would be written in a feature spec, including locales and mobile.
+    validations:
+      required: true
+  - type: input
+    id: module
+    attributes:
+      label: Module
+      description: home, tasks, notes, committees, kpis, initiatives, meetings, people, links, admin, core, ui

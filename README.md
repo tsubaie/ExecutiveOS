@@ -6,7 +6,7 @@ ExecutiveOS is self-hosted, multi-user, and bilingual-ready (English and Arabic 
 
 ## Status
 
-Runnable development preview: setup/login, Home, administration surfaces, and a PostgreSQL-backed People slice in English and Arabic. WI-0001 is incomplete: the full audit gate, several core hardening requirements, and framework behaviors remain outstanding. See `docs/history/HANDOFF.md` for verified behavior and the exact gaps. The v1 module table below describes the intended product, not completed modules.
+Development preview. Setup, login, Home, administration, People and Tasks work end to end in English and Arabic on a PostgreSQL database, and the full quality gate (`pnpm audit:all`) runs green in CI. Notes, Committees, KPIs, Initiatives, Meetings and Links are specified but not built; `docs/STATUS.md` lists which parts of the target layout exist, and `docs/history/` keeps every hand-off. The v1 module table below describes the intended product, not completed modules.
 
 ## Modules (v1)
 
@@ -52,7 +52,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 The development override publishes PostgreSQL on localhost only. Use a separate disposable database for `DATABASE_URL_TEST`; never point tests at production.
 
-The complete audit gate is not green yet. Checks run from the source checkout with Node 22; the exact Docker tooling commands used for this preview are in `docs/history/HANDOFF.md`:
+Checks run from the source checkout with Node 22 (see Development below); inside the Compose stack they can also be run in the app container:
 
 ```bash
 docker compose exec app pnpm test
@@ -66,7 +66,7 @@ After setup, load the six invented preview people (repeat-safe):
 docker compose exec app pnpm db:seed
 ```
 
-Screenshots are under `docs/screenshots/`; unsuffixed screenshots use the dark theme, and `-light.png` files show the light theme.
+A few representative screenshots live under `docs/screenshots/`; `node tools/capture-preview.mjs` and `node tools/capture-tasks.mjs` regenerate the full matrix into the ignored `tmp/screenshots/`.
 
 Restore replaces the target database and requires explicit confirmation, as specified by ADR 0008:
 
@@ -111,4 +111,4 @@ Update the local running stack without resetting its database:
 docker compose up -d --build
 ```
 
-Migrations apply on startup. See [the Tasks hand-off](docs/history/TASKS-HANDOFF.md) for validation, screenshots, assumptions, and deferred functionality. The earlier [WI-0001 hand-off](docs/history/HANDOFF.md) still records unfinished foundation work.
+Migrations apply on startup. Hand-offs for every work item, including deferred functionality and recorded assumptions, are under `docs/history/`.

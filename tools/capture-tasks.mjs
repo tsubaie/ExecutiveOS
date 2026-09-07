@@ -1,8 +1,9 @@
 import { chromium } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { lookup } from 'node:dns/promises';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { Temporal } from '@js-temporal/polyfill';
+await mkdir('tmp/screenshots', { recursive: true });
 const fixtures = JSON.parse(await readFile('tests/fixtures/tasks/preview.json', 'utf8'));
 const { address } = await lookup('app');
 const browser = await chromium.launch({ args: [`--host-resolver-rules=MAP localhost ${address}`] });
@@ -98,7 +99,7 @@ for (const locale of ['en', 'ar']) {
             errors: [...errors],
           });
           await page.screenshot({
-            path: `docs/screenshots/tasks-${route}-${locale}-${viewport}${theme === 'light' ? '-light' : ''}.png`,
+            path: `tmp/screenshots/tasks-${route}-${locale}-${viewport}${theme === 'light' ? '-light' : ''}.png`,
           });
         }
       }

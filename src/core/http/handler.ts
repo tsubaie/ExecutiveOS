@@ -20,9 +20,6 @@ async function inMaintenance() {
   maintenanceState = { value, expires: Date.now() + 2000 };
   return value;
 }
-export function resetMaintenanceCache() {
-  maintenanceState = undefined;
-}
 
 type HandlerContext = { user: User | null; db: Database; requestId: string };
 export type HandlerMeta = {

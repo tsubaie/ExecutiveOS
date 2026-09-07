@@ -41,9 +41,6 @@ export function env() {
   cached ??= load();
   return cached;
 }
-export function resetEnv() {
-  cached = undefined;
-}
 
 export function rawRuntime() {
   return {

@@ -1,0 +1,32 @@
+name: Bug report
+description: Something behaves differently from its specification
+labels: [bug]
+body:
+  - type: input
+    id: requirement
+    attributes:
+      label: Requirement ID
+      description: The spec ID the behavior belongs to, if you know it (for example TASKS-B02).
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: Locale, viewport, route, actions taken, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Quote the spec sentence if possible.
+    validations:
+      required: true
+  - type: input
+    id: request
+    attributes:
+      label: Request id
+      description: Shown under API error messages; helps find the log line.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit

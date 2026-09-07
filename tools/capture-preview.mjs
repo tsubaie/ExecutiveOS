@@ -20,7 +20,7 @@ const personId = await cleanup.evaluate(async () => {
   return data.find((person) => person.fullName === 'Leila Haddad').id;
 });
 await cleanup.close();
-await mkdir('docs/screenshots', { recursive: true });
+await mkdir('tmp/screenshots', { recursive: true });
 const findings = [];
 for (const locale of ['en', 'ar'])
   for (const [size, viewport] of [
@@ -66,7 +66,7 @@ for (const locale of ['en', 'ar'])
           .map((v) => ({ id: v.id, nodes: v.nodes.map((n) => n.target) })),
       });
       await page.screenshot({
-        path: 'docs/screenshots/' + name + '-' + locale + '-' + size + '.png',
+        path: 'tmp/screenshots/' + name + '-' + locale + '-' + size + '.png',
         animations: 'disabled',
       });
       if (name === 'home' || name === 'people-list') {
@@ -75,7 +75,7 @@ for (const locale of ['en', 'ar'])
           .click();
         await expect(page.locator('html')).toHaveClass(/light/);
         await page.screenshot({
-          path: 'docs/screenshots/' + name + '-' + locale + '-' + size + '-light.png',
+          path: 'tmp/screenshots/' + name + '-' + locale + '-' + size + '-light.png',
           animations: 'disabled',
         });
       }
