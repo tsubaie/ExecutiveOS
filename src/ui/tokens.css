@@ -1,0 +1,124 @@
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--raised);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--muted-text);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--accent);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--on-accent);
+  --color-secondary: var(--raised);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--raised);
+  --color-muted-foreground: var(--muted-text);
+  --color-input: var(--border);
+  --color-ring: var(--accent);
+  --color-destructive: var(--danger);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --font-sans: var(--font-inter), sans-serif;
+}
+:root {
+  --bg: #f5f5f2;
+  --surface: #ffffff;
+  --raised: #edeeeb;
+  --border: #dce0da;
+  --text: #202a28;
+  --muted-text: #606d68;
+  --accent: #306b59;
+  --on-accent: #ffffff;
+  --success: #287053;
+  --warning: #8b620d;
+  --danger: #b63c3c;
+}
+.dark {
+  --bg: #141918;
+  --surface: #1b211f;
+  --raised: #252d29;
+  --border: #323d36;
+  --text: #e8eee9;
+  --muted-text: #a0ada5;
+  --accent: #a7d4b6;
+  --on-accent: #163626;
+  --success: #8acba6;
+  --warning: #e4bc71;
+  --danger: #ee9696;
+  color-scheme: dark;
+}
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    font-size: 14px;
+    background: var(--bg);
+  }
+  body {
+    margin: 0;
+    color: var(--text);
+    font-family: var(--font-inter), sans-serif;
+  }
+  html[dir='rtl'] body {
+    font-family: var(--font-arabic), sans-serif;
+  }
+  button:not(:disabled),
+  a {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  input,
+  textarea,
+  select {
+    min-height: 44px;
+  }
+  button[data-slot='button'] {
+    min-height: 44px;
+  }
+  h1,
+  h2,
+  h3,
+  p {
+    overflow-wrap: anywhere;
+  }
+}
+.entity-detail {
+  animation: enter-detail 160ms ease-out;
+}
+@keyframes enter-detail {
+  from {
+    translate: 1rem;
+  }
+  to {
+    translate: 0;
+  }
+}
+[dir='rtl'] .entity-detail {
+  animation-name: enter-detail-rtl;
+}
+@keyframes enter-detail-rtl {
+  from {
+    translate: -1rem;
+  }
+  to {
+    translate: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entity-detail {
+    animation: none;
+  }
+}
