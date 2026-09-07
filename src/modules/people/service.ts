@@ -3,10 +3,11 @@ import 'server-only';
 import { z } from 'zod';
 import { type Context } from '@/core/auth/session';
 import { id } from '@/core/db/ids';
-import { settingValue } from '@/core/db/settings-repo';
-import { writeAudit } from '@/core/db/http-repo';
+import { getSetting } from '@/core/db/settings-repo';
+import { toJson, writeAudit } from '@/core/db/audit-repo';
+import { decodeCursor, encodeCursor, filtersHash } from '@/core/db/keyset';
+import { applyUpdate, requireRevision, restoreByOp, type EntityOps } from '@/core/entity/service';
 import { AppError } from '@/core/http/errors';
-import { filtersHash, readCursor, makeCursor } from '@/core/http/pagination';
 import {
   Person,
   View,
@@ -15,39 +16,42 @@ import {
   type PersonListQuery,
 } from './schema/validation';
 import * as repo from './repo';
-
+export { personNameSql } from './repo';
+type PersonRow = NonNullable<Awaited<ReturnType<typeof repo.selectPerson>>>;
+const ops: EntityOps<Person, PersonRow, Parameters<typeof repo.updatePerson>[3]> = {
+  entityType: 'person',
+  get: (ctx, personId, includeDeleted) => getPerson(ctx, personId, includeDeleted),
+  update: (ctx, personId, revision, patch) =>
+    repo.updatePerson(ctx.db, personId, revision, patch, ctx.user.id),
+  restore: (ctx, personId, opId) => repo.restorePerson(ctx.db, personId, opId, ctx.user.id),
+};
 export async function listPeople(ctx: Context, query: PersonListQuery) {
-  const hash = filtersHash({
-    view: query.view,
-    q: query.q,
-    tag: query.tag,
-    organization: query.organization,
-    day: new Date().toISOString().slice(0, 10),
-  });
+  const { view, q, tag, organization } = query;
+  const hash = filtersHash({ view, q, tag, organization });
   const rows = await repo.selectPeople(
     ctx.db,
     query,
     query.limit + 1,
-    readCursor(query.cursor, hash),
+    decodeCursor(query.cursor, repo.nameSort, hash),
   );
-  const viewCounts: Record<string, number> = {};
-  for (const view of View.options)
-    viewCounts[view] = await repo.countPeople(ctx.db, { ...query, view });
-  const counts = z.record(View, z.number()).parse(viewCounts);
+  const counts = z
+    .record(View, z.number())
+    .parse(await repo.countPeople(ctx.db, { q, tag, organization }, View.options));
   const items = rows.slice(0, query.limit);
   const last = items.at(-1);
   return {
     data: items.map((row) => Person.parse(row)),
     meta: {
       counts,
-      total: counts[query.view],
+      total: counts[view],
       nextCursor:
-        rows.length > query.limit && last ? makeCursor(last.fullName, last.id, hash) : null,
+        rows.length > query.limit && last ? encodeCursor(repo.nameSort, hash, last) : null,
     },
   };
 }
 export async function countPeople(ctx: Context) {
-  return repo.countPeople(ctx.db, { view: 'all', q: '', tag: '', organization: '' });
+  const row = await repo.countPeople(ctx.db, { q: '', tag: '', organization: '' }, ['all']);
+  return row?.all ?? 0;
 }
 export async function getPerson(ctx: Context, personId: string, deleted = false) {
   const row = await repo.selectPerson(ctx.db, personId);
@@ -77,46 +81,30 @@ export async function createPerson(ctx: Context, input: PersonCreate) {
       updatedBy: ctx.user.id,
     }),
   );
-  await writeAudit(ctx.db, ctx.user.id, 'create', 'person', person.id, z.json().parse(person));
+  await writeAudit(ctx.db, ctx.user.id, 'create', 'person', person.id, toJson(fields));
   return { data: person, meta: { possibleDuplicates: [] } };
 }
 export async function patchPerson(ctx: Context, personId: string, input: PersonPatch) {
   memberLink(ctx, input.userId);
-  await getPerson(ctx, personId);
   const { revision, ...fields } = input;
-  const row = await repo.updatePerson(ctx.db, personId, revision, {
-    ...fields,
-    updatedBy: ctx.user.id,
-  });
-  if (!row)
-    throw new AppError('conflict', { reason: 'revision', current: await getPerson(ctx, personId) });
-  await writeAudit(ctx.db, ctx.user.id, 'update', 'person', personId, z.json().parse(fields));
-  return Person.parse(row);
+  const current = await requireRevision(ctx, ops, personId, revision);
+  return Person.parse(await applyUpdate(ctx, ops, current, fields));
 }
 export async function removePerson(ctx: Context, personId: string, revision: number) {
-  const principal = await settingValue(ctx.db, 'workspace.principal_person_id');
+  const principal = await getSetting(ctx.db, 'workspace.principal_person_id');
   if (principal === personId) throw new AppError('rule_violation', { rule: 'PEOPLE-I04' });
-  await getPerson(ctx, personId);
+  const current = await requireRevision(ctx, ops, personId, revision);
   const opId = id();
-  const row = await repo.updatePerson(ctx.db, personId, revision, {
-    deletedAt: new Date(),
-    deletedOpId: opId,
-    updatedBy: ctx.user.id,
-  });
-  if (!row)
-    throw new AppError('conflict', { reason: 'revision', current: await getPerson(ctx, personId) });
-  await writeAudit(ctx.db, ctx.user.id, 'delete', 'person', personId, {}, opId);
+  await applyUpdate(
+    ctx,
+    ops,
+    current,
+    { deletedAt: new Date(), deletedOpId: opId },
+    { action: 'delete', opId, diff: {} },
+  );
   return { opId };
 }
 export async function restorePerson(ctx: Context, personId: string, opId: string) {
-  const old = await getPerson(ctx, personId, true);
-  if (old.deletedOpId !== opId) throw new AppError('conflict', { reason: 'state' });
-  const row = await repo.updatePerson(ctx.db, personId, old.revision, {
-    deletedAt: null,
-    deletedOpId: null,
-    updatedBy: ctx.user.id,
-  });
-  if (!row) throw new AppError('conflict', { reason: 'revision' });
-  await writeAudit(ctx.db, ctx.user.id, 'restore', 'person', personId, {}, opId);
-  return Person.parse(row);
+  await getPerson(ctx, personId, true);
+  return Person.parse(await restoreByOp(ctx, ops, personId, opId));
 }

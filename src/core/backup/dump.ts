@@ -7,6 +7,7 @@ import { env } from '@/core/config/env';
 import { postgresConnection } from '@/core/config/backup-env';
 import { resolveInside } from '@/core/files/storage';
 import { checksum, verifyBackup } from './manifest';
+import { appVersion } from '@/core/config/version';
 export function pgCommand(binary: 'pg_dump' | 'pg_restore', args: string[], signal?: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     const connection = postgresConnection();
@@ -58,7 +59,7 @@ export async function createBackup(backupId: string, signal?: AbortSignal) {
     id: backupId,
     createdAt: new Date().toISOString(),
     schemaVersion: 1,
-    appVersion: '0.1.0',
+    appVersion,
     files: Object.fromEntries(entries),
   };
   await writeFile(join(staging, 'manifest.json'), JSON.stringify(manifest, null, 2));

@@ -12,6 +12,18 @@ import { getTranslations } from 'next-intl/server';
 import type { User } from '@/core/auth/validation';
 import { isRestoring } from '@/core/backup/maintenance';
 
+let maintenanceState: { value: boolean; expires: number } | undefined;
+// Both checks hit storage; two seconds of staleness is acceptable for a maintenance banner.
+async function inMaintenance() {
+  if (maintenanceState && maintenanceState.expires > Date.now()) return maintenanceState.value;
+  const value = (await isRestoring()) || (await maintenance(db()));
+  maintenanceState = { value, expires: Date.now() + 2000 };
+  return value;
+}
+export function resetMaintenanceCache() {
+  maintenanceState = undefined;
+}
+
 type HandlerContext = { user: User | null; db: Database; requestId: string };
 export type HandlerMeta = {
   guard: 'public' | 'session' | 'admin';
@@ -54,7 +66,7 @@ export function defineHandler<I extends z.ZodType, O extends z.ZodType>(options:
   const handler = async (request: Request, route?: { params: Promise<Record<string, string>> }) => {
     const requestId = id();
     try {
-      if ((await isRestoring()) || (await maintenance(db())))
+      if (await inMaintenance())
         return Response.json({ error: { code: 'maintenance', requestId } }, { status: 503 });
       const user = await currentUser();
       if (options.guard !== 'public' && !user) throw new AppError('unauthenticated');

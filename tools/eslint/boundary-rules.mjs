@@ -84,7 +84,7 @@ export const serverMarker = {
     const path = context.filename;
     if (
       testFile(path) ||
-      !/(?:\/src\/modules\/[^/]+\/(?:service|repo)\.ts$|\/schema\/db\.ts$|\/src\/core\/(?:db|auth|ai|jobs|files|backup)\/|\/src\/core\/config\/env\.ts$)/u.test(
+      !/(?:\/src\/modules\/[^/]+\/(?:service|repo)\.ts$|\/schema\/db\.ts$|\/src\/core\/(?:db|auth|ai|jobs|files|backup|entity)\/|\/src\/core\/config\/env\.ts$)/u.test(
         path,
       )
     )

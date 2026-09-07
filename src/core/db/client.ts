@@ -6,7 +6,7 @@ import { queryLogger } from './query-log';
 
 let connection: pg.Pool | undefined;
 export function pool() {
-  connection ??= new pg.Pool({ connectionString: env().DATABASE_URL, max: 12 });
+  connection ??= new pg.Pool({ connectionString: env().DATABASE_URL, max: env().DB_POOL_MAX });
   return connection;
 }
 // A separate pool for audits that rebuild the disposable *_test database from migrations.

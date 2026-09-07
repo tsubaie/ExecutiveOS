@@ -5,6 +5,7 @@ import { storageUsage } from '@/core/files/storage';
 import { aiConnection } from '@/core/ai/client';
 import { env } from '@/core/config/env';
 import { isRestoring } from '@/core/backup/maintenance';
+import { appVersion } from '@/core/config/version';
 export async function GET() {
   try {
     await initialized(db());
@@ -13,7 +14,7 @@ export async function GET() {
     return Response.json(
       {
         status: (await isRestoring()) ? 'degraded' : 'ok',
-        version: '0.1.0',
+        version: appVersion,
         db: true,
         ai: aiConnection().state,
         jobs: {

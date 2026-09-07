@@ -1,5 +1,7 @@
 # 06 — AI integration
 
+> Model identifiers in settings (`ai.model.default`, `ai.model.fast`) accept any `claude-*` id; availability is checked against the provider at connection time, not by the registry.
+
 AI runs inside the application by calling the Claude API with the official TypeScript SDK. There is no worker service and no CLI. All model calls run as jobs (ADR 0010). If `ANTHROPIC_API_KEY` is not set or the connection check fails, AI entry points are hidden and AI routes return `503 ai_unavailable`; nothing else changes.
 
 ## Layers

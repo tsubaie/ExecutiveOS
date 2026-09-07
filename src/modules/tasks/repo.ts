@@ -6,15 +6,25 @@ import {
   isNotNull,
   sql,
   asc,
-  desc,
   inArray,
   ne,
   getTableColumns,
   type SQL,
 } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { tasks } from './schema/db';
 import type { Database } from '@/core/db/client';
 import { normalize } from '@/core/search/normalize';
+import { updateEntity, type EntityPatch } from '@/core/db/entity';
+import {
+  cursorColumns,
+  cursorPredicate,
+  filteredCounts,
+  orderBy,
+  type SortKey,
+  type SortSpec,
+} from '@/core/db/keyset';
+export type NameOf = (personId: AnyPgColumn) => SQL<string | null>;
 type Filters = {
   view: string;
   q: string;
@@ -28,13 +38,11 @@ type Filters = {
 };
 const children = sql<number>`(select count(*)::int from tasks c where c.parent_id = tasks.id and c.deleted_at is null)`;
 const completed = sql<number>`(select count(*)::int from tasks c where c.parent_id = tasks.id and c.deleted_at is null and c.status = 'completed')`;
-const columns = () => ({
+const columns = (ownerName: NameOf) => ({
   ...getTableColumns(tasks),
   subtaskCount: children,
   completedSubtaskCount: completed,
-  ownerName: sql<
-    string | null
-  >`(select coalesce(p.display_name,p.full_name) from people p where p.id = tasks.owner_id)`,
+  ownerName: ownerName(tasks.ownerId),
 });
 function base(f: Filters) {
   const predicates: SQL[] = [];
@@ -68,90 +76,76 @@ function viewPredicate(view: string, today: string, week: string, cutoff: string
     predicates.push(sql`${tasks.dueDate} > ${today} and ${tasks.dueDate} <= ${week}`);
   return and(...predicates);
 }
-function order(sort: string, today: string, week: string) {
-  const priority = sql`case ${tasks.priority} when 'urgent' then 4 when 'high' then 3 when 'medium' then 2 when 'low' then 1 else 0 end`;
-  if (sort === 'title') return [asc(sql`lower(${tasks.title})`), desc(tasks.id)];
-  if (sort === 'priority') return [desc(priority), desc(tasks.id)];
-  if (sort === 'created_at') return [desc(tasks.createdAt), desc(tasks.id)];
-  if (sort === 'updated_at') return [desc(tasks.updatedAt), desc(tasks.id)];
-  const due = sql`${tasks.dueDate} asc nulls last`;
-  if (sort === 'due_date') return [due, desc(tasks.id)];
+// Sort keys are total and non-null so keyset cursors continue exactly (TASKS-B07).
+const priorityRank = sql`case ${tasks.priority} when 'urgent' then 4 when 'high' then 3 when 'medium' then 2 when 'low' then 1 else 0 end`;
+const dueKey = sql`coalesce(${tasks.dueDate}::text, '9999-12-31')`;
+const micros = (column: AnyPgColumn) => sql`(extract(epoch from ${column}) * 1000000)::bigint`;
+const idKey: SortKey = { expr: sql`${tasks.id}`, direction: 'desc' };
+export function sortSpec(sort: string, today: string, week: string): SortSpec {
   const band = sql`case when ${tasks.status} = 'completed' then 5 when ${tasks.dueDate} < ${today} then 0 when ${tasks.dueDate} = ${today} then 1 when ${tasks.dueDate} <= ${week} then 2 when ${tasks.dueDate} is not null then 3 else 4 end`;
-  return [asc(band), due, desc(priority), desc(tasks.createdAt), desc(tasks.id)];
+  const keys: Record<string, SortKey[]> = {
+    title: [{ expr: sql`lower(${tasks.title})`, direction: 'asc' }, idKey],
+    priority: [{ expr: priorityRank, direction: 'desc' }, idKey],
+    created_at: [{ expr: micros(tasks.createdAt), direction: 'desc' }, idKey],
+    updated_at: [{ expr: micros(tasks.updatedAt), direction: 'desc' }, idKey],
+    due_date: [{ expr: dueKey, direction: 'asc' }, idKey],
+  };
+  return {
+    id: sort,
+    keys: keys[sort] ?? [
+      { expr: band, direction: 'asc' },
+      { expr: dueKey, direction: 'asc' },
+      { expr: priorityRank, direction: 'desc' },
+      { expr: micros(tasks.createdAt), direction: 'desc' },
+      idKey,
+    ],
+  };
 }
 export async function selectTasks(
   database: Database,
   f: Filters,
   dates: string[],
-  sort: string,
+  spec: SortSpec,
   limit: number,
-  after: string | null,
+  last: (string | number)[] | null,
+  ownerName: NameOf,
 ) {
   const [today = '', week = '', cutoff = ''] = dates;
-  // The cursor is a full sort tuple captured as a JSON array; no offset or missing-anchor lookup.
-  const ordering = order(sort, today, week);
-  const keys = sortKeys(sort, today, week);
-  const cursor = after
-    ? sql`jsonb_build_array(${sql.join(keys, sql`, `)}) > ${after}::jsonb`
-    : undefined;
   return database
-    .select(columns())
+    .select({ ...columns(ownerName), ...cursorColumns(spec) })
     .from(tasks)
-    .where(and(base(f), viewPredicate(f.view, today, week, cutoff), cursor))
-    .orderBy(...ordering)
+    .where(and(base(f), viewPredicate(f.view, today, week, cutoff), cursorPredicate(spec, last)))
+    .orderBy(...orderBy(spec))
     .limit(limit);
 }
-function sortKeys(sort: string, today: string, week: string) {
-  const reverseId = sql`translate(${tasks.id}::text,'0123456789abcdef','fedcba9876543210')`;
-  const p = sql`case ${tasks.priority} when 'urgent' then -4 when 'high' then -3 when 'medium' then -2 when 'low' then -1 else 0 end`;
-  const due = sql`coalesce(${tasks.dueDate}::text,'9999-12-31')`;
-  if (sort === 'title') return [sql`lower(${tasks.title})`, reverseId];
-  if (sort === 'priority') return [p, reverseId];
-  if (sort === 'created_at') return [sql`-extract(epoch from ${tasks.createdAt})`, reverseId];
-  if (sort === 'updated_at') return [sql`-extract(epoch from ${tasks.updatedAt})`, reverseId];
-  if (sort === 'due_date') return [due, reverseId];
-  return [
-    sql`case when ${tasks.status} = 'completed' then 5 when ${tasks.dueDate} < ${today} then 0 when ${tasks.dueDate} = ${today} then 1 when ${tasks.dueDate} <= ${week} then 2 when ${tasks.dueDate} is not null then 3 else 4 end`,
-    due,
-    p,
-    sql`-extract(epoch from ${tasks.createdAt})`,
-    reverseId,
-  ];
-}
-export async function cursorTuple(
+export async function countTasks<V extends string>(
   database: Database,
-  taskId: string,
-  sort: string,
-  today: string,
-  week: string,
+  f: Filters,
+  views: readonly V[],
+  dates: string[],
 ) {
-  const [row] = await database
-    .select({
-      tuple: sql<string>`jsonb_build_array(${sql.join(sortKeys(sort, today, week), sql`, `)})::text`,
-    })
-    .from(tasks)
-    .where(eq(tasks.id, taskId));
-  return row?.tuple ?? null;
-}
-export async function countTasks(database: Database, f: Filters, views: string[], dates: string[]) {
   const [today = '', week = '', cutoff = ''] = dates;
-  const fields: Record<string, SQL<number>> = {};
-  for (const view of views)
-    fields[view] =
-      sql<number>`count(*) filter (where ${viewPredicate(view, today, week, cutoff)})::int`;
+  const predicates = Object.fromEntries(
+    views.map((view) => [view, viewPredicate(view, today, week, cutoff)]),
+  ) as Record<V, SQL | undefined>; // cast: built from the same view list
   const [row] = await database
-    .select(fields)
+    .select(filteredCounts(predicates))
     .from(tasks)
     .where(base({ ...f, includeSubtasks: 'false', parentId: undefined }));
-  return row ?? {};
-}
-export async function selectTask(database: Database, taskId: string) {
-  const [row] = await database.select(columns()).from(tasks).where(eq(tasks.id, taskId));
   return row;
 }
-export function selectChildren(database: Database, parentId: string, deleted = false) {
+export async function selectTask(database: Database, taskId: string, ownerName: NameOf) {
+  const [row] = await database.select(columns(ownerName)).from(tasks).where(eq(tasks.id, taskId));
+  return row;
+}
+export function selectChildren(
+  database: Database,
+  parentId: string,
+  ownerName: NameOf,
+  deleted = false,
+) {
   return database
-    .select(columns())
+    .select(columns(ownerName))
     .from(tasks)
     .where(and(eq(tasks.parentId, parentId), deleted ? undefined : isNull(tasks.deletedAt)))
     .orderBy(asc(tasks.sortOrder));
@@ -172,18 +166,14 @@ export async function insertTask(database: Database, input: typeof tasks.$inferI
   if (!row) throw new Error('Task insert failed');
   return row;
 }
-export async function updateTask(
+export function updateTask(
   database: Database,
   taskId: string,
   revision: number,
-  patch: { [K in keyof typeof tasks.$inferInsert]?: (typeof tasks.$inferInsert)[K] | undefined },
+  patch: EntityPatch<typeof tasks.$inferInsert>,
+  actorId: string,
 ) {
-  const [row] = await database
-    .update(tasks)
-    .set({ ...patch, revision: sql`${tasks.revision}+1`, updatedAt: new Date() })
-    .where(and(eq(tasks.id, taskId), eq(tasks.revision, revision)))
-    .returning();
-  return row;
+  return updateEntity<typeof tasks.$inferSelect>(database, tasks, taskId, revision, patch, actorId);
 }
 export async function reorderTasks(database: Database, orderedIds: string[], actorId: string) {
   await database

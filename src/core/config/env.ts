@@ -20,6 +20,7 @@ const Environment = z.object({
     .transform((v) => v === 'true'),
   JOBS_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
   JOBS_DRAIN_SECONDS: z.coerce.number().int().min(1).max(120).default(25),
+  DB_POOL_MAX: z.coerce.number().int().min(2).max(64).default(12),
   RECOVERY_TOKEN: optionalText,
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -27,11 +28,21 @@ const Environment = z.object({
   NEXT_PHASE: optionalText,
 });
 
-export function env() {
+type Environment = z.infer<typeof Environment>;
+let cached: Environment | undefined;
+function load(): Environment {
   const parsed = Environment.parse(process.env);
   if (parsed.NODE_ENV === 'test')
     return { ...parsed, DATABASE_URL: z.string().url().parse(parsed.DATABASE_URL_TEST) };
   return parsed;
+}
+// Parsed once per process; every request path reads it.
+export function env() {
+  cached ??= load();
+  return cached;
+}
+export function resetEnv() {
+  cached = undefined;
 }
 
 export function rawRuntime() {

@@ -3,15 +3,14 @@ import 'server-only';
 import { z } from 'zod';
 import type { Context } from '@/core/auth/session';
 import { id } from '@/core/db/ids';
-import { writeAudit } from '@/core/db/http-repo';
-import { settingValue } from '@/core/db/settings-repo';
-import { defaults } from '@/core/config/defaults';
-import { filtersHash } from '@/core/http/pagination';
+import { toJson, writeAudit } from '@/core/db/audit-repo';
+import { getSetting } from '@/core/db/settings-repo';
+import { decodeCursor, encodeCursor, filtersHash } from '@/core/db/keyset';
+import { applyUpdate, requireRevision, type EntityOps } from '@/core/entity/service';
 import { AppError } from '@/core/http/errors';
 import { dayAt, addDays, bandOf } from '@/core/time/tasks';
-import { getPerson } from '@/modules/people';
+import { getPerson, personNameSql } from '@/modules/people';
 import {
-  Task,
   TaskDetail,
   View,
   type TaskCreate,
@@ -21,68 +20,53 @@ import {
   type Reorder,
 } from './schema/validation';
 import * as repo from './repo';
-const Cursor = z.strictObject({ v: z.literal(1), hash: z.string(), tuple: z.string() });
-function readCursor(cursor: string | undefined, hash: string) {
-  if (!cursor) return null;
-  try {
-    const parsed = Cursor.parse(JSON.parse(Buffer.from(cursor, 'base64url').toString()));
-    if (parsed.hash !== hash) throw new Error('cursor filters changed');
-    const tuple = z
-      .array(z.union([z.string(), z.number()]))
-      .min(2)
-      .max(5)
-      .parse(JSON.parse(parsed.tuple));
-    return JSON.stringify(tuple);
-  } catch {
-    throw new AppError('validation_failed', { fieldErrors: { cursor: ['invalid_cursor'] } });
-  }
-}
+type TaskRow = NonNullable<Awaited<ReturnType<typeof repo.updateTask>>>;
+type Patch = Parameters<typeof repo.updateTask>[3];
+const ops: EntityOps<TaskDetail, TaskRow, Patch> = {
+  entityType: 'task',
+  get: (ctx, taskId, includeDeleted) => getTask(ctx, taskId, includeDeleted),
+  update: (ctx, taskId, revision, patch) =>
+    repo.updateTask(ctx.db, taskId, revision, patch, ctx.user.id),
+};
 export async function listTasks(ctx: Context, query: TaskListQuery) {
-  const timezone = z
-    .string()
-    .parse((await settingValue(ctx.db, 'workspace.timezone')) ?? defaults.timezone);
+  const timezone = await getSetting(ctx.db, 'workspace.timezone');
   const today = dayAt(timezone);
-  const dates = [today, addDays(today, 7), addDays(today, -90)];
+  const week = addDays(today, 7);
+  const dates = [today, week, addDays(today, -90)];
   const { cursor, withTotal, limit, ...filters } = query;
   void withTotal;
   const hash = filtersHash(z.json().parse({ ...filters, today, timezone }));
+  const spec = repo.sortSpec(query.sort, today, week);
   const rows = await repo.selectTasks(
     ctx.db,
     query,
     dates,
-    query.sort,
+    spec,
     limit + 1,
-    readCursor(cursor, hash),
+    decodeCursor(cursor, spec, hash),
+    personNameSql,
   );
   const counts = z
     .record(View, z.number())
     .parse(await repo.countTasks(ctx.db, query, View.options, dates));
-  const data = rows
-    .slice(0, limit)
-    .map((row) => TaskDetail.parse({ ...row, band: bandOf(row, today) }));
-  const last = data.at(-1);
-  const tuple =
-    rows.length > limit && last
-      ? await repo.cursorTuple(ctx.db, last.id, query.sort, today, addDays(today, 7))
-      : null;
+  const page = rows.slice(0, limit);
+  const last = page.at(-1);
   return {
-    data,
+    data: page.map((row) => TaskDetail.parse({ ...row, band: bandOf(row, today) })),
     meta: {
       counts,
       total: counts[query.view],
       today,
       timezone,
       defaultView: z.enum(['today', 'next']).parse(counts.today > 0 ? 'today' : 'next'),
-      nextCursor: tuple
-        ? Buffer.from(JSON.stringify({ v: 1, hash, tuple })).toString('base64url')
-        : null,
+      nextCursor: rows.length > limit && last ? encodeCursor(spec, hash, last) : null,
     },
   };
 }
 export async function getTask(ctx: Context, taskId: string, deleted = false) {
-  const row = await repo.selectTask(ctx.db, taskId);
+  const row = await repo.selectTask(ctx.db, taskId, personNameSql);
   if (!row || (!deleted && row.deletedAt)) throw new AppError('not_found', { entityType: 'task' });
-  const children = await repo.selectChildren(ctx.db, taskId, true);
+  const children = await repo.selectChildren(ctx.db, taskId, personNameSql, true);
   return TaskDetail.parse({
     ...row,
     subtasks: deleted ? children : children.filter((child) => !child.deletedAt),
@@ -96,37 +80,20 @@ async function owner(ctx: Context, ownerId: string | null | undefined) {
 }
 async function current(ctx: Context, taskId: string, revision: number, deleted = false) {
   await repo.lockTasks(ctx.db);
-  const task = await getTask(ctx, taskId, deleted);
-  if (task.revision !== revision)
-    throw new AppError('conflict', { reason: 'revision', current: task });
-  return task;
+  return requireRevision(ctx, ops, taskId, revision, deleted);
 }
-async function update(
+function update(
   ctx: Context,
-  task: Task,
-  patch: Parameters<typeof repo.updateTask>[3],
+  task: { id: string; revision: number },
+  patch: Patch,
   action = 'update',
   opId?: string,
 ) {
-  const row = await repo.updateTask(ctx.db, task.id, task.revision, {
-    ...patch,
-    updatedBy: ctx.user.id,
-  });
-  if (!row)
-    throw new AppError('conflict', {
-      reason: 'revision',
-      current: await getTask(ctx, task.id, true),
-    });
-  await writeAudit(
-    ctx.db,
-    ctx.user.id,
+  return applyUpdate(ctx, ops, task, patch, {
     action,
-    'task',
-    task.id,
-    z.json().parse(JSON.parse(JSON.stringify(patch))),
-    opId,
-  );
-  return row;
+    opId: opId ?? null,
+    ...(action === 'delete' || action === 'restore' ? { diff: {} } : {}),
+  });
 }
 export async function createTask(ctx: Context, input: TaskCreate) {
   await repo.lockTasks(ctx.db);
@@ -142,7 +109,7 @@ export async function createTask(ctx: Context, input: TaskCreate) {
     createdBy: ctx.user.id,
     updatedBy: ctx.user.id,
   });
-  await writeAudit(ctx.db, ctx.user.id, 'create', 'task', row.id, z.json().parse(input));
+  await writeAudit(ctx.db, ctx.user.id, 'create', 'task', row.id, toJson(input));
   return getTask(ctx, row.id);
 }
 export async function patchTask(ctx: Context, taskId: string, input: TaskPatch) {
@@ -214,7 +181,7 @@ export async function moveTask(
     if (
       task.id === parentId ||
       parent.parentId ||
-      (await repo.selectChildren(ctx.db, taskId, true)).length
+      (await repo.selectChildren(ctx.db, taskId, personNameSql, true)).length
     )
       throw new AppError('rule_violation', { rule: 'TASKS-I01' });
   }
@@ -226,12 +193,12 @@ export async function groupTasks(ctx: Context, input: z.infer<typeof Group>) {
   const children: TaskDetail[] = [];
   const invalid: string[] = [];
   for (const taskId of input.childIds) {
-    const row = await repo.selectTask(ctx.db, taskId);
+    const row = await repo.selectTask(ctx.db, taskId, personNameSql);
     if (
       !row ||
       row.deletedAt ||
       row.parentId ||
-      (await repo.selectChildren(ctx.db, taskId, true)).length
+      (await repo.selectChildren(ctx.db, taskId, personNameSql, true)).length
     )
       invalid.push(taskId);
     else children.push(TaskDetail.parse(row));
@@ -252,7 +219,9 @@ export async function groupTasks(ctx: Context, input: z.infer<typeof Group>) {
 }
 export async function reorderTasks(ctx: Context, input: z.infer<typeof Reorder>) {
   await repo.lockTasks(ctx.db);
-  const rows = input.parentId ? await repo.selectChildren(ctx.db, input.parentId) : [];
+  const rows = input.parentId
+    ? await repo.selectChildren(ctx.db, input.parentId, personNameSql)
+    : [];
   if (
     !input.parentId ||
     rows.length !== input.orderedIds.length ||
@@ -268,9 +237,7 @@ export async function reorderTasks(ctx: Context, input: z.infer<typeof Reorder>)
   return getTask(ctx, input.parentId);
 }
 export async function homeSummary(ctx: Context) {
-  const timezone = z
-    .string()
-    .parse((await settingValue(ctx.db, 'workspace.timezone')) ?? defaults.timezone);
+  const timezone = await getSetting(ctx.db, 'workspace.timezone');
   const row = await repo.selectHomeSummary(ctx.db, dayAt(timezone));
   return ['overdue', 'today', 'waiting'].map((key) => ({
     key,

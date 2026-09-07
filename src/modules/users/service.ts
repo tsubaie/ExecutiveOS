@@ -8,7 +8,7 @@ import { newSession, type Context } from '@/core/auth/session';
 import { db } from '@/core/db/client';
 import { lockWorkspace, initialized, insertUser, finishSetup } from '@/core/db/auth-repo';
 import { writeSetting } from '@/core/db/settings-repo';
-import { writeAudit } from '@/core/db/http-repo';
+import { writeAudit } from '@/core/db/audit-repo';
 import { id } from '@/core/db/ids';
 import { AppError } from '@/core/http/errors';
 import { createPerson } from '@/modules/people';
@@ -48,13 +48,10 @@ export async function setup(input: z.infer<typeof Setup>) {
       confirmDuplicate: true,
     });
     if (!principal.data) throw new Error('Principal creation failed');
-    for (const [key, value] of Object.entries({
-      'workspace.name': input.workspaceName,
-      'workspace.default_locale': input.locale,
-      'workspace.timezone': input.timezone,
-      'workspace.principal_person_id': principal.data.id,
-    }))
-      await writeSetting(database, key, value, user.id);
+    await writeSetting(database, 'workspace.name', input.workspaceName, user.id);
+    await writeSetting(database, 'workspace.default_locale', input.locale, user.id);
+    await writeSetting(database, 'workspace.timezone', input.timezone, user.id);
+    await writeSetting(database, 'workspace.principal_person_id', principal.data.id, user.id);
     await finishSetup(database);
     return { user, token: await newSession(database, user.id) };
   });
@@ -75,7 +72,7 @@ export async function patchUser(ctx: Context, userId: string, input: UserPatch) 
     (await countAdmins(ctx.db)) <= 1
   )
     throw new AppError('rule_violation', { rule: 'ADMIN-B04' });
-  const row = await updateUser(ctx.db, userId, input);
+  const row = await updateUser(ctx.db, userId, input, ctx.user.id);
   if (!row) throw new AppError('conflict', { reason: 'revision', current: User.parse(existing) });
   await writeAudit(ctx.db, ctx.user.id, 'update', 'user', userId, input);
   return User.parse(row);

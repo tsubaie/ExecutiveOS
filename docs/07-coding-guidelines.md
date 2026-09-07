@@ -41,6 +41,7 @@ Generated primitives (`src/ui/primitives`) and test files are exempt from the si
 | `modules/*/repo` | own `schema/db`, `core/db`, `core/links` (edge helpers), `core/search` | anything else |
 | `modules/*/jobs`, `modules/*/ai` | own `service`, own `schema`, `core/ai`, `core/jobs` | other modules' internals |
 | `core/**` | other `core/*`, `modules/*/index` only from `core/links` resolvers and `core/jobs/registry` | `modules/*/repo`, `modules/*/ui` |
+| `core/entity/service` | `core/db/audit-repo`, `core/http/errors` | modules; it receives repo functions as an adapter from the calling service |
 
 - **[static]** Server-only modules import `server-only`; the client bundle audit fails if any of them appears in a client chunk.
 - **[static]** `process.env` readable only in `core/config/env.ts`.
@@ -51,7 +52,8 @@ Generated primitives (`src/ui/primitives`) and test files are exempt from the si
 - **[static]** SQL only in `repo.ts` and `core/db`, `core/links`, `core/search`, `core/backup`. `sql` fragments allowed for expressions the builder cannot express, never whole statements outside custom migrations.
 - **[runtime]** Every list query filters `deleted_at is null` unless `includeDeleted` (repo tests assert).
 - **[review]** Multi-statement writes run in `db.transaction`; the service opens it; repos accept the handle.
-- **[runtime]** Updates go through the repo update helper that applies the revision predicate and bumps `revision` and `updated_at`.
+- **[runtime]** Updates go through the repo update helper, a one-line wrapper over `core/db/entity.ts` (`updateEntity`, `softDeleteEntity`, `restoreEntity`) that applies the revision predicate and bumps `revision` and `updated_at`. Services compose them through `core/entity/service.ts` (`requireRevision`, `applyUpdate`, `restoreByOp`) so conflicts carry the current row and every write is audited.
+- **[review]** Lists page with `core/db/keyset.ts`: one `SortSpec` per sort drives ORDER BY, the cursor tuple and the continuation predicate; view counts use `filteredCounts` in one statement.
 - **[runtime]** Query count per request ≤ 6 on module golden paths (test asserts with the query logger).
 
 ## API and validation

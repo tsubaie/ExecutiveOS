@@ -10,7 +10,7 @@ describe('audit:docs', () => {
     const spec = parseSpec('docs/features/bad.md', await readFile(fixture('docs/bad.md'), 'utf8'));
     const tests = scanTestNames(
       'x.test.ts',
-      "it('BAD-B01 works', () => {});\ntest(`ZZZ-B09 ${locale}`, () => {});",
+      await readFile(fixture('docs/sample.test.ts.txt'), 'utf8'),
     );
     const adr = {
       index: parseAdrIndex(await readFile(fixture('docs/adr-index.md'), 'utf8')),

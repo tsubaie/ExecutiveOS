@@ -1,5 +1,5 @@
 const server =
-  '(?:src/core/(?:db|auth|ai|jobs|files|backup)/|src/core/config/env\\.ts$|src/modules/[^/]+/(?:service|repo)\\.ts$|src/modules/[^/]+/schema/(?:db|index)\\.ts$)';
+  '(?:src/core/(?:db|auth|ai|jobs|files|backup|entity)/|src/core/config/env\\.ts$|src/modules/[^/]+/(?:service|repo)\\.ts$|src/modules/[^/]+/schema/(?:db|index)\\.ts$)';
 const rule = (name, from, to) => ({ name, severity: 'error', from, to });
 const clientFiles = require('./tools/eslint/client-files.cjs');
 const clientPaths = clientFiles().map((path) => path.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'));

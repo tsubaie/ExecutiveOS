@@ -35,8 +35,8 @@ export async function insertUser(database: Database, input: typeof users.$inferI
 export async function insertSession(database: Database, input: typeof sessions.$inferInsert) {
   await database.insert(sessions).values(input);
 }
-export async function sessionByHash(hash: string) {
-  const [row] = await db()
+export async function sessionByHash(hash: string, database: Database = db()) {
+  const [row] = await database
     .select({ session: sessions, user: users })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
@@ -52,14 +52,17 @@ export async function sessionByHash(hash: string) {
     );
   return row;
 }
-export async function refreshSession(sessionId: string, expiry: Date) {
-  await db()
+export async function refreshSession(sessionId: string, expiry: Date, database: Database = db()) {
+  await database
     .update(sessions)
     .set({ lastSeenAt: new Date(), expiresAt: expiry })
     .where(eq(sessions.id, sessionId));
 }
-export async function revokeSession(hash: string) {
-  await db().update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.tokenHash, hash));
+export async function revokeSession(hash: string, database: Database = db()) {
+  await database
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(eq(sessions.tokenHash, hash));
 }
 export async function revokeUserSessions(database: Database, userId: string) {
   await database.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.userId, userId));

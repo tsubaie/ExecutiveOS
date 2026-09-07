@@ -5,24 +5,45 @@ import {
   isNull,
   isNotNull,
   sql,
-  asc,
-  gt,
-  or,
-  count,
   arrayContains,
+  getTableColumns,
   type SQL,
 } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { people } from './schema/db';
 import { type Database } from '@/core/db/client';
 import { normalize } from '@/core/search/normalize';
+import { restoreEntity, updateEntity, type EntityPatch } from '@/core/db/entity';
+import {
+  cursorColumns,
+  cursorPredicate,
+  filteredCounts,
+  orderBy,
+  type SortSpec,
+} from '@/core/db/keyset';
 
 type Filters = { view: string; q: string; tag: string; organization: string };
-function predicate(filters: Filters) {
+export const nameSort: SortSpec = {
+  id: 'name',
+  keys: [
+    { expr: sql`lower(${people.fullName})`, direction: 'asc' },
+    { expr: sql`${people.id}`, direction: 'asc' },
+  ],
+};
+// Display name expression other modules may embed (owner labels); People owns its columns.
+export function personNameSql(personId: AnyPgColumn) {
+  return sql<
+    string | null
+  >`(select coalesce(p.display_name, p.full_name) from people p where p.id = ${personId})`;
+}
+function viewPredicate(view: string) {
+  const where: SQL[] = [view === 'trash' ? isNotNull(people.deletedAt) : isNull(people.deletedAt)];
+  if (view === 'assignable') where.push(eq(people.isAssignable, true));
+  if (view === 'internal' || view === 'external') where.push(eq(people.kind, view));
+  return and(...where);
+}
+function facets(filters: Omit<Filters, 'view'>) {
   const where: SQL[] = [];
-  where.push(filters.view === 'trash' ? isNotNull(people.deletedAt) : isNull(people.deletedAt));
-  if (filters.view === 'assignable') where.push(eq(people.isAssignable, true));
-  if (filters.view === 'internal' || filters.view === 'external')
-    where.push(eq(people.kind, filters.view));
   if (filters.organization) where.push(eq(people.organization, filters.organization));
   if (filters.tag) where.push(arrayContains(people.tags, [filters.tag]));
   if (filters.q)
@@ -35,24 +56,32 @@ export async function selectPeople(
   database: Database,
   filters: Filters,
   limit: number,
-  last?: { name: string; id: string },
+  last: (string | number)[] | null,
 ) {
-  const cursor = last
-    ? or(
-        gt(sql<string>`lower(${people.fullName})`, last.name),
-        and(eq(sql<string>`lower(${people.fullName})`, last.name), gt(people.id, last.id)),
-      )
-    : undefined;
   return database
-    .select()
+    .select({ ...getTableColumns(people), ...cursorColumns(nameSort) })
     .from(people)
-    .where(and(predicate(filters), cursor))
-    .orderBy(asc(sql`lower(${people.fullName})`), asc(people.id))
+    .where(and(facets(filters), viewPredicate(filters.view), cursorPredicate(nameSort, last)))
+    .orderBy(...orderBy(nameSort))
     .limit(limit);
 }
-export async function countPeople(database: Database, filters: Filters) {
-  const [row] = await database.select({ count: count() }).from(people).where(predicate(filters));
-  return row?.count ?? 0;
+export async function countPeople<V extends string>(
+  database: Database,
+  filters: Omit<Filters, 'view'>,
+  views: readonly V[],
+) {
+  const [row] = await database
+    .select(
+      filteredCounts(
+        Object.fromEntries(views.map((view) => [view, viewPredicate(view)])) as Record<
+          V,
+          SQL | undefined
+        >, // cast: built from the same view list
+      ),
+    )
+    .from(people)
+    .where(facets(filters));
+  return row;
 }
 export async function selectPerson(database: Database, personId: string) {
   const [row] = await database.select().from(people).where(eq(people.id, personId));
@@ -75,16 +104,22 @@ export async function insertPerson(database: Database, input: typeof people.$inf
   if (!row) throw new Error('Person insert failed');
   return row;
 }
-export async function updatePerson(
+export function updatePerson(
   database: Database,
   personId: string,
   revision: number,
-  patch: { [K in keyof typeof people.$inferInsert]?: (typeof people.$inferInsert)[K] | undefined },
+  patch: EntityPatch<typeof people.$inferInsert>,
+  actorId: string,
 ) {
-  const [row] = await database
-    .update(people)
-    .set({ ...patch, updatedAt: new Date(), revision: sql`${people.revision}+1` })
-    .where(and(eq(people.id, personId), eq(people.revision, revision)))
-    .returning();
-  return row;
+  return updateEntity<typeof people.$inferSelect>(
+    database,
+    people,
+    personId,
+    revision,
+    patch,
+    actorId,
+  );
+}
+export function restorePerson(database: Database, personId: string, opId: string, actorId: string) {
+  return restoreEntity<typeof people.$inferSelect>(database, people, personId, opId, actorId);
 }

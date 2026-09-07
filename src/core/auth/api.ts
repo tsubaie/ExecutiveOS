@@ -31,10 +31,10 @@ export const logoutApi = defineHandler({
   guard: 'session',
   input: z.strictObject({}),
   response: z.object({ data: z.null() }),
-  handler: async () => {
+  handler: async (_, ctx) => {
     const jar = await cookies();
     const raw = jar.get(defaults.cookieName)?.value;
-    if (raw) await revokeSession(digest(raw));
+    if (raw) await revokeSession(digest(raw), ctx.db);
     jar.delete(defaults.cookieName);
     return { data: null };
   },

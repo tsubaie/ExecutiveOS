@@ -6,4 +6,5 @@ export {
   patchPerson,
   removePerson,
   restorePerson,
+  personNameSql,
 } from './service';
