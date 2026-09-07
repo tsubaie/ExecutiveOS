@@ -1,0 +1,11 @@
+ExecutiveOS
+Copyright 2026 ExecutiveOS Authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Portions of the design and selected code patterns derive from the authors'
+earlier private project "Mission Control", relicensed by its author under the
+Apache License, Version 2.0 for inclusion here.
+
+Third-party notices (fonts, dependencies) are added to this file as they are
+introduced; see docs/09-audit-checklists.md section F.

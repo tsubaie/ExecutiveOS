@@ -1,0 +1,175 @@
+# 02 — Architecture
+
+## Stack
+
+| Layer | Choice | Why |
+|---|---|---|
+| Framework | Next.js (App Router), React 19, TypeScript strict | Single deployable, server and client in one codebase. ADR 0001 |
+| Database | PostgreSQL 16 | Relational data with real constraints; one dependency for self-hosters |
+| ORM / migrations | Drizzle ORM + drizzle-kit, custom SQL migrations allowed | Schema as typed TypeScript, generated SQL, triggers and indexes reviewed as SQL. ADR 0002 |
+| Validation | Zod | One schema drives types, API validation, form validation, and AI structured output |
+| Client data | TanStack Query | Caching, invalidation, optimistic updates |
+| UI | Tailwind CSS v4, shadcn/ui on Base UI | Accessible primitives, tokenized theme, RTL-capable. ADR 0004 |
+| i18n | next-intl | Message catalogs, direction per locale |
+| AI | `@anthropic-ai/sdk` | In-process API calls; structured outputs via Zod. ADR 0003, 0010 |
+| Jobs | In-process runner on a Postgres table with leases | No external worker; at-least-once with fencing. ADR 0010 |
+| Auth | Own `users` + `sessions` tables, argon2id, cookie sessions | Simple, auditable. ADR 0005 |
+| Backups | Bundled `pg_dump`/`pg_restore` + file manifest | ADR 0008 |
+| Tests | Vitest, Testing Library, Playwright, real Postgres in CI | Behavior tests only |
+| Package manager | pnpm, Node 22 LTS | |
+
+## Deployment model (v1)
+
+- Exactly one application instance and one PostgreSQL database. The spec does not support horizontal scaling in v1; the queue is still crash-safe so a restart never loses or duplicates completed work.
+- Local file storage on a volume (`FILES_DIR`). Files are immutable and content-addressed.
+- Migrations run on container start under a Postgres advisory lock before the HTTP server accepts requests.
+- The reverse proxy terminates TLS; the app trusts `X-Forwarded-*` only from `TRUSTED_PROXY_CIDRS`.
+
+## Repository layout
+
+```
+.
+├── AGENTS.md  CLAUDE.md  README.md  LICENSE
+├── docs/
+├── drizzle/                       generated + custom SQL migrations, meta (committed)
+├── e2e/
+├── scripts/                       audit/, db/, backup/ (tsx), audit/tests/ (fixtures that violate rules)
+├── src/
+│   ├── instrumentation.ts         starts jobs runner + scheduler (nodejs runtime, once)
+│   ├── app/
+│   │   ├── (auth)/login, setup, recovery
+│   │   ├── (app)/home tasks notes committees kpis initiatives meetings people admin
+│   │   └── api/v1/<resource>/route.ts
+│   ├── core/
+│   │   ├── config/                env.ts, settings.ts (typed registry), principal.ts
+│   │   ├── db/                    client.ts, migrate.ts, tx.ts, schema.ts (re-exports)
+│   │   ├── auth/                  session.ts, password.ts, guards.ts, rate-limit.ts, setup.ts
+│   │   ├── http/                  handler.ts, errors.ts, pagination.ts, idempotency.ts, client.ts, openapi.ts
+│   │   ├── jobs/                  runner.ts, queue.ts, scheduler.ts, registry.ts, types.ts
+│   │   ├── ai/                    client.ts, provider.ts, anthropic.ts, fake.ts, budget.ts, models.ts, capabilities.ts
+│   │   ├── i18n/                  request.ts, locales.ts, messages/en.json, messages/ar.json
+│   │   ├── links/                 links service, relation registry, edges view helpers, context query
+│   │   ├── files/                 storage.ts (interface + local), upload.ts, hashing.ts, purge.ts
+│   │   ├── backup/                dump.ts, restore.ts, manifest.ts, maintenance.ts
+│   │   ├── search/                search_text helpers, normalization
+│   │   └── audit/                 audit_log writer
+│   ├── modules/
+│   │   ├── tasks/ notes/ committees/ kpis/ initiatives/ meetings/ people/ users/ settings/ home/
+│   └── ui/
+│       ├── primitives/  entity/  links/  charts/  layout/  markdown/  tokens.css
+├── tools/eslint/                  custom rules (no-color-literals, logical-props, no-literal-strings)
+├── .dependency-cruiser.cjs        layering rules on the real import graph
+├── docker-compose.yml  Dockerfile  .env.example
+└── package.json  tsconfig.json  eslint.config.mjs  vitest.config.ts  playwright.config.ts
+```
+
+### Module manifest (mandatory)
+
+Every module under `src/modules/<name>/` has this shape. The structure audit checks required entries and forbids anything not listed.
+
+| Entry | Required | Responsibility |
+|---|---|---|
+| `schema/db.ts` | yes | Drizzle tables and relations. Server-only. |
+| `schema/validation.ts` | yes | Zod schemas (entity, create, update, list query, AI I/O) and derived types. Client-safe: no Drizzle imports. |
+| `schema/index.ts` | yes | Re-exports both; marked `server-only` when it exports `db.ts` (client code imports `schema/validation` directly). |
+| `repo.ts` | yes | All SQL. May use `core/db`, `core/links` edge helpers, `core/search`. No business rules. |
+| `service.ts` | yes | Business rules, invariants, transactions, explicit orchestration of other modules through their `index.ts`, audit writes, job enqueueing. Actor-aware: every function takes `ctx`. |
+| `api.ts` | yes | `defineHandler` implementations. |
+| `jobs.ts` | if the module owns jobs | Job handlers registered in `core/jobs/registry.ts`. |
+| `ai/` | if the module owns capabilities | `capabilities.ts` and `prompts/<name>.v<N>.ts`. |
+| `ui/` | yes | Components, `queries.ts` (TanStack hooks), `index.ts` (components other modules may reuse). |
+| `tests/` | yes | Scenario tests named by requirement ID (see `08-testing-strategy.md`). |
+| `index.ts` | yes | Public surface: service functions and types for other modules. |
+
+## Request flow
+
+```
+Browser ──HTTP──▶ src/app/api/v1/tasks/route.ts
+                     └─▶ core/http/handler()   request id, guard, Origin check, parse, idempotency, envelope, log
+                          └─▶ modules/tasks/api.ts
+                               └─▶ modules/tasks/service.ts   rules, transactions, orchestration
+                                    └─▶ modules/tasks/repo.ts  SQL via Drizzle
+                                         └─▶ PostgreSQL
+```
+
+- Server components MAY call `service.ts` for initial page data with the request's `ctx`. They MUST NOT call `repo.ts`.
+- Client components use TanStack Query hooks from `modules/<m>/ui/queries.ts`, which call `/api/v1/...` through `core/http/client.ts`. Components never call `fetch` directly.
+- Cross-module effects are explicit awaited calls in the originating service, inside its transaction. There is no event bus. A durable side effect that must survive a crash is a job inserted in the same transaction.
+
+## Authentication and authorization
+
+- Cookie session (`eos_session`, httpOnly, `SameSite=Lax`, Secure in production). Session rows store a token hash. Sliding 30-day expiry, absolute 90-day expiry. ADR 0005.
+- Roles: `admin`, `member`. All members read and write shared module data. Admin additionally manages users, settings, backups, jobs, AI, and learnings.
+- **Private data** is stored in per-user tables (`meeting_private_notes`, user preferences) and never on shared rows. Services take `ctx` and filter private tables by `ctx.user.id` on every read path, including server components, jobs that build AI inputs (private notes are never sent to AI), audit diffs (private tables are not audited), and backups (included; backup operators are admins by definition).
+- `core/auth/guards.ts` exposes `session` and `admin` guards. `defineHandler` refuses a route without a guard.
+- First run: `users` is empty → only `/setup` is reachable, and it requires the `SETUP_TOKEN` printed to the container log at first boot. Setup runs in a transaction that locks the singleton `workspace` row so concurrent submissions cannot both succeed.
+- Recovery without a CLI: an operator sets `RECOVERY_TOKEN` in the environment and restarts; `/recovery` accepts the token and lets them set a password for an existing admin. The token is single-use and the route is absent when the variable is unset.
+- Last-admin protection: the last active admin cannot be deactivated or demoted. Deactivation revokes all sessions.
+
+## Background jobs
+
+Contract in ADR 0010; schema in `03-data-model.md` § jobs.
+
+- Single `jobs` table. Producers insert `{ kind, payload, dedup_key?, entity_type?, entity_id?, run_after?, deadline_at? }`. `dedup_key` is unique among non-terminal jobs; an insert that collides returns the existing job.
+- Runner: `src/instrumentation.ts` `register()` starts the runner and scheduler once when `NEXT_RUNTIME === "nodejs"`, `JOBS_ENABLED !== "false"`, and not during build or test. It does not await the loop. On `SIGTERM` it stops claiming, signals running handlers through `AbortSignal`, waits up to `JOBS_DRAIN_SECONDS` (default 25), then exits.
+- Claiming: `UPDATE jobs SET status='running', attempt=attempt+1, lease_owner=$w, lease_expires_at=now()+lease WHERE id = (SELECT id … FOR UPDATE SKIP LOCKED)`. Lease is 2 minutes; the runner renews every 30 seconds while the handler runs. A job whose lease expired is claimable again.
+- Fencing: every write a handler makes to `jobs` (heartbeat, result, failure) is conditional on `attempt = $myAttempt AND lease_owner = $w AND status = 'running'`. A handler whose renewal fails receives an abort signal and must stop; any result it produces afterwards is discarded (zero rows updated) and logged.
+- Result publication is atomic with the job's own side effects: handlers write their outputs inside one transaction that also performs the fenced status update. If the fence fails, the transaction rolls back.
+- Semantics: at-least-once execution. Handlers are idempotent with respect to their side effects (upserts keyed by `job_id` or `dedup_key`), which is tested by running each handler twice.
+- Retries: per-kind `maxAttempts` (default 3) with backoff 30 s, 2 m, 8 m. `deadline_at` fails a job that has not succeeded in time. `cancel_requested` is checked by the runner before claiming and surfaced to handlers through the abort signal.
+- Concurrency: global `JOBS_CONCURRENCY` (default 4) and per-kind limits from the registry (`ai.meetings.brief`: 1, other AI kinds: 2, extraction: 1). Admission is enforced at claim time with a per-kind count.
+- Every attempt writes a `job_attempts` row (start, finish, status, error, lease owner).
+- Scheduler: `schedules` rows (kind, cron, timezone, payload). Every minute the scheduler computes due occurrences and inserts jobs with `dedup_key = kind:occurrence` so an occurrence can never run twice. Missed occurrences while the app was down: only the latest missed one per schedule is enqueued on start.
+
+## AI
+
+All model calls go through `core/ai` and all run as jobs; there is no inline mode. Full contract: `06-ai-integration.md`.
+
+## Links, files, backup, search
+
+- `core/links`: the `entity_links` table (contextual edges only), the relation registry (allowed endpoint pairs, direction, inverse labels), the `entity_edges` view that unions contextual edges with structural projections, and the context query. Spec: `features/links.md`, ADR 0009.
+- `core/files`: upload streaming to a temp path, hashing, atomic move to the content-addressed key, DB insert in a transaction after the move, orphan sweep, availability states, purge. Spec: `features/meetings.md`, ADR 0007.
+- `core/backup`: `pg_dump` (custom format) then tar of `FILES_DIR`, a `manifest.json` with checksums, schema version, and app version; restore enters maintenance mode, `pg_restore`, files, verifies checksums. Consistency: files are immutable and written before their DB row, and the dump is taken first, so every file referenced by the dump exists in the tar. ADR 0008.
+- `core/search`: generated `search_text` columns per table (declared in each schema), normalization for Arabic (remove tashkeel, unify alef and ya forms) and case folding, wildcard escaping, trigram indexes.
+
+## Resource limits (runtime-enforced)
+
+| Resource | Limit | Where |
+|---|---|---|
+| Upload body | `MAX_UPLOAD_MB` (default 20) | handler, before buffering |
+| PDF pages | 300 | extraction job, before AI |
+| Model input | `count_tokens` preflight ≤ 150 000 tokens | brief job |
+| Concurrent uploads | 2 per instance | handler semaphore |
+| Extraction and brief jobs | 1 each | jobs registry |
+| Other AI jobs | 2 | jobs registry |
+| Password hashing | 2 concurrent | auth semaphore |
+| Job queue depth per kind | 100 (429 beyond) | enqueue |
+| Storage quota | `FILES_QUOTA_GB` (default 20) | upload |
+
+Overload responses are 429 with `retryAfterSeconds`. Interactive requests never wait on job capacity.
+
+## Configuration
+
+1. **Environment (`core/config/env.ts`)**, zod-validated at boot: `DATABASE_URL`, `SESSION_SECRET` (≥ 32 chars), `APP_URL`, `TRUSTED_PROXY_CIDRS`, `ANTHROPIC_API_KEY` (optional), `FILES_DIR`, `FILES_QUOTA_GB`, `MAX_UPLOAD_MB`, `BACKUP_DIR`, `JOBS_ENABLED`, `JOBS_CONCURRENCY`, `JOBS_DRAIN_SECONDS`, `RECOVERY_TOKEN` (optional), `LOG_LEVEL`.
+2. **Settings (`core/config/settings.ts`)**: a typed registry `{ key, schema, default, readRoles, writeRoles, scope: "workspace" | "user" }`. Workspace keys: `workspace.name`, `workspace.principal_person_id`, `workspace.default_locale`, `workspace.timezone`, `workspace.arabic_numerals`, `retention.trash_days`, `retention.meeting_files_days`, `ai.model.default`, `ai.model.fast`, `ai.enabled_capabilities`, `ai.monthly_token_budget`, `notes.types`, `notes.default_type`, `kpis.status_thresholds`, `tasks.default_view`. User keys: `user.locale`, `user.timezone`, `user.theme`, `user.numerals`. Keys whose name or schema suggests a secret are rejected by the registry's own test.
+
+Nothing else may read `process.env` (static lint).
+
+## Observability
+
+- Structured JSON logs via `pino` with request id and, for jobs, job id and attempt.
+- Every API error response carries the request id.
+- AI calls log capability, version, model, tokens, cache read and write tokens, latency, and status. Never prompt bodies.
+- Redaction: session tokens, API keys, passwords, and private-note bodies are redacted by a serializer before logging.
+
+## Health
+
+`GET /api/v1/health` (public) returns `{ status: "ok" | "degraded", version, db: boolean, jobs: { queued, running, oldestQueuedSeconds }, ai: "enabled" | "disabled" | "error", storage: { usedBytes, quotaBytes } }`.
+
+## What deliberately does not exist
+
+- No separate worker, no OS cron, no separately installed tools.
+- No event bus; effects are explicit.
+- No untyped `unknown` crossing a module boundary.
+- No client-side environment access.
+- No clustering in v1.
