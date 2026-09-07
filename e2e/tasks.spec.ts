@@ -180,7 +180,7 @@ test('TASKS-A07 TASKS-B02 API authorization validation idempotency and disabled 
   page,
   request,
 }) => {
-  expect((await request.get('http://app:3000/api/v1/tasks')).status()).toBe(401);
+  expect((await request.get('/api/v1/tasks')).status()).toBe(401);
   await loginAs(page, 'en');
   expect((await api(page, '', 'POST', { title: '' })).status).toBe(400);
   const key = crypto.randomUUID();
