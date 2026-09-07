@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { z } from 'zod';
+import { env } from '../../src/core/config/env';
+import { ensureTestDatabase } from '../../src/core/db/test-database';
 import { databaseFor, testPool } from '../../src/core/db/client';
 import { resetDatabase } from '../../src/core/db/reset';
 import {
@@ -277,6 +279,7 @@ async function drizzleKitCheck(root: string): Promise<Finding[]> {
   }
 }
 export async function auditSchema(root: string) {
+  await ensureTestDatabase(env().DATABASE_URL_TEST ?? '');
   const source = testPool();
   const database = databaseFor(source);
   try {

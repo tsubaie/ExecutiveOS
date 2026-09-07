@@ -1,3 +1,5 @@
+import { env } from '../../src/core/config/env';
+import { ensureTestDatabase } from '../../src/core/db/test-database';
 import { databaseFor, testPool, type Database } from '../../src/core/db/client';
 import { resetDatabase } from '../../src/core/db/reset';
 import { countQueries } from '../../src/core/db/query-log';
@@ -64,6 +66,7 @@ async function measure(
   return { name: path.name, ms: times[Math.floor(times.length / 2)] ?? 0, queries };
 }
 export async function auditPerf() {
+  await ensureTestDatabase(env().DATABASE_URL_TEST ?? '');
   const source = testPool();
   const database = databaseFor(source);
   try {

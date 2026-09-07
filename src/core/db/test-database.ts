@@ -1,4 +1,6 @@
+import 'server-only';
 import pg from 'pg';
+// Disposable *_test databases used by the unit suites and the database-backed audits.
 export function assertTestDatabase(url: string) {
   const parsed = new URL(url);
   const name = decodeURIComponent(parsed.pathname.slice(1));

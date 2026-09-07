@@ -1,5 +1,5 @@
 import { env } from '@/core/config/env';
-import { ensureTestDatabase } from './test-database';
+import { ensureTestDatabase } from '@/core/db/test-database';
 // Vitest runs this once before any suite. Integration suites share one *_test database.
 export default async function setup() {
   let url: string;
