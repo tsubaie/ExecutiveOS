@@ -41,9 +41,11 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  sheet = false,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
+  sheet?: boolean;
 }) {
   const t = useTranslations('common');
   return (
@@ -52,7 +54,10 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          'fixed top-1/2 start-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 rtl:translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+          'fixed z-50 grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+          sheet
+            ? 'start-0 end-0 bottom-0 max-w-none rounded-es-none rounded-ee-none pb-[max(16px,env(safe-area-inset-bottom))] lg:top-1/2 lg:start-1/2 lg:end-auto lg:bottom-auto lg:max-w-md lg:-translate-x-1/2 lg:rtl:translate-x-1/2 lg:-translate-y-1/2 lg:rounded-xl'
+            : 'top-1/2 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 -translate-y-1/2',
           className,
         )}
         {...props}
@@ -85,6 +90,7 @@ function DialogFooter({
   ...props
 }: React.ComponentProps<'div'> & {
   showCloseButton?: boolean;
+  sheet?: boolean;
 }) {
   const t = useTranslations('common');
   return (

@@ -43,6 +43,7 @@ export function TaskToggle({ task }: { task: Task }) {
   return (
     <>
       <Checkbox
+        className="entity-check rounded-full"
         checked={task.status === 'completed'}
         disabled={pending}
         aria-label={t(task.status === 'completed' ? 'reopenNamed' : 'completeNamed', {

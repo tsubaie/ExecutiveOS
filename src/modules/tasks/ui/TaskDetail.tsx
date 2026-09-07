@@ -37,14 +37,16 @@ export function TaskDetail({
             <p className="mb-4 text-sm text-text-muted">{t('completedHint')}</p>
           )}
           <TaskFields initial={task} save={api.save} disabled={task.status === 'completed'} />
-          <div className="mt-5">
-            <Button variant="destructive" onClick={api.remove}>
-              {c('delete')}
-            </Button>
-          </div>
         </>
       )}
       <Subtasks task={task} />
+      {!task.deletedAt && (
+        <div className="mt-6 border-t pt-4">
+          <Button variant="ghost" className="text-danger" onClick={api.remove}>
+            {c('delete')}
+          </Button>
+        </div>
+      )}
       <p className="mt-6 text-xs text-text-muted">
         {t('updated', { date: task.updatedAt.slice(0, 10) })}
       </p>

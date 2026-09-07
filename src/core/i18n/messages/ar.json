@@ -55,7 +55,17 @@
     "errorState": "فشل الحفظ",
     "tasks": "المهام",
     "selectItem": "تحديد {name}",
-    "conflictReapply": "تم تعديل هذا السجل في مكان آخر. حدّث النسخة وأعد تطبيق الحقول التي عدّلتها."
+    "conflictReapply": "تم تعديل هذا السجل في مكان آخر. حدّث النسخة وأعد تطبيق الحقول التي عدّلتها.",
+    "select": "تحديد العناصر",
+    "doneSelecting": "إنهاء التحديد",
+    "filtersActive": "الفلاتر · {count}",
+    "filterDescription": "اختر عرضًا وحدد النتائج المطلوبة.",
+    "noMatchesDescription": "جرّب بحثًا آخر أو امسح الفلاتر المفعّلة.",
+    "collapseViews": "طي العروض",
+    "expandViews": "إظهار العروض",
+    "selectionHint": "حدد العناصر لاستخدام الإجراءات الجماعية.",
+    "position": "{position} من {count}",
+    "titleRequired": "أدخل عنوانًا قبل مغادرة هذا الحقل."
   },
   "people": {
     "fullName": "الاسم الكامل",

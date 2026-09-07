@@ -11,7 +11,7 @@ function NativeSelect({ className, size = 'default', ...props }: NativeSelectPro
   return (
     <div
       className={cn(
-        'group/native-select relative w-fit has-[select:disabled]:opacity-50',
+        'group/native-select relative min-w-0 w-full has-[select:disabled]:opacity-50',
         className,
       )}
       data-slot="native-select-wrapper"

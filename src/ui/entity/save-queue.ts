@@ -86,6 +86,7 @@ class SaveQueue<T extends Entity, P extends object> {
     q.conflict = false;
     this.notify('idle', null);
   };
+  latest = () => this.q.current;
   settle = async () => {
     const q = this.q;
     while (q.running) await q.running;

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createSaveQueue } from './save-queue';
 import type { Entity, SaveState } from './types';
 export function useSaveQueue<T extends Entity, P extends object>(
@@ -15,12 +15,19 @@ export function useSaveQueue<T extends Entity, P extends object>(
       setError(error);
     }),
   );
+  // sync: expire the transient saved announcement after two seconds.
+  useEffect(() => {
+    if (state !== 'saved') return;
+    const timer = setTimeout(() => setState('idle'), 2000);
+    return () => clearTimeout(timer);
+  }, [state]);
   return {
     state,
     error,
     save: (input: P) => queue.save(entity, input),
     retry: () => queue.retry(reload),
     settle: queue.settle,
+    latest: queue.latest,
     discard: queue.discard,
   };
 }

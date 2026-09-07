@@ -4,6 +4,8 @@ import { useTranslations } from 'next-intl';
 import { ChevronUp, ChevronDown, X } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
+import { useLinkGuard } from './use-link-guard';
+import { useNavigationGuard } from './use-navigation-guard';
 import { useSaveQueue } from './use-save-queue';
 import { DeleteEntityDialog, UnsavedEntityDialog } from './EntityDialogs';
 import type { Entity, DetailApi, EntityPageProps, SaveState } from './types';
@@ -15,6 +17,7 @@ type Props<T extends Entity, P extends object, C> = {
   reload: () => Promise<T | undefined>;
   close: () => void;
   move: (direction: number) => void;
+  neighbors: { previous: boolean; next: boolean; position: number; count: number };
 };
 export function EntityPanel<T extends Entity, P extends object, C>(props: Props<T, P, C>) {
   const t = useTranslations('common');
@@ -28,6 +31,7 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
     <>
       <PanelToolbar
         state={c.queue.state}
+        neighbors={props.neighbors}
         move={(direction) => void c.navigate(() => props.move(direction))}
         close={() => void c.navigate(props.close)}
       />
@@ -73,13 +77,18 @@ function usePanelController<T extends Entity, P extends object, C>(props: Props<
     if (await queue.settle()) action();
     else setNavigation(() => action);
   }
+  useNavigationGuard(navigate, queue.state);
+  useLinkGuard(navigate);
   async function remove() {
     try {
       if (!(await queue.settle())) {
         setDeleting(false);
         return;
       }
-      await props.mutations.remove(props.item.id, props.item.revision);
+      await props.mutations.remove(
+        props.item.id,
+        Math.max(queue.latest()?.revision ?? 0, props.item.revision),
+      );
       props.close();
     } catch (error) {
       setError(error instanceof Error ? error : new Error(t('error')));
@@ -109,21 +118,33 @@ function usePanelController<T extends Entity, P extends object, C>(props: Props<
 }
 function PanelToolbar({
   state,
+  neighbors,
   move,
   close,
 }: {
   state: SaveState;
+  neighbors: { previous: boolean; next: boolean; position: number; count: number };
   move: (direction: number) => void;
   close: () => void;
 }) {
   const t = useTranslations('common');
   return (
-    <div className="flex items-center justify-between border-b p-3">
+    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-surface p-2">
       <div className="flex gap-1">
-        <Button variant="ghost" aria-label={t('previous')} onClick={() => move(-1)}>
+        <Button
+          variant="ghost"
+          disabled={!neighbors.previous}
+          aria-label={t('previous')}
+          onClick={() => move(-1)}
+        >
           <ChevronUp className="size-4" />
         </Button>
-        <Button variant="ghost" aria-label={t('next')} onClick={() => move(1)}>
+        <Button
+          variant="ghost"
+          disabled={!neighbors.next}
+          aria-label={t('next')}
+          onClick={() => move(1)}
+        >
           <ChevronDown className="size-4" />
         </Button>
       </div>
@@ -132,6 +153,7 @@ function PanelToolbar({
       </div>
       <Button variant="ghost" aria-label={t('close')} onClick={close}>
         <X className="size-4" />
+        <span className="lg:sr-only">{t('back')}</span>
       </Button>
     </div>
   );

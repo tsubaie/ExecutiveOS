@@ -36,7 +36,10 @@ export function GroupTasks({ items, clear }: { items: TaskDetail[]; clear: () =>
         <Button
           size="sm"
           variant="outline"
-          disabled={items.length < 2}
+          disabled={
+            items.length < 2 ||
+            items.some((item) => item.deletedAt || item.parentId || item.subtaskCount > 0)
+          }
           onClick={() => setOpen(true)}
         >
           {t('group')}

@@ -31,17 +31,17 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
 }
 function EntityEmpty<T extends Entity, P extends object, C>({ controller: c }: Surface<T, P, C>) {
   const t = useTranslations('common');
-  const filtered = c.state.q || c.state.view !== 'all';
+  const filtered = c.state.q || c.state.view !== 'all' || Object.values(c.facets).some(Boolean);
   return (
     <div className="grid justify-items-center gap-4 px-6 py-16 text-center">
       <Users className="size-8 text-text-muted" />
       <h2 className="text-lg font-medium">{t(filtered ? 'noMatches' : 'empty')}</h2>
-      <p className="max-w-sm text-sm text-text-muted">{t('emptyDescription')}</p>
+      <p className="max-w-sm text-sm text-text-muted">
+        {t(filtered ? 'noMatchesDescription' : 'emptyDescription')}
+      </p>
       <Button
         variant="outline"
-        onClick={() =>
-          filtered ? c.navigate({ q: null, view: 'all' }, true) : c.navigate({ new: '1' })
-        }
+        onClick={() => (filtered ? c.clearFilters() : c.navigate({ new: '1' }))}
       >
         {t(filtered ? 'clear' : 'create')}
       </Button>
@@ -55,20 +55,13 @@ function EntityListRow<T extends Entity, P extends object, C>({
   index,
 }: Surface<T, P, C> & { item: T; index: number }) {
   const t = useTranslations('common');
-  const heading = config.group?.(item);
-  const showHeading =
-    heading && (index === 0 || heading !== config.group?.(c.list.items[index - 1] ?? item));
   return (
     <li>
-      {showHeading && (
-        <h2 className="border-b bg-surface-raised px-5 py-2 text-xs font-semibold text-text-muted">
-          {heading}
-        </h2>
-      )}
+      <EntityGroupHeading config={config} controller={c} item={item} index={index} />
       <div className="flex min-w-0 items-center border-b">
-        {config.bulk && (
+        {config.bulk && c.selecting && (
           <Checkbox
-            className="ms-4 shrink-0 rounded-full"
+            className="entity-check ms-1 shrink-0"
             aria-label={t('selectItem', { name: config.renderers.name(item) })}
             checked={c.selected.includes(item.id)}
             onCheckedChange={(checked) =>
@@ -84,13 +77,16 @@ function EntityListRow<T extends Entity, P extends object, C>({
             }
           />
         )}
-        {config.rowAction && <div className="ms-3 shrink-0">{config.rowAction(item)}</div>}
+        {config.rowAction && !c.selecting && (
+          <div className="ms-1 shrink-0">{config.rowAction(item)}</div>
+        )}
         <Button
           data-row-id={item.id}
+          aria-current={c.state.id === item.id ? 'true' : undefined}
           variant="ghost"
           className={cn(
-            'h-auto min-h-20 min-w-0 flex-1 justify-start rounded-none px-5 py-4 text-start',
-            c.state.id === item.id && 'bg-accent/10',
+            'h-auto min-h-20 min-w-0 flex-1 justify-start rounded-none px-3 py-3 text-start',
+            c.state.id === item.id && 'bg-surface ring-1 ring-inset ring-accent/40',
           )}
           onFocus={() => c.setFocused(index)}
           onClick={() => c.navigate({ id: item.id })}
@@ -99,5 +95,21 @@ function EntityListRow<T extends Entity, P extends object, C>({
         </Button>
       </div>
     </li>
+  );
+}
+
+function EntityGroupHeading<T extends Entity, P extends object, C>({
+  config,
+  controller: c,
+  item,
+  index,
+}: Surface<T, P, C> & { item: T; index: number }) {
+  const heading = c.facets.sort ? null : config.group?.(item);
+  if (!heading || (index > 0 && heading === config.group?.(c.list.items[index - 1] ?? item)))
+    return null;
+  return (
+    <h2 className="border-b bg-surface-raised px-5 py-2 text-xs font-semibold text-text-muted">
+      {heading}
+    </h2>
   );
 }

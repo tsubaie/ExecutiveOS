@@ -36,4 +36,5 @@ it('EP-B08 pending edits drain after the active save using its returned revision
   resolve({ ...entity, revision: 2, title: 'First' });
   expect(await queue.settle()).toBe(true);
   expect(writer.mock.calls.map((call) => call[1])).toEqual([1, 2]);
+  expect(queue.latest()?.revision).toBe(3);
 });

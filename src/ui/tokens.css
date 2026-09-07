@@ -122,3 +122,53 @@
     animation: none;
   }
 }
+
+/* Shared entity surfaces keep list and detail independently reachable. */
+.entity-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 119px - env(safe-area-inset-bottom));
+}
+.entity-check[data-slot='checkbox'] {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+}
+.entity-check[data-slot='checkbox']::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px solid var(--color-text-muted);
+  border-radius: inherit;
+}
+.entity-check[data-checked]::before {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.entity-check [data-slot='checkbox-indicator'] {
+  position: relative;
+  color: var(--color-background);
+}
+.entity-check::after {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .entity-page {
+    height: calc(100dvh - 63px);
+  }
+}
+
+main:has(.entity-page) {
+  padding-bottom: 0;
+}
+.mobile-navigation > a {
+  min-width: 44px;
+  min-height: 56px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding-inline: 8px;
+  font-size: 12px;
+}

@@ -27,10 +27,12 @@ export function SubtaskActions({ task, parent }: { task: Task; parent: TaskDetai
       {!task.deletedAt && (
         <fieldset disabled={operation.pending || Boolean(parent.deletedAt)} className="grid gap-2">
           <SubtaskFields task={task} operation={operation} />
-          <SubtaskOrdering task={task} parent={parent} operation={operation} />
-          <Button size="sm" variant="ghost" onClick={() => setDeleting(true)}>
-            {c('delete')}
-          </Button>
+          <div className="flex flex-wrap items-center justify-between gap-1">
+            <SubtaskOrdering task={task} parent={parent} operation={operation} />
+            <Button size="sm" variant="ghost" onClick={() => setDeleting(true)}>
+              {c('delete')}
+            </Button>
+          </div>
         </fieldset>
       )}
       {task.deletedOpId && !parent.deletedAt && (
@@ -78,7 +80,7 @@ function SubtaskFields({ task, operation }: { task: Task; operation: Operation }
   const patch = (fields: { ownerId?: string | null; dueDate?: string | null }) =>
     operation.run(() => mutations.patch(task.id, task.revision, fields, crypto.randomUUID()));
   return (
-    <>
+    <div className="grid grid-cols-2 gap-2">
       <NativeSelect
         aria-label={t('owner')}
         value={task.ownerId ?? ''}
@@ -97,7 +99,7 @@ function SubtaskFields({ task, operation }: { task: Task; operation: Operation }
         value={task.dueDate ?? ''}
         onChange={(event) => void patch({ dueDate: event.target.value || null })}
       />
-    </>
+    </div>
   );
 }
 function SubtaskOrdering({

@@ -32,6 +32,7 @@ export function EntityContent<T extends Entity, P extends object, C>({
       close={c.close}
       reload={c.detail.refetch}
       move={c.move}
+      neighbors={c.neighbors}
     />
   );
 }

@@ -55,7 +55,17 @@
     "errorState": "Save failed",
     "tasks": "Tasks",
     "selectItem": "Select {name}",
-    "conflictReapply": "This record changed elsewhere. Reload the latest revision and reapply your edited fields."
+    "conflictReapply": "This record changed elsewhere. Reload the latest revision and reapply your edited fields.",
+    "select": "Select items",
+    "doneSelecting": "Done selecting",
+    "filtersActive": "Filters · {count}",
+    "filterDescription": "Choose a view and narrow the results.",
+    "noMatchesDescription": "Try another search or clear the active filters.",
+    "collapseViews": "Collapse views",
+    "expandViews": "Expand views",
+    "selectionHint": "Select rows to use bulk actions.",
+    "position": "{position} of {count}",
+    "titleRequired": "Enter a title before leaving this field."
   },
   "people": {
     "fullName": "Full name",

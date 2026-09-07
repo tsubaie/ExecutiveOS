@@ -20,3 +20,14 @@ export function changeUrl(params: URLSearchParams, patch: Record<string, string 
   }
   return result.toString();
 }
+
+export function clearEntityFilters(keys: string[]) {
+  return Object.fromEntries([
+    ...keys.map((key) => [key, null]),
+    ['view', 'all'],
+    ['q', null],
+    ['id', null],
+    ['new', null],
+    ['sel', null],
+  ]);
+}

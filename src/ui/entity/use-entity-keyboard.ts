@@ -8,6 +8,10 @@ type Options = {
   navigate: (patch: Record<string, string | null>, replace?: boolean) => void;
   close: () => void;
   panel: boolean;
+  selected: string[];
+  selectable: boolean;
+  select: () => void;
+  clear: () => void;
 };
 export function useEntityKeyboard(root: RefObject<HTMLElement | null>, options: Options) {
   // sync: delegated DOM keyboard events belong to the entity surface, not individual modules.
@@ -15,21 +19,13 @@ export function useEntityKeyboard(root: RefObject<HTMLElement | null>, options: 
     const element = root.current;
     function keyboard(event: KeyboardEvent) {
       if (ignoredKey(event)) return;
-      if (['ArrowDown', 'j', 'ArrowUp', 'k'].includes(event.key)) {
+      if (!options.panel && ['ArrowDown', 'j', 'ArrowUp', 'k'].includes(event.key)) {
         event.preventDefault();
-        const index = Math.max(
-          0,
-          Math.min(
-            options.items.length - 1,
-            options.focused + (['ArrowDown', 'j'].includes(event.key) ? 1 : -1),
-          ),
-        );
-        options.setFocused(index);
-        const item = options.items[index];
-        if (item)
-          element
-            ?.querySelector<HTMLButtonElement>(`[data-row-id="${CSS.escape(item.id)}"]`)
-            ?.focus();
+        focusNeighbor(event, options, element);
+      }
+      if (!options.panel && event.key === 'x') {
+        event.preventDefault();
+        selectFocused(options);
       }
       if (event.key === 'n') {
         event.preventDefault();
@@ -38,7 +34,7 @@ export function useEntityKeyboard(root: RefObject<HTMLElement | null>, options: 
       if (event.key === 'Escape') {
         event.preventDefault();
         if (options.panel) options.close();
-        else options.navigate({ q: null, view: null }, true);
+        else options.clear();
       }
     }
     element?.addEventListener('keydown', keyboard);
@@ -52,4 +48,28 @@ function ignoredKey(event: KeyboardEvent) {
     event.target instanceof HTMLElement &&
     Boolean(event.target.closest('input,textarea,select,[contenteditable=true],[role=dialog]'))
   );
+}
+
+function selectFocused(options: Options) {
+  const item = options.items[options.focused];
+  if (!item || !options.selectable) return;
+  options.select();
+  const selected = options.selected.includes(item.id)
+    ? options.selected.filter((id) => id !== item.id)
+    : [...options.selected, item.id];
+  options.navigate({ sel: selected.join(',') }, true);
+}
+
+function focusNeighbor(event: KeyboardEvent, options: Options, element: HTMLElement | null) {
+  const index = Math.max(
+    0,
+    Math.min(
+      options.items.length - 1,
+      options.focused + (['ArrowDown', 'j'].includes(event.key) ? 1 : -1),
+    ),
+  );
+  options.setFocused(index);
+  const item = options.items[index];
+  if (item)
+    element?.querySelector<HTMLButtonElement>(`[data-row-id="${CSS.escape(item.id)}"]`)?.focus();
 }

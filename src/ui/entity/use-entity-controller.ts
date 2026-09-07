@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect, type RefObject } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { resolveUrlState, changeUrl } from './url-state';
+import { resolveUrlState, changeUrl, clearEntityFilters } from './url-state';
 import type { Entity, EntityPageProps } from './types';
+import { requestEntityNavigation } from './use-navigation-guard';
+import { useEntityNeighbors } from './use-entity-neighbors';
 import { useEntityKeyboard } from './use-entity-keyboard';
 export function useEntityController<T extends Entity, P extends object, C>(
   props: EntityPageProps<T, P, C>,
@@ -20,24 +22,16 @@ export function useEntityController<T extends Entity, P extends object, C>(
   const selected = (params.get('sel') ?? '').split(',').filter(Boolean);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [focused, setFocused] = useState(0);
+  const [selecting, setSelecting] = useState(false);
+  const [railOpen, setRailOpen] = useState(true);
   const navigate = (patch: Record<string, string | null>, replace = false) => {
     const query = changeUrl(new URLSearchParams(window.location.search), patch);
-    router[replace ? 'replace' : 'push'](`${path}${query ? '?' + query : ''}`, { scroll: false });
+    requestEntityNavigation(() =>
+      router[replace ? 'replace' : 'push'](`${path}${query ? '?' + query : ''}`, { scroll: false }),
+    );
   };
-  const close = () => {
-    navigate({ id: null, new: null });
-    const row = list.items[focused];
-    if (row)
-      document
-        .querySelector<HTMLButtonElement>(`[data-row-id="${CSS.escape(row.id)}"]`)
-        ?.focus({ preventScroll: true });
-  };
-  const move = (direction: number) => {
-    const index = list.items.findIndex((item) => item.id === state.id);
-    const next = list.items[index + direction];
-    if (next) navigate({ id: next.id }, true);
-    else if (direction > 0 && list.more) void list.fetchMore();
-  };
+  const close = () => navigate({ id: null, new: null });
+  const neighbors = useEntityNeighbors(list, state.id, navigate);
   useDefaultView(list.defaultView, Boolean(state.id || state.creating));
   useEntityKeyboard(root, {
     items: list.items,
@@ -46,21 +40,29 @@ export function useEntityController<T extends Entity, P extends object, C>(
     navigate,
     close,
     panel: Boolean(state.id || state.creating),
+    selected,
+    selectable: Boolean(props.bulk),
+    select: () => setSelecting(true),
+    clear: () => {
+      navigate({ sel: null }, true);
+      setSelecting(false);
+    },
   });
   const { creating, submit } = useEntityCreate(props.mutations.create, navigate);
   return {
     state,
     facets,
+    clearFilters: (id: string | null = null) =>
+      navigate({ ...clearEntityFilters(Object.keys(facets)), id }, true),
+    selecting: selecting || selected.length > 0,
+    setSelecting,
+    ...{ railOpen, setRailOpen },
     list,
     detail,
-    selected,
-    filtersOpen,
-    setFiltersOpen,
-    creating,
-    setFocused,
-    navigate,
-    close,
-    move,
+    ...{ selected, filtersOpen, setFiltersOpen },
+    ...{ creating, setFocused, navigate, close },
+    move: neighbors.move,
+    neighbors,
     submit,
   };
 }
