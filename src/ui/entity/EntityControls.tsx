@@ -12,7 +12,9 @@ export type Surface<T extends Entity, P extends object, C> = {
   config: EntityPageProps<T, P, C>;
   controller: EntityController<T, P, C>;
 };
-// Title, current view and count, search, filter, selection and the primary action in one bar.
+// Title and current view lead, search, filter and selection follow, and Create closes the bar at
+// its trailing end; when the bar wraps (a phone, or beside an open detail) Create stays on the
+// title row so the primary action never drops below the fold.
 export function EntityToolbar<T extends Entity, P extends object, C>({
   config,
   controller: c,
@@ -35,7 +37,7 @@ export function EntityToolbar<T extends Entity, P extends object, C>({
           <p className="sr-only">{config.description}</p>
           <EntityToolbarSummary config={config} controller={c} />
         </div>
-        <Button onClick={() => c.navigate({ new: '1' })}>
+        <Button className="@2xl:order-last" onClick={() => c.navigate({ new: '1' })}>
           <Plus className="size-4" />
           {t('create')}
         </Button>
