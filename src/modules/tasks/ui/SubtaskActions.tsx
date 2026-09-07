@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowUp, ArrowDown, CornerUpRight, Eye, Trash2 } from 'lucide-react';
+import { CornerUpRight, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
 } from '@/ui/primitives/dialog';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { Property } from '@/ui/layout/Property';
+import { SaveStatus } from '@/ui/layout/SaveStatus';
 import type { Task, TaskDetail } from '../schema/validation';
 import { useTaskMutations, useOwners } from './queries';
 import { useTaskOperation } from './use-task-operation';
@@ -49,13 +50,13 @@ export function SubtaskActions({ task, parent }: { task: Task; parent: TaskDetai
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <DialogTitle dir="auto" className="plaintext pe-8">
-            {task.title}
+          <DialogTitle className="pe-8">
+            <bdi>{task.title}</bdi>
           </DialogTitle>
           <DialogDescription>{t('subtaskDetailsDescription')}</DialogDescription>
           {operation.error && <ErrorPanel error={operation.error} />}
           <SubtaskFields task={task} operation={operation} />
-          <SubtaskOrdering task={task} parent={parent} operation={operation} />
+          <SubtaskDialogFooter task={task} parent={parent} operation={operation} />
         </DialogContent>
       </Dialog>
     </>
@@ -90,7 +91,9 @@ function SubtaskFields({ task, operation }: { task: Task; operation: Operation }
     </fieldset>
   );
 }
-function SubtaskOrdering({
+// Convert and trash on the start side, the save state and a labelled Close on the end side;
+// ordering is the grip handle in the list (drag, or arrow keys while it has focus).
+function SubtaskDialogFooter({
   task,
   parent,
   operation,
@@ -101,30 +104,11 @@ function SubtaskOrdering({
 }) {
   const t = useTranslations('tasks');
   const mutations = useTaskMutations();
-  const { index, length, reorder } = useSubtaskOrder(task, parent, operation);
   return (
-    <DialogFooter className="flex-row flex-wrap items-center gap-1 sm:justify-start">
-      <Button
-        size="icon"
-        variant="outline"
-        aria-label={t('moveUp')}
-        disabled={index <= 0 || operation.pending}
-        onClick={() => reorder(-1)}
-      >
-        <ArrowUp className="size-4" />
-      </Button>
-      <Button
-        size="icon"
-        variant="outline"
-        aria-label={t('moveDown')}
-        disabled={index >= length - 1 || operation.pending}
-        onClick={() => reorder(1)}
-      >
-        <ArrowDown className="size-4" />
-      </Button>
+    <DialogFooter showCloseButton className="flex-row flex-wrap items-center gap-2">
       <Button
         variant="outline"
-        disabled={operation.pending}
+        disabled={operation.pending || Boolean(parent.deletedAt)}
         onClick={() =>
           void operation.run(() =>
             mutations.action(task.id, 'convert-to-task', { revision: task.revision }),
@@ -134,8 +118,9 @@ function SubtaskOrdering({
         <CornerUpRight className="size-4" />
         {t('convert')}
       </Button>
-      <span className="flex-1" />
       <SubtaskDelete task={task} operation={operation} />
+      <span className="flex-1" />
+      <SaveStatus state={operation.state} />
     </DialogFooter>
   );
 }
@@ -200,35 +185,4 @@ function SubtaskDeleteDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-function movedIds(items: string[], index: number, direction: number) {
-  const current = items[index];
-  const other = items[index + direction];
-  if (!current || !other) return null;
-  items[index] = other;
-  items[index + direction] = current;
-  return items;
-}
-
-function useSubtaskOrder(task: Task, parent: TaskDetail, operation: Operation) {
-  const mutations = useTaskMutations();
-  const active = parent.subtasks.filter((child) => !child.deletedAt);
-  const index = active.findIndex((child) => child.id === task.id);
-  function reorder(direction: number) {
-    const items = movedIds(
-      active.map((child) => child.id),
-      index,
-      direction,
-    );
-    if (!items) return;
-    void operation.run(() =>
-      mutations.reorder(
-        parent.id,
-        items,
-        Object.fromEntries(active.map((child) => [child.id, child.revision])),
-      ),
-    );
-  }
-  return { index, length: active.length, reorder };
 }

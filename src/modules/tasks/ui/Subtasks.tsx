@@ -50,6 +50,12 @@ export function Subtasks({ task }: { task: TaskDetail }) {
                 disabled={Boolean(task.deletedAt) || drag.active.length < 2}
                 className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-text-muted/70 hover:text-text active:cursor-grabbing disabled:opacity-30"
                 onPointerDown={drag.start(child.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    drag.nudge(child.id, event.key === 'ArrowUp' ? -1 : 1);
+                  }
+                }}
               >
                 <GripVertical className="size-4" />
               </button>
@@ -95,11 +101,7 @@ function SubtaskTitle({ task }: { task: Task }) {
           onBlur={(event) => void rename(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') event.currentTarget.blur();
-            if (event.key === 'Escape') {
-              event.currentTarget.value = task.title;
-              event.currentTarget.blur();
-              event.stopPropagation();
-            }
+            if (event.key === 'Escape') event.currentTarget.value = task.title;
           }}
         />
       </div>

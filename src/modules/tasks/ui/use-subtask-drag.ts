@@ -22,7 +22,24 @@ export function useSubtaskReorder(task: TaskDetail) {
         ),
       ),
   );
-  return { ...drag, active, error: operation.error };
+  // Keyboard alternative to dragging: move one step from the grip.
+  const nudge = (id: string, direction: -1 | 1) => {
+    const ids = active.map((child) => child.id);
+    const index = ids.indexOf(id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= ids.length) return;
+    const next = [...ids];
+    next.splice(index, 1);
+    next.splice(target, 0, id);
+    void operation.run(() =>
+      mutations.reorder(
+        task.id,
+        next,
+        Object.fromEntries(active.map((child) => [child.id, child.revision])),
+      ),
+    );
+  };
+  return { ...drag, active, nudge, error: operation.error, state: operation.state };
 }
 export function useSubtaskDrag(ids: string[], commit: (ordered: string[]) => void) {
   const [order, setOrder] = useState<string[] | null>(null);

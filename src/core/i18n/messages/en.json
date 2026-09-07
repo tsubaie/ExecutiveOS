@@ -75,7 +75,8 @@
     "noDate": "No date",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
-    "pickDate": "Choose a date"
+    "pickDate": "Choose a date",
+    "saveFailed": "Not saved"
   },
   "people": {
     "fullName": "Full name",
@@ -233,8 +234,6 @@
     "groupDescription": "Selected tasks become subtasks, in their displayed order. Tasks that already have subtasks cannot be grouped.",
     "selected": "{count, plural, =0 {Select tasks to group} one {# selected · choose at least two} other {# selected}}",
     "convert": "Make a task",
-    "moveUp": "Move subtask up",
-    "moveDown": "Move subtask down",
     "completedHint": "Reopen using the checkbox to edit this completed task.",
     "updated": "Updated {date}",
     "assignedTasks": "Assigned tasks",

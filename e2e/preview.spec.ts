@@ -153,6 +153,22 @@ test('idempotency replay returns one entity; changed payload with the same key c
   });
   expect(JSON.parse(result.first)).toEqual(JSON.parse(result.replay));
   expect(result.statuses).toEqual([201, 201, 409]);
+  // Leave nothing behind: accumulated rows would push other scenarios' people past the first page.
+  const created = JSON.parse(result.first).data;
+  await page.evaluate(
+    async ({ id, revision }) => {
+      await fetch(`/api/v1/people/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'ExecutiveOS',
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+        body: JSON.stringify({ revision }),
+      });
+    },
+    { id: created.id, revision: created.revision },
+  );
 });
 test('ADMIN-B12 backup created from the admin page completes as a fenced job', async ({ page }) => {
   await loginAs(page, 'en');

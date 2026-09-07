@@ -214,13 +214,8 @@ test('TASKS-B08 TASKS-I04 reorder children and restore an independently deleted 
   await expect(
     page.locator('aside.entity-detail').getByRole('heading', { name: parent.title }),
   ).toBeVisible();
-  await page.getByRole('button', { name: en.tasks.subtaskDetails, exact: true }).first().click();
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: en.tasks.moveDown, exact: true })
-    .click();
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toBeHidden();
+  await page.getByRole('button', { name: en.tasks.dragHandle, exact: true }).first().focus();
+  await page.keyboard.press('ArrowDown');
   await expect(page.getByLabel(en.tasks.subtaskTitle, { exact: true }).first()).toHaveValue(
     'Confirm attendance',
   );
@@ -366,4 +361,28 @@ test('EP-B01 EP-B02 search keeps typing focus, debounces and follows browser his
   await page.goBack();
   await expect(search).toHaveValue(title);
   await expect(page).not.toHaveURL(/id=/);
+});
+
+test('EP-B06 EP-B11 Escape closes the detail after edits through a field and a picker @desktop', async ({
+  page,
+}) => {
+  await loginAs(page, 'en');
+  const task = (await api(page, '', 'POST', { title: `Escape ${crypto.randomUUID()}` })).body.data;
+  await page.goto(`/tasks?view=all&id=${task.id}`);
+  const title = page.getByLabel(en.tasks.title, { exact: true });
+  await title.fill(`${task.title} edited`);
+  await page.keyboard.press('Escape');
+  await expect(page).not.toHaveURL(/id=/);
+  await expect
+    .poll(async () => (await api(page, `/${task.id}`)).body.data.title)
+    .toBe(`${task.title} edited`);
+  await page.locator(`[data-row-id="${task.id}"]`).click();
+  await page.getByLabel(en.tasks.priority, { exact: true }).last().click();
+  await page.getByRole('option', { name: en.tasks.high, exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: en.common.saved })).toBeVisible();
+  // Focus returns to the trigger once the picker has closed; a person presses Escape after that.
+  await expect(page.getByLabel(en.tasks.priority, { exact: true }).last()).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page).not.toHaveURL(/id=/);
+  expect((await api(page, `/${task.id}`)).body.data.priority).toBe('high');
 });

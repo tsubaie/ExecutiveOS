@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronUp, ChevronDown, ChevronLeft, X } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
+import { SaveStatus } from '@/ui/layout/SaveStatus';
 import { useNavigationGuard, type NavigationGuard } from './navigation';
 import { useSaveQueue } from './use-save-queue';
 import { DeleteEntityDialog, UnsavedEntityDialog } from './EntityDialogs';
@@ -26,6 +27,13 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
   useEffect(() => {
     root.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
   }, []);
+  // A control that re-renders away during its own save leaves focus on the document body,
+  // outside the surface; take it back so Escape and the shortcuts keep working (EP-B06).
+  // sync: DOM focus follows the save queue's state.
+  useEffect(() => {
+    if (c.queue.state === 'saved' && document.activeElement === document.body)
+      root.current?.focus({ preventScroll: true });
+  }, [c.queue.state]);
   const guarded = (action: () => void) => () => void c.navigate(action);
   return (
     <>
@@ -35,7 +43,7 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
         move={(direction) => guarded(() => props.move(direction))()}
         close={guarded(props.close)}
       />
-      <div ref={root} className="p-4 lg:p-5">
+      <div ref={root} tabIndex={-1} className="p-4 outline-none lg:p-5">
         {c.queue.error && <ErrorPanel error={c.queue.error} />}
         {c.queue.state === 'conflict' && <p className="my-3 text-sm">{t('conflictReapply')}</p>}
         {c.queue.error && (
@@ -159,11 +167,12 @@ function PanelToolbar({
         <X className="hidden size-4 lg:block" />
       </Button>
       <div className="flex flex-1 items-center justify-center gap-2 text-xs text-text-muted tabular-nums">
-        <span role="status">
-          {state === 'saving' ? t('saving') : state === 'saved' ? t('saved') : null}
-        </span>
-        {state !== 'saving' && state !== 'saved' && neighbors.position > 0 && (
-          <span>{t('position', { position: neighbors.position, count: neighbors.count })}</span>
+        {state === 'idle' ? (
+          neighbors.position > 0 && (
+            <span>{t('position', { position: neighbors.position, count: neighbors.count })}</span>
+          )
+        ) : (
+          <SaveStatus state={state} />
         )}
       </div>
       <div className="flex gap-0.5 lg:order-first">

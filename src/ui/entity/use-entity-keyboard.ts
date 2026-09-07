@@ -39,20 +39,26 @@ export function useEntityKeyboard(root: RefObject<HTMLElement | null>, options: 
       else options.clear();
     }
   });
+  // Capture phase, so a picker trigger that stops propagation of Escape cannot hide it.
   // sync: delegated DOM keyboard events belong to the entity surface, not individual modules.
   useEffect(() => {
     const element = root.current;
     const listener = (event: KeyboardEvent) => keyboard(event);
-    element?.addEventListener('keydown', listener);
-    return () => element?.removeEventListener('keydown', listener);
+    element?.addEventListener('keydown', listener, true);
+    return () => element?.removeEventListener('keydown', listener, true);
   }, [root]);
 }
 
+// Shortcuts stay out of fields and dialogs, except Escape: from a field or a closed picker it
+// closes the panel once pending saves settle (EP-B06, EP-B11). Open pickers render in a portal
+// outside the surface, so their own Escape never reaches this listener.
 function ignoredKey(event: KeyboardEvent) {
   if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return true;
-  return (
-    event.target instanceof HTMLElement &&
-    Boolean(event.target.closest('input,textarea,select,[contenteditable=true],[role=dialog]'))
+  if (!(event.target instanceof HTMLElement)) return false;
+  if (event.target.closest('[role=dialog]')) return true;
+  if (event.key === 'Escape') return event.target.getAttribute('aria-expanded') === 'true';
+  return Boolean(
+    event.target.closest('input,textarea,select,[contenteditable=true],[role=combobox]'),
   );
 }
 

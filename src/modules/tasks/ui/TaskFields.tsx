@@ -44,7 +44,7 @@ export function TaskFields({
       ) : (
         <TaskTitle editor={editor} />
       )}
-      <TaskProperties key={propertyKey(initial)} initial={initial} save={save} />
+      <TaskProperties initial={initial} save={save} />
       <TaskDescription editor={editor} />
     </fieldset>
   );
@@ -62,21 +62,25 @@ const propertiesOf = (initial: Initial | undefined): Properties => ({
   ownerId: initial?.ownerId ?? '',
   dueDate: initial?.dueDate ?? null,
 });
-const propertyKey = (initial: Initial | undefined) =>
-  Object.values(propertiesOf(initial)).join('|');
-// Pickers are controlled from a draft; the parent remounts this block whenever the saved task
-// changes so the draft always starts from server truth. In the create form the draft is the form
-// state and hidden inputs carry it into FormData.
-function TaskProperties({
-  initial,
-  save,
-}: {
-  initial: Initial | undefined;
-  save: ((patch: Patch) => void) | undefined;
-}) {
-  const t = useTranslations('tasks');
-  const owners = useOwners();
-  const [draft, setDraft] = useState(() => propertiesOf(initial));
+const sameProperties = (a: Properties, b: Properties) =>
+  a.status === b.status &&
+  a.priority === b.priority &&
+  a.ownerId === b.ownerId &&
+  a.dueDate === b.dueDate;
+// Pickers are controlled from a draft that is re-based on the saved task whenever it changes,
+// without remounting, so a picker keeps focus after its own save and Escape still reaches the
+// panel. In the create form the draft is the form state and hidden inputs carry it into FormData.
+function useDraftProperties(
+  initial: Initial | undefined,
+  save: ((patch: Patch) => void) | undefined,
+) {
+  const base = propertiesOf(initial);
+  const [draft, setDraft] = useState(base);
+  const [seen, setSeen] = useState(base);
+  if (!sameProperties(seen, base)) {
+    setSeen(base);
+    setDraft(base);
+  }
   // A picker reporting the value it already shows is not an edit and must never write.
   const same = (patch: Partial<Properties>) =>
     (patch.status === undefined || patch.status === draft.status) &&
@@ -88,6 +92,18 @@ function TaskProperties({
     setDraft((current) => ({ ...current, ...patch }));
     save?.(saved);
   };
+  return { draft, change };
+}
+function TaskProperties({
+  initial,
+  save,
+}: {
+  initial: Initial | undefined;
+  save: ((patch: Patch) => void) | undefined;
+}) {
+  const t = useTranslations('tasks');
+  const owners = useOwners();
+  const { draft, change } = useDraftProperties(initial, save);
   return (
     <div className="grid gap-2">
       <Property label={t('status')}>

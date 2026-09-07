@@ -62,7 +62,7 @@ export function TaskTitle({
             aria-invalid={Boolean(error)}
             className="plaintext min-h-0 resize-none rounded-md border-transparent px-2 py-1 text-xl leading-snug font-semibold hover:border-border md:text-xl"
             onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === 'Escape') {
+              if (event.key === 'Enter') {
                 event.preventDefault();
                 event.currentTarget.blur();
               }
