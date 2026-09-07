@@ -8,9 +8,12 @@
   --color-text: var(--text);
   --color-text-muted: var(--muted-text);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --color-info: var(--accent);
   --color-background: var(--bg);
   --color-foreground: var(--text);
@@ -37,10 +40,13 @@
   --text: #202a28;
   --muted-text: #606d68;
   --accent: #306b59;
+  --accent-soft: #e8f0eb;
   --on-accent: #ffffff;
   --success: #287053;
   --warning: #8b620d;
+  --warning-soft: #f6eccf;
   --danger: #b63c3c;
+  --danger-soft: #f6e1e1;
 }
 .dark {
   --bg: #141918;
@@ -50,10 +56,13 @@
   --text: #e8eee9;
   --muted-text: #a0ada5;
   --accent: #a7d4b6;
+  --accent-soft: #223129;
   --on-accent: #163626;
   --success: #8acba6;
   --warning: #e4bc71;
+  --warning-soft: #33301f;
   --danger: #ee9696;
+  --danger-soft: #3a2626;
   color-scheme: dark;
 }
 @layer base {
@@ -80,13 +89,20 @@
     outline: 2px solid var(--accent);
     outline-offset: 3px;
   }
+  /* Controls are 36px with a pointer and 44px on touch (docs/05 § Density and § Mobile). */
   input,
   textarea,
-  select {
-    min-height: 44px;
-  }
+  select,
   button[data-slot='button'] {
-    min-height: 44px;
+    min-height: 36px;
+  }
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select,
+    button[data-slot='button'] {
+      min-height: 44px;
+    }
   }
   h1,
   h2,
@@ -127,8 +143,9 @@
 .entity-page {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 119px - env(safe-area-inset-bottom));
+  height: calc(100dvh - 63px - 56px - env(safe-area-inset-bottom));
 }
+/* The completion toggle keeps a 44px hit area at every pointer type; the ring inside is 18px. */
 .entity-check[data-slot='checkbox'] {
   width: 44px;
   height: 44px;
@@ -139,9 +156,12 @@
 .entity-check[data-slot='checkbox']::before {
   content: '';
   position: absolute;
-  inset: 12px;
-  border: 1px solid var(--color-text-muted);
+  inset: 13px;
+  border: 1.5px solid var(--color-text-muted);
   border-radius: inherit;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
 }
 .entity-check[data-checked]::before {
   background: var(--color-accent);
@@ -154,9 +174,130 @@
 .entity-check::after {
   display: none;
 }
+/* Completing a task: the ring pops and the tick scales in. */
+.entity-check[data-checked]::before {
+  animation: check-pop 220ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.entity-check[data-checked] [data-slot='checkbox-indicator'] {
+  animation: check-in 200ms ease-out;
+}
+@keyframes check-pop {
+  0% {
+    transform: scale(0.8);
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes check-in {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+/* A row leaving the list (completed, trashed, restored) fades, then collapses. */
+.entity-row-leaving {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: row-leave 300ms ease-in forwards;
+  pointer-events: none;
+}
+.entity-row-leaving > * {
+  min-height: 0;
+  overflow: hidden;
+}
+@keyframes row-leave {
+  0% {
+    opacity: 1;
+    grid-template-rows: 1fr;
+  }
+  50% {
+    opacity: 0;
+    grid-template-rows: 1fr;
+  }
+  100% {
+    opacity: 0;
+    grid-template-rows: 0fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entity-check[data-checked]::before,
+  .entity-check[data-checked] [data-slot='checkbox-indicator'] {
+    animation: none;
+  }
+  .entity-row-leaving {
+    animation-duration: 1ms;
+  }
+}
+/* Selected row: tinted ground plus a start-edge bar that reads in both directions and themes. */
+.entity-row[data-current]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--color-accent);
+}
+/* Text that may be Arabic inside an English list (or the reverse) keeps its own direction while
+   staying aligned with the row (docs/05 § Mixed direction). */
+.plaintext {
+  unicode-bidi: plaintext;
+}
+/* Secondary controls unfold on hover or focus where a pointer can hover; touch sees them always. */
+@media (hover: hover) {
+  .hover-reveal-target {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+      grid-template-rows 120ms ease,
+      opacity 120ms ease;
+  }
+  .hover-reveal-target > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .hover-reveal:hover .hover-reveal-target,
+  .hover-reveal:focus-within .hover-reveal-target {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hover-reveal-target {
+      transition: none;
+    }
+  }
+}
 @media (min-width: 1024px) {
   .entity-page {
     height: calc(100dvh - 63px);
+  }
+  /* An open panel pulls focus: the shell sidebar and the views rail soften, and while a task is
+     being created the list softens too. Hover or focus brings an element back; colours are not
+     changed, so text contrast holds. */
+  .app-sidebar,
+  .entity-rail,
+  [data-entity-list] {
+    transition: filter 160ms ease;
+  }
+  body:has(.entity-page-open) .app-sidebar:not(:hover):not(:focus-within),
+  .entity-page-open .entity-rail:not(:hover):not(:focus-within),
+  .entity-page-creating [data-entity-list]:not(:hover):not(:focus-within) {
+    filter: blur(1.5px) saturate(0.7);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app-sidebar,
+    .entity-rail,
+    [data-entity-list] {
+      transition: none;
+    }
   }
 }
 

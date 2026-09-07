@@ -6,7 +6,7 @@
 - **Tokens:** `src/ui/tokens.css` defines every color, radius, shadow, and spacing scale as CSS variables under `@theme`. Semantic names only: `--color-bg`, `--color-surface`, `--color-surface-raised`, `--color-border`, `--color-text`, `--color-text-muted`, `--color-accent`, `--color-success`, `--color-warning`, `--color-danger`, `--color-info`. Light and dark values are both defined; dark is the default.
 - **No raw colors in TSX** (static lint `no-color-literals`). Status colors come from `tone()` helpers mapping an enum to a semantic class.
 - **Typography:** Inter (Latin) and IBM Plex Sans Arabic via `next/font`. The Arabic family is applied by `<html lang dir>`, never per element. Mixed-direction fields use `dir="auto"`; inline mixed runs are wrapped in `<bdi>` by the `Text` component so an English acronym inside an Arabic title does not flip punctuation.
-- **Density:** base 14px; list rows 44px on touch, 36px on desktop; 8px grid.
+- **Density:** base 14px; list rows 44px single-line; form controls 36px with a pointer and 44px on touch (`pointer: coarse`), so hit areas never drop below 44px where fingers are used; 8px grid. Tinted surfaces for emphasis come from `--color-accent-soft`, `--color-warning-soft`, `--color-danger-soft`; the foreground on each is its matching solid token and both pairs meet 4.5:1 in both themes.
 - **Icons:** Lucide only. Icon buttons have `aria-label` from i18n.
 - **Theme:** `next-themes`, class attribute, pre-hydration script; per-user setting.
 

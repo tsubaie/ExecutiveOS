@@ -1,11 +1,21 @@
 import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 export type Entity = {
   id: string;
   revision: number;
   deletedAt: string | null;
   deletedOpId: string | null;
 };
-export type View = { id: string; label: string };
+// `separated` draws a divider before the view in the rail (archive views such as Completed, Trash);
+// `featured` views also show their count in the strip above the list, tinted by `tone` when > 0.
+export type View = {
+  id: string;
+  label: string;
+  icon?: LucideIcon;
+  separated?: boolean;
+  featured?: boolean;
+  tone?: 'danger' | 'accent';
+};
 export type Facet = { key: string; label: string; options: { value: string; label: string }[] };
 export type SortOption = { id: string; label: string };
 // Views, facets and sort are declared together; the framework owns their URL state.
@@ -63,6 +73,7 @@ export type EmptyState = {
   title: string;
   description: string;
   action?: { label: string; onSelect: () => void };
+  icon?: LucideIcon;
 };
 export type EntityPageProps<T extends Entity, P, C> = {
   module: string;

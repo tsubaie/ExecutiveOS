@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronUp, ChevronDown, X } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronLeft, X } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { useNavigationGuard, type NavigationGuard } from './navigation';
@@ -35,7 +35,7 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
         move={(direction) => guarded(() => props.move(direction))()}
         close={guarded(props.close)}
       />
-      <div ref={root} className="p-5">
+      <div ref={root} className="p-4 lg:p-5">
         {c.queue.error && <ErrorPanel error={c.queue.error} />}
         {c.queue.state === 'conflict' && <p className="my-3 text-sm">{t('conflictReapply')}</p>}
         {c.queue.error && (
@@ -131,6 +131,8 @@ function useUnloadGuard(state: SaveState) {
     return () => window.removeEventListener('beforeunload', unload);
   }, [state]);
 }
+// On a phone the bar reads Back · status · previous/next; beside the list it reads
+// previous/next · status · close, so the dismiss control sits where each layout expects it.
 function PanelToolbar({
   state,
   neighbors,
@@ -144,10 +146,30 @@ function PanelToolbar({
 }) {
   const t = useTranslations('common');
   return (
-    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-surface p-2">
-      <div className="flex gap-1">
+    <div className="sticky top-0 z-20 flex items-center gap-1 border-b bg-surface px-2 py-1.5">
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label={t('close')}
+        onClick={close}
+        className="lg:order-last"
+      >
+        <ChevronLeft className="size-4 rtl:rotate-180 lg:hidden" />
+        <span className="lg:sr-only">{t('back')}</span>
+        <X className="hidden size-4 lg:block" />
+      </Button>
+      <div className="flex flex-1 items-center justify-center gap-2 text-xs text-text-muted tabular-nums">
+        <span role="status">
+          {state === 'saving' ? t('saving') : state === 'saved' ? t('saved') : null}
+        </span>
+        {state !== 'saving' && state !== 'saved' && neighbors.position > 0 && (
+          <span>{t('position', { position: neighbors.position, count: neighbors.count })}</span>
+        )}
+      </div>
+      <div className="flex gap-0.5 lg:order-first">
         <Button
           variant="ghost"
+          size="sm"
           disabled={!neighbors.previous}
           aria-label={t('previous')}
           onClick={() => move(-1)}
@@ -156,6 +178,7 @@ function PanelToolbar({
         </Button>
         <Button
           variant="ghost"
+          size="sm"
           disabled={!neighbors.next}
           aria-label={t('next')}
           onClick={() => move(1)}
@@ -163,13 +186,6 @@ function PanelToolbar({
           <ChevronDown className="size-4" />
         </Button>
       </div>
-      <div role="status" className="text-xs text-text-muted">
-        {state === 'saving' ? t('saving') : state === 'saved' ? t('saved') : null}
-      </div>
-      <Button variant="ghost" aria-label={t('close')} onClick={close}>
-        <X className="size-4" />
-        <span className="lg:sr-only">{t('back')}</span>
-      </Button>
     </div>
   );
 }

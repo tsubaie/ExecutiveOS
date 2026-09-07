@@ -55,7 +55,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 
 ## Layout
 
-- EP-B07 Desktop (≥ 1024 px): rail 240 px (collapsible), list, detail 480 px inline; list resizes, never shifts.
+- EP-B07 Desktop (≥ 1024 px): rail 208 px (collapsible, ≥ 1280 px), list, detail 480 px inline; list resizes, never shifts. The list column opens with one sticky bar that carries the page title, the current view and its count (a button into the filter sheet where the rail is hidden), search, Filter, selection mode and the primary Create action; the page description is exposed to assistive technology only. Below 640 px the search group wraps under the title. Rows are 44 px single-line by default; group headers are 28 px; rail items 32 px with a divider before views marked `separated`. Views marked `featured` also show their count in a strip under the bar (tinted by `tone` when the count is above zero); views may carry an `icon` for the rail. While a panel is open the shell sidebar and the rail soften with a light blur, and while the create form is open the list softens too; hovering or focusing an element restores it, colours do not change, and the effect is skipped under reduced motion transitions. The panel bar shows the item's position in the loaded list ("3 of 11") when no save is in flight.
 - EP-B08 Mobile: views `list` → `detail` → `create`, full screen, slide from the end side (`dir`-aware); rail as a bottom sheet with active-filter count. Back gesture and browser back both go to the previous view.
 - EP-B09 Direction: all animation and column order derive from `dir`.
 
@@ -63,13 +63,13 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 
 - EP-B10 `api.save(patch)` queues per entity: one request in flight; newer patches coalesce; each request sends the latest known `revision`. State `idle → saving → saved (2 s) → idle`, or `error` with Retry (same idempotency key) and, on 409, `conflict` with "Reload and reapply" that refetches, shows the diff of the user's pending patch, and reapplies on confirm.
 - EP-B11 Navigating away (close, next, prev, view change, same-origin links) while a save is pending waits for it; while a save is in `error`, a dialog asks to retry or discard. Guards are registered through the framework's navigation context and scoped to the active panel, so an entity surface embedded in another module guards only itself; an invalid autosaved field (inside a `data-autosave` container) blocks navigation and reports its validity message; secondary forms in the panel do not.
-- EP-B12 Optimistic updates apply to the list row and detail; on error they roll back.
+- EP-B12 Optimistic updates apply to the list row and detail; on error they roll back. A row that leaves the loaded list after a mutation (completed, trashed, restored) stays rendered and inert for one 300 ms fade-and-collapse; a full replacement of the list (view, filter or search change) is not animated. Under reduced motion the exit is immediate.
 
 ## Lists
 
 - EP-B13 Infinite paging with `fetchNextPage` on scroll; next/prev at the end of the loaded page loads the next page before moving.
-- EP-B14 Grouping renders headers with counts over the loaded rows and, when `meta.counts` provides a group count, the full count in parentheses; collapse state per module in local storage.
-- EP-B15 Empty states: no items at all (primary action) versus no matches (clear filters).
+- EP-B14 Grouping renders headers with counts over the loaded rows and, when `meta.counts` provides a group count, the full count in parentheses; collapse state per module in local storage. The selected row is marked with the accent-soft ground and a 3 px start-edge bar.
+- EP-B15 Empty states: no items at all (primary action) versus no matches (clear filters); the module may supply the icon through `emptyState.icon`. While the first page loads the list shows six placeholder rows at row height.
 - EP-B16 Errors: list error panel with retry and request id; detail error inline.
 - EP-B17 Focus: opening detail moves focus to the title; closing returns focus to the row; create returns focus to the new row after submit.
 - EP-B18 Query client is recreated on login and logout; list refetch on focus and every 60 seconds while visible.
