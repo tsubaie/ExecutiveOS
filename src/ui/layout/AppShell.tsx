@@ -36,7 +36,7 @@ export function AppShell({
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[208px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-dvh flex-col border-e bg-surface p-5 lg:flex">
+      <aside className="app-sidebar sticky top-0 hidden h-dvh flex-col border-e bg-surface p-5 lg:flex">
         <Link href={routes.home()} className="mb-10 flex items-center gap-3 text-lg font-semibold">
           <Command className="size-7 text-accent" />
           {t('brand')}

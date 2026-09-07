@@ -1,4 +1,5 @@
 'use client';
+import type { FocusEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,22 +32,61 @@ export function useTaskText(
     },
   };
 }
-export function TaskTitle({ editor }: { editor: ReturnType<typeof useTaskText> }) {
+// In the detail panel the title is the heading itself: one editable field instead of a heading
+// plus a labelled input (tasks.md § UI). Enter commits; the accessible label stays "Task title".
+export function TaskTitle({
+  editor,
+  heading = false,
+}: {
+  editor: ReturnType<typeof useTaskText>;
+  heading?: boolean;
+}) {
   const t = useTranslations('tasks');
   const field = editor.form.register('title');
+  const error = editor.form.formState.errors.title?.message;
+  const blur = (event: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    void field.onBlur(event);
+    editor.blur('title', event.target.value);
+  };
+  if (heading)
+    return (
+      <div className="grid gap-1">
+        <h2 tabIndex={-1} className="min-w-0 rounded-md">
+          <Textarea
+            {...field}
+            dir="auto"
+            required
+            rows={1}
+            maxLength={500}
+            aria-label={t('title')}
+            aria-invalid={Boolean(error)}
+            className="plaintext min-h-0 resize-none rounded-md border-transparent px-2 py-1 text-xl leading-snug font-semibold hover:border-border md:text-xl"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                event.currentTarget.blur();
+              }
+            }}
+            onBlur={blur}
+          />
+        </h2>
+        {error && (
+          <span role="alert" className="px-2 text-xs text-danger">
+            {error}
+          </span>
+        )}
+      </div>
+    );
   return (
-    <Field label={t('title')} error={editor.form.formState.errors.title?.message}>
+    <Field label={t('title')} error={error}>
       <Input
         {...field}
         dir="auto"
         required
         pattern=".*\S.*"
         maxLength={500}
-        aria-invalid={Boolean(editor.form.formState.errors.title)}
-        onBlur={(event) => {
-          void field.onBlur(event);
-          editor.blur('title', event.target.value);
-        }}
+        aria-invalid={Boolean(error)}
+        onBlur={blur}
       />
     </Field>
   );
@@ -59,7 +99,7 @@ export function TaskDescription({ editor }: { editor: ReturnType<typeof useTaskT
       <Textarea
         {...field}
         dir="auto"
-        className="min-h-24"
+        className="min-h-20"
         maxLength={50000}
         onBlur={(event) => {
           void field.onBlur(event);

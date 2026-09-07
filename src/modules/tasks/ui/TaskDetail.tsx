@@ -1,8 +1,9 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
-import { useDateTime } from '@/ui/format';
+import { useDateTime, useRelativeTime } from '@/ui/format';
 import { routes } from '@/core/routes';
 import type { DetailApi } from '@/ui/entity/types';
 import type { TaskDetail as Detail, TaskPatch } from '../schema/validation';
@@ -18,41 +19,67 @@ export function TaskDetail({
 }) {
   const t = useTranslations('tasks');
   const c = useTranslations('common');
-  const dateTime = useDateTime();
   return (
     <div className="min-w-0">
-      <div className="mb-5 flex items-start gap-3">
-        <TaskToggle task={task} />
-        <h2 tabIndex={-1} dir="auto" className="min-w-0 break-words text-xl font-semibold">
-          {task.title}
-        </h2>
-      </div>
-      {task.ownerId && (
-        <Link href={routes.person(task.ownerId)} className="mb-4 block text-sm text-accent">
-          <bdi>{task.ownerName ?? t('owner')}</bdi>
-        </Link>
-      )}
       {task.deletedAt ? (
-        <Button onClick={api.restore}>{c('restore')}</Button>
+        <>
+          <h2 tabIndex={-1} dir="auto" className="plaintext text-xl font-semibold">
+            {task.title}
+          </h2>
+          <Button className="mt-4" onClick={api.restore}>
+            {c('restore')}
+          </Button>
+        </>
       ) : (
         <>
           {task.status === 'completed' && (
-            <p className="mb-4 text-sm text-text-muted">{t('completedHint')}</p>
+            <p className="mb-3 text-xs text-text-muted">{t('completedHint')}</p>
           )}
-          <TaskFields initial={task} save={api.save} disabled={task.status === 'completed'} />
+          <TaskFields
+            initial={task}
+            save={api.save}
+            disabled={task.status === 'completed'}
+            heading
+            leading={<TaskToggle task={task} />}
+          />
         </>
       )}
       <Subtasks task={task} />
-      {!task.deletedAt && (
-        <div className="mt-6 border-t pt-4">
-          <Button variant="ghost" className="text-danger" onClick={api.remove}>
-            {c('delete')}
-          </Button>
-        </div>
-      )}
-      <p className="mt-6 text-xs text-text-muted">
-        {t('updated', { date: dateTime(task.updatedAt) })}
-      </p>
+      <TaskFooter task={task} remove={api.remove} />
     </div>
+  );
+}
+
+// Owner link and freshness at the start, the destructive action at the end, out of the way of
+// the fields but still one click away.
+function TaskFooter({ task, remove }: { task: Detail; remove: () => void }) {
+  const t = useTranslations('tasks');
+  const c = useTranslations('common');
+  const dateTime = useDateTime();
+  const relative = useRelativeTime();
+  return (
+    <footer className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3 text-xs text-text-muted">
+      <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        {task.ownerId && (
+          <Link href={routes.person(task.ownerId)} className="text-accent">
+            <bdi>{task.ownerName ?? t('owner')}</bdi>
+          </Link>
+        )}
+        <span title={dateTime(task.updatedAt)}>
+          {t('updated', { date: relative(task.updatedAt) })}
+        </span>
+      </span>
+      {!task.deletedAt && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-danger hover:text-danger"
+          onClick={remove}
+        >
+          <Trash2 className="size-3.5" />
+          {c('delete')}
+        </Button>
+      )}
+    </footer>
   );
 }

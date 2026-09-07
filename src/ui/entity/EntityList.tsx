@@ -1,24 +1,26 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { Users } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
-import Loading from '@/ui/layout/Loading';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
+import { useCount } from '@/ui/format';
 import { cn } from '@/ui/cn';
 import type { Entity } from './types';
 import type { Surface } from './EntityControls';
+import { useLeavingRows, type Rendered } from './use-leaving-rows';
 export function EntityList<T extends Entity, P extends object, C>(props: Surface<T, P, C>) {
   const t = useTranslations('common');
   const { list } = props.controller;
-  if (list.pending) return <Loading />;
+  const rows = useLeavingRows(list.items, list.pending);
+  if (list.pending) return <EntityListSkeleton />;
   if (list.error) return <ErrorPanel error={list.error} retry={list.refetch} />;
-  if (!list.items.length) return <EntityEmpty {...props} />;
+  if (!rows.length) return <EntityEmpty {...props} />;
   return (
     <>
       <ul>
-        {list.items.map((item, index) => (
-          <EntityListRow key={item.id} {...props} item={item} index={index} />
+        {rows.map((row, index) => (
+          <EntityListRow key={row.item.id} {...props} rows={rows} row={row} index={index} />
         ))}
       </ul>
       {list.more && (
@@ -27,6 +29,28 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
         </Button>
       )}
     </>
+  );
+}
+// Placeholder rows at the real row height keep the layout stable while the first page loads.
+function EntityListSkeleton() {
+  const t = useTranslations('common');
+  const rows = ['a', 'b', 'c', 'd', 'e', 'f'];
+  return (
+    <div role="status" className="animate-pulse">
+      <span className="sr-only">{t('loading')}</span>
+      {rows.map((row, index) => (
+        <div key={row} aria-hidden className="flex h-11 items-center gap-3 border-b px-4">
+          <span className="size-4 rounded-full bg-surface-raised" />
+          <span
+            className={cn(
+              'h-3 rounded bg-surface-raised',
+              index % 3 === 0 ? 'w-2/3' : index % 3 === 1 ? 'w-1/2' : 'w-3/5',
+            )}
+          />
+          <span className="ms-auto h-3 w-12 rounded bg-surface-raised" />
+        </div>
+      ))}
+    </div>
   );
 }
 function isFiltered<T extends Entity, P extends object, C>(c: Surface<T, P, C>['controller']) {
@@ -41,6 +65,7 @@ export function EntityEmpty<T extends Entity, P extends object, C>({
   const t = useTranslations('common');
   const filtered = isFiltered(c);
   const custom = filtered ? {} : (config.emptyState ?? {});
+  const Icon = config.emptyState?.icon ?? Inbox;
   const copy = {
     title: custom.title ?? t(filtered ? 'noMatches' : 'empty'),
     description: custom.description ?? t(filtered ? 'noMatchesDescription' : 'emptyDescription'),
@@ -50,11 +75,11 @@ export function EntityEmpty<T extends Entity, P extends object, C>({
     },
   };
   return (
-    <div className="grid justify-items-center gap-4 px-6 py-16 text-center">
-      <Users className="size-8 text-text-muted" />
-      <h2 className="text-lg font-medium">{copy.title}</h2>
+    <div className="grid justify-items-center gap-3 px-6 py-16 text-center">
+      <Icon className="size-7 text-text-muted" />
+      <h2 className="text-base font-medium">{copy.title}</h2>
       <p className="max-w-sm text-sm text-text-muted">{copy.description}</p>
-      <Button variant="outline" onClick={copy.action.onSelect}>
+      <Button variant="outline" className="mt-1" onClick={copy.action.onSelect}>
         {copy.action.label}
       </Button>
     </div>
@@ -63,42 +88,30 @@ export function EntityEmpty<T extends Entity, P extends object, C>({
 function EntityListRow<T extends Entity, P extends object, C>({
   config,
   controller: c,
-  item,
+  rows,
+  row,
   index,
-}: Surface<T, P, C> & { item: T; index: number }) {
-  const t = useTranslations('common');
+}: Surface<T, P, C> & { rows: Rendered<T>[]; row: Rendered<T>; index: number }) {
+  const { item, leaving } = row;
+  const current = !leaving && c.state.id === item.id;
   return (
-    <li>
-      <EntityGroupHeading config={config} controller={c} item={item} index={index} />
-      <div className="flex min-w-0 items-center border-b">
-        {config.bulkActions?.length && c.selecting ? (
-          <Checkbox
-            className="entity-check ms-1 shrink-0"
-            aria-label={t('selectItem', { name: config.renderers.name(item) })}
-            checked={c.selected.includes(item.id)}
-            onCheckedChange={(checked) =>
-              c.navigate(
-                {
-                  sel: (checked
-                    ? [...c.selected, item.id]
-                    : c.selected.filter((id) => id !== item.id)
-                  ).join(','),
-                },
-                true,
-              )
-            }
-          />
-        ) : null}
-        {config.rowAction && !c.selecting && (
-          <div className="ms-1 shrink-0">{config.rowAction(item)}</div>
+    <li className={cn(leaving && 'entity-row-leaving')} inert={leaving || undefined}>
+      <EntityGroupHeading config={config} rows={rows} index={index} />
+      <div
+        className={cn(
+          'entity-row relative flex min-w-0 items-center border-b transition-colors',
+          current ? 'bg-accent-soft' : 'hover:bg-surface-raised/50',
         )}
+        data-current={current ? '' : undefined}
+      >
+        <EntityRowLead config={config} controller={c} item={item} />
         <Button
-          data-row-id={item.id}
-          aria-current={c.state.id === item.id ? 'true' : undefined}
+          data-row-id={leaving ? undefined : item.id}
+          aria-current={current ? 'true' : undefined}
           variant="ghost"
           className={cn(
-            'h-auto min-h-20 min-w-0 flex-1 justify-start rounded-none px-3 py-3 text-start',
-            c.state.id === item.id && 'bg-surface ring-1 ring-inset ring-accent/40',
+            'h-auto min-h-11 min-w-0 flex-1 justify-start rounded-none px-3 py-1.5 text-start hover:bg-transparent',
+            !config.rowAction && !c.selecting && 'ps-4',
           )}
           onFocus={() => c.setFocused(index)}
           onClick={() => c.navigate({ id: item.id })}
@@ -110,18 +123,58 @@ function EntityListRow<T extends Entity, P extends object, C>({
   );
 }
 
-function EntityGroupHeading<T extends Entity, P extends object, C>({
+// The leading control: a selection checkbox in multi-select mode, otherwise the row action.
+function EntityRowLead<T extends Entity, P extends object, C>({
   config,
   controller: c,
   item,
-  index,
-}: Surface<T, P, C> & { item: T; index: number }) {
-  const heading = c.state.sort ? null : config.group?.(item);
-  if (!heading || (index > 0 && heading === config.group?.(c.list.items[index - 1] ?? item)))
-    return null;
+}: Surface<T, P, C> & { item: T }) {
+  const t = useTranslations('common');
   return (
-    <h2 className="border-b bg-surface-raised px-5 py-2 text-xs font-semibold text-text-muted">
+    <>
+      {config.bulkActions?.length && c.selecting ? (
+        <Checkbox
+          className="entity-check ms-1 shrink-0"
+          aria-label={t('selectItem', { name: config.renderers.name(item) })}
+          checked={c.selected.includes(item.id)}
+          onCheckedChange={(checked) =>
+            c.navigate(
+              {
+                sel: (checked
+                  ? [...c.selected, item.id]
+                  : c.selected.filter((id) => id !== item.id)
+                ).join(','),
+              },
+              true,
+            )
+          }
+        />
+      ) : null}
+      {config.rowAction && !c.selecting && (
+        <div className="ms-1 shrink-0">{config.rowAction(item)}</div>
+      )}
+    </>
+  );
+}
+
+// Group headers carry the count of loaded rows in the group (EP-B14).
+function EntityGroupHeading<T extends Entity, P extends object, C>({
+  config,
+  rows,
+  index,
+}: Pick<Surface<T, P, C>, 'config'> & { rows: Rendered<T>[]; index: number }) {
+  const count = useCount();
+  const item = rows[index]?.item;
+  const before = rows[index - 1]?.item;
+  const heading = item ? config.group?.(item) : null;
+  if (!heading || (before && heading === config.group?.(before))) return null;
+  const size = rows.filter((row) => !row.leaving && config.group?.(row.item) === heading).length;
+  return (
+    <h2 className="flex h-7 items-center gap-2 border-b bg-surface-raised/60 px-4 text-[11px] leading-none font-semibold tracking-wider text-text-muted uppercase">
       {heading}
+      <span className="rounded-full bg-surface-raised px-1.5 py-0.5 text-[10px] font-semibold tracking-normal text-text tabular-nums">
+        {count(size)}
+      </span>
     </h2>
   );
 }

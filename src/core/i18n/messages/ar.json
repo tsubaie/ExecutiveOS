@@ -35,7 +35,6 @@
     "notFound": "هذا السجل غير متاح.",
     "outside": "هذا السجل خارج طريقة العرض الحالية.",
     "showAll": "عرض في الكل",
-    "previous": "السابق",
     "next": "التالي",
     "more": "تحميل المزيد",
     "edit": "تعديل",
@@ -67,7 +66,16 @@
     "position": "{position} من {count}",
     "titleRequired": "أدخل عنوانًا قبل مغادرة هذا الحقل.",
     "selectedCount": "{count} محدد",
-    "actions": "إجراءات"
+    "actions": "إجراءات",
+    "today": "اليوم",
+    "tomorrow": "غدًا",
+    "endOfWeek": "نهاية الأسبوع",
+    "nextWeek": "الأسبوع القادم",
+    "noDate": "بلا تاريخ",
+    "previousMonth": "الشهر السابق",
+    "nextMonth": "الشهر التالي",
+    "pickDate": "اختر تاريخًا",
+    "saveFailed": "لم يُحفظ"
   },
   "people": {
     "fullName": "الاسم الكامل",
@@ -225,11 +233,16 @@
     "groupDescription": "ستصبح المهام المحددة مهام فرعية بالترتيب المعروض. لا يمكن تجميع مهمة لديها مهام فرعية.",
     "selected": "المهام المحددة: {count} — اختر مهمتين على الأقل للتجميع",
     "convert": "تحويل إلى مهمة مستقلة",
-    "moveUp": "نقل المهمة الفرعية لأعلى",
-    "moveDown": "نقل المهمة الفرعية لأسفل",
     "completedHint": "أعد فتح المهمة باستخدام مربع الاختيار لتعديلها.",
     "updated": "آخر تحديث {date}",
     "assignedTasks": "المهام المسندة",
-    "viewAssigned": "عرض المهام المسندة ({count})"
+    "viewAssigned": "عرض المهام المسندة ({count})",
+    "tomorrow": "غدًا",
+    "yesterday": "أمس",
+    "progressShort": "{done}/{total}",
+    "addSubtask": "أضف مهمة فرعية",
+    "subtaskDetails": "تفاصيل المهمة الفرعية",
+    "subtaskDetailsDescription": "المسؤول وتاريخ الاستحقاق والترتيب والإجراءات لهذه المهمة الفرعية.",
+    "dragHandle": "اسحب لإعادة الترتيب"
   }
 }

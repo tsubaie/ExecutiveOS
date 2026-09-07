@@ -49,6 +49,25 @@ for (const locale of ['en', 'ar'])
     await expect(page).not.toHaveURL(/id=/);
     await selectView(page, locale, new RegExp(m.common.all));
     await expect(page.getByRole('button').filter({ hasText: name })).toBeVisible();
+    // Leave nothing behind after the walkthrough: restored people would accumulate run after run.
+    const restored = await page.evaluate(async (fullName) => {
+      const list = await (await fetch('/api/v1/people?view=all&limit=200')).json();
+      return list.data.find((person: { fullName: string }) => person.fullName === fullName) ?? null;
+    }, name);
+    const cleanup = async () => {
+      if (!restored) return;
+      await page.evaluate(async ({ id, revision }) => {
+        await fetch(`/api/v1/people/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'ExecutiveOS',
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+          body: JSON.stringify({ revision }),
+        });
+      }, restored);
+    };
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
     expect(
@@ -63,6 +82,7 @@ for (const locale of ['en', 'ar'])
         () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
       ),
     ).toBe(true);
+    await cleanup();
   });
 test('ADMIN-A01 setup cannot run a second time; origin guard and private session boundary', async ({
   page,
@@ -153,6 +173,22 @@ test('idempotency replay returns one entity; changed payload with the same key c
   });
   expect(JSON.parse(result.first)).toEqual(JSON.parse(result.replay));
   expect(result.statuses).toEqual([201, 201, 409]);
+  // Leave nothing behind: accumulated rows would push other scenarios' people past the first page.
+  const created = JSON.parse(result.first).data;
+  await page.evaluate(
+    async ({ id, revision }) => {
+      await fetch(`/api/v1/people/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'ExecutiveOS',
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+        body: JSON.stringify({ revision }),
+      });
+    },
+    { id: created.id, revision: created.revision },
+  );
 });
 test('ADMIN-B12 backup created from the admin page completes as a fenced job', async ({ page }) => {
   await loginAs(page, 'en');

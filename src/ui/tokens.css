@@ -8,9 +8,12 @@
   --color-text: var(--text);
   --color-text-muted: var(--muted-text);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --color-info: var(--accent);
   --color-background: var(--bg);
   --color-foreground: var(--text);
@@ -25,9 +28,10 @@
   --color-destructive: var(--danger);
   --color-popover: var(--surface);
   --color-popover-foreground: var(--text);
+  --color-scrim: var(--scrim);
   --radius-lg: 0.625rem;
   --radius-xl: 0.875rem;
-  --font-sans: var(--font-inter), sans-serif;
+  --font-sans: 'Inter', 'IBM Plex Sans Arabic', 'Inter Fallback', sans-serif;
 }
 :root {
   --bg: #f5f5f2;
@@ -37,40 +41,57 @@
   --text: #202a28;
   --muted-text: #606d68;
   --accent: #306b59;
+  --accent-soft: #e8f0eb;
   --on-accent: #ffffff;
   --success: #287053;
   --warning: #8b620d;
+  --warning-soft: #f6eccf;
   --danger: #b63c3c;
+  --danger-soft: #f6e1e1;
+  --scrim: #202a2899;
 }
 .dark {
-  --bg: #141918;
-  --surface: #1b211f;
-  --raised: #252d29;
-  --border: #323d36;
-  --text: #e8eee9;
-  --muted-text: #a0ada5;
-  --accent: #a7d4b6;
-  --on-accent: #163626;
-  --success: #8acba6;
-  --warning: #e4bc71;
-  --danger: #ee9696;
+  /* Catppuccin Mocha: mantle ground, base surfaces, surface0/1 for raised and borders, green as
+     the accent, yellow and red for warning and danger. Soft tints are 16% of the hue over base. */
+  --bg: #181825;
+  --surface: #1e1e2e;
+  --raised: #313244;
+  --border: #45475a;
+  --text: #cdd6f4;
+  --muted-text: #a6adc8;
+  --accent: #a6e3a1;
+  --accent-soft: #343e40;
+  --on-accent: #1e1e2e;
+  --success: #a6e3a1;
+  --warning: #f9e2af;
+  --warning-soft: #413d43;
+  --danger: #f38ba8;
+  --danger-soft: #402f42;
+  --scrim: #11111bcc;
   color-scheme: dark;
 }
 @layer base {
   * {
     border-color: var(--border);
   }
+  /* 16px base: the office reads on tablets and many readers are over forty (docs/05 § Density). */
   html {
-    font-size: 14px;
+    font-size: 16px;
     background: var(--bg);
   }
+  /* Both faces are always in the stack and the real faces come before the size-matched
+     fallbacks next/font synthesises (those carry Arabic glyphs and would win otherwise): an
+     Arabic title in the English view renders in the Arabic face and a Latin acronym in the
+     Arabic view in Inter (docs/05 § Typography). */
   body {
     margin: 0;
     color: var(--text);
-    font-family: var(--font-inter), sans-serif;
+    font-family:
+      'Inter', 'IBM Plex Sans Arabic', 'Inter Fallback', 'IBM Plex Sans Arabic Fallback', sans-serif;
   }
   html[dir='rtl'] body {
-    font-family: var(--font-arabic), sans-serif;
+    font-family:
+      'IBM Plex Sans Arabic', 'Inter', 'IBM Plex Sans Arabic Fallback', 'Inter Fallback', sans-serif;
   }
   button:not(:disabled),
   a {
@@ -80,13 +101,20 @@
     outline: 2px solid var(--accent);
     outline-offset: 3px;
   }
+  /* Controls are 36px with a pointer and 44px on touch (docs/05 § Density and § Mobile). */
   input,
   textarea,
-  select {
-    min-height: 44px;
-  }
+  select,
   button[data-slot='button'] {
-    min-height: 44px;
+    min-height: 36px;
+  }
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select,
+    button[data-slot='button'] {
+      min-height: 44px;
+    }
   }
   h1,
   h2,
@@ -127,8 +155,9 @@
 .entity-page {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 119px - env(safe-area-inset-bottom));
+  height: calc(100dvh - 63px - 56px - env(safe-area-inset-bottom));
 }
+/* The completion toggle keeps a 44px hit area at every pointer type; the ring inside is 18px. */
 .entity-check[data-slot='checkbox'] {
   width: 44px;
   height: 44px;
@@ -139,9 +168,12 @@
 .entity-check[data-slot='checkbox']::before {
   content: '';
   position: absolute;
-  inset: 12px;
-  border: 1px solid var(--color-text-muted);
+  inset: 13px;
+  border: 1.5px solid var(--color-text-muted);
   border-radius: inherit;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
 }
 .entity-check[data-checked]::before {
   background: var(--color-accent);
@@ -154,9 +186,186 @@
 .entity-check::after {
   display: none;
 }
+/* Completing a task: the ring pops and the tick scales in. */
+.entity-check[data-checked]::before {
+  animation: check-pop 220ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.entity-check[data-checked] [data-slot='checkbox-indicator'] {
+  animation: check-in 200ms ease-out;
+}
+@keyframes check-pop {
+  0% {
+    transform: scale(0.8);
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes check-in {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+/* A row leaving the list (completed, trashed, restored) fades, then collapses. */
+.entity-row-leaving {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: row-leave 300ms ease-in forwards;
+  pointer-events: none;
+}
+.entity-row-leaving > * {
+  min-height: 0;
+  overflow: hidden;
+}
+@keyframes row-leave {
+  0% {
+    opacity: 1;
+    grid-template-rows: 1fr;
+  }
+  50% {
+    opacity: 0;
+    grid-template-rows: 1fr;
+  }
+  100% {
+    opacity: 0;
+    grid-template-rows: 0fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entity-check[data-checked]::before,
+  .entity-check[data-checked] [data-slot='checkbox-indicator'] {
+    animation: none;
+  }
+  .entity-row-leaving {
+    animation-duration: 1ms;
+  }
+}
+/* Popups scale in from their anchor and out again (Base UI starting and ending styles). */
+[data-slot='select-content'],
+[data-slot='popover-content'] {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+[data-slot='select-content'][data-starting-style],
+[data-slot='select-content'][data-ending-style],
+[data-slot='popover-content'][data-starting-style],
+[data-slot='popover-content'][data-ending-style] {
+  opacity: 0;
+  transform: scale(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot='select-content'],
+  [data-slot='popover-content'] {
+    transition: none;
+  }
+}
+/* Selected row: tinted ground plus a start-edge bar that reads in both directions and themes. */
+.entity-row[data-current]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--color-accent);
+}
+/* Text that may be Arabic inside an English list (or the reverse) keeps its own direction while
+   staying aligned with the row (docs/05 § Mixed direction). */
+.plaintext {
+  unicode-bidi: plaintext;
+}
+/* Popups scale in from their anchor and out again (Base UI starting and ending styles). */
+[data-slot='select-content'],
+[data-slot='popover-content'] {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+[data-slot='select-content'][data-starting-style],
+[data-slot='select-content'][data-ending-style],
+[data-slot='popover-content'][data-starting-style],
+[data-slot='popover-content'][data-ending-style] {
+  opacity: 0;
+  transform: scale(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot='select-content'],
+  [data-slot='popover-content'] {
+    transition: none;
+  }
+}
+/* Selected row: tinted ground plus a start-edge bar that reads in both directions and themes. */
+.entity-row[data-current]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--color-accent);
+}
+/* Text that may be Arabic inside an English list (or the reverse) keeps its own direction while
+   staying aligned with the row (docs/05 § Mixed direction). */
+.plaintext {
+  unicode-bidi: plaintext;
+}
+/* Secondary controls unfold on hover or focus where a pointer can hover; touch sees them always. */
+@media (hover: hover) {
+  .hover-reveal-target {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+      grid-template-rows 120ms ease,
+      opacity 120ms ease;
+  }
+  .hover-reveal-target > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .hover-reveal:hover .hover-reveal-target,
+  .hover-reveal:focus-within .hover-reveal-target {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hover-reveal-target {
+      transition: none;
+    }
+  }
+}
 @media (min-width: 1024px) {
   .entity-page {
     height: calc(100dvh - 63px);
+  }
+  /* An open panel pulls focus: the shell sidebar and the views rail soften, and while a task is
+     being created the list softens too. Hover or focus brings an element back; colours are not
+     changed, so text contrast holds. */
+  .app-sidebar,
+  .entity-rail,
+  [data-entity-list] {
+    transition: filter 160ms ease;
+  }
+  body:has(.entity-page-open) .app-sidebar:not(:hover):not(:focus-within),
+  .entity-page-open .entity-rail:not(:hover):not(:focus-within),
+  .entity-page-creating [data-entity-list]:not(:hover):not(:focus-within) {
+    filter: blur(1.5px) saturate(0.7);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app-sidebar,
+    .entity-rail,
+    [data-entity-list] {
+      transition: none;
+    }
   }
 }
 

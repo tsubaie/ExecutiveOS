@@ -1,6 +1,6 @@
 import { it, expect } from 'vitest';
 import { PersonCreate } from '../schema/validation';
-import { initials } from '../ui/initials';
+import { initials } from '@/ui/format';
 import { normalize } from '@/core/search/normalize';
 import { seedPeople } from '../../../../tests/fixtures/people';
 it('PEOPLE-I01 full name is required and tags are deduplicated', () => {

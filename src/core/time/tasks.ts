@@ -1,10 +1,5 @@
-import { Temporal } from '@js-temporal/polyfill';
-export function dayAt(timezone: string, instant = Temporal.Now.instant().toString()) {
-  return Temporal.Instant.from(instant).toZonedDateTimeISO(timezone).toPlainDate().toString();
-}
-export function addDays(day: string, days: number) {
-  return Temporal.PlainDate.from(day).add({ days }).toString();
-}
+import { addDays, dayAt } from './days';
+export { addDays, dayAt };
 export function bandOf(task: { status: string; dueDate: string | null }, today: string) {
   if (task.status === 'completed') return null;
   if (!task.dueDate) return 'nodate';

@@ -35,7 +35,6 @@
     "notFound": "This record is no longer available.",
     "outside": "This record is outside the current view.",
     "showAll": "Show in All",
-    "previous": "Previous",
     "next": "Next",
     "more": "Load more",
     "edit": "Edit",
@@ -67,7 +66,16 @@
     "position": "{position} of {count}",
     "titleRequired": "Enter a title before leaving this field.",
     "selectedCount": "{count} selected",
-    "actions": "Actions"
+    "actions": "Actions",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "endOfWeek": "End of week",
+    "nextWeek": "Next week",
+    "noDate": "No date",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "pickDate": "Choose a date",
+    "saveFailed": "Not saved"
   },
   "people": {
     "fullName": "Full name",
@@ -225,11 +233,16 @@
     "groupDescription": "Selected tasks become subtasks, in their displayed order. Tasks that already have subtasks cannot be grouped.",
     "selected": "{count, plural, =0 {Select tasks to group} one {# selected · choose at least two} other {# selected}}",
     "convert": "Make a task",
-    "moveUp": "Move subtask up",
-    "moveDown": "Move subtask down",
     "completedHint": "Reopen using the checkbox to edit this completed task.",
     "updated": "Updated {date}",
     "assignedTasks": "Assigned tasks",
-    "viewAssigned": "View assigned tasks ({count})"
+    "viewAssigned": "View assigned tasks ({count})",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday",
+    "progressShort": "{done}/{total}",
+    "addSubtask": "Add a subtask",
+    "subtaskDetails": "Subtask details",
+    "subtaskDetailsDescription": "Owner, due date, order and actions for this subtask.",
+    "dragHandle": "Drag to reorder"
   }
 }
