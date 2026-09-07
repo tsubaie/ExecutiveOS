@@ -29,16 +29,42 @@ Later modules (not in v1): My Day, Relationships cadence tracking, Daily Check-i
 
 Next.js (App Router) · TypeScript strict · PostgreSQL 16 · Drizzle ORM · Zod · TanStack Query · Tailwind CSS v4 + shadcn/ui · next-intl · Claude API (`@anthropic-ai/sdk`) · Vitest + Testing Library · Playwright.
 
-## Quick start (target, once implemented)
+## Run with Docker
+
+WI-0001 is being implemented; see `HANDOFF.md` for the current milestone and verification status. The commands below are the intended completed-stack workflow, not a claim that the in-progress branch already serves the application.
 
 ```bash
-cp .env.example .env          # set DB password, SESSION_SECRET, APP_URL, optional ANTHROPIC_API_KEY
-docker compose up -d
-docker compose logs app | grep SETUP_TOKEN
+cp .env.example .env
+# Set POSTGRES_PASSWORD and the matching password in DATABASE_URL.
+# Set a random SESSION_SECRET of at least 32 characters, and APP_URL.
+docker compose up -d --build
+docker compose logs app
 # open APP_URL and complete first-run setup with the token
 ```
 
-Production needs a reverse proxy with TLS in front (Caddy example in `docs/02-architecture.md`); secure cookies require https.
+The database password is required; Compose refuses an empty value. The database has no published port. The application binds to localhost port 3000; production needs a TLS reverse proxy and an HTTPS `APP_URL`. AI remains disabled when `ANTHROPIC_API_KEY` is empty.
+
+Development with bind-mounted source and hot reload:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
+The development override publishes PostgreSQL on localhost only. Use a separate disposable database for `DATABASE_URL_TEST`; never point tests at production.
+
+Once the implementation and audit scripts are complete, run checks inside the development container:
+
+```bash
+docker compose exec app pnpm test
+docker compose exec app pnpm test:e2e
+docker compose exec app pnpm audit:all
+```
+
+Restore is destructive and requires explicit confirmation, as specified by ADR 0008:
+
+```bash
+docker compose exec app pnpm backup:restore /var/lib/executiveos/backups/BACKUP_ID --confirm
+```
 
 ## Documentation
 

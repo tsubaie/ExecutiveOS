@@ -1,0 +1,49 @@
+services:
+  app:
+    build:
+      context: .
+      target: runtime
+    env_file: .env
+    environment:
+      FILES_DIR: /var/lib/executiveos/files
+      BACKUP_DIR: /var/lib/executiveos/backups
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - files:/var/lib/executiveos/files
+      - backups:/var/lib/executiveos/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 35s
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/v1/health').then(async r=>{const h=await r.json();process.exit(r.ok&&h.db?0:1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+  db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: executiveos
+      POSTGRES_USER: executiveos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U executiveos -d executiveos']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  data:
+  files:
+  backups:

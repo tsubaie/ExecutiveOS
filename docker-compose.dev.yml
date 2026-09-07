@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      target: development
+    user: node
+    environment:
+      NODE_ENV: development
+    volumes:
+      - .:/app
+      - dev_modules:/app/node_modules
+      - dev_next:/app/.next
+    command: ['pnpm', 'dev']
+  db:
+    ports:
+      - '127.0.0.1:5432:5432'
+volumes:
+  dev_modules:
+  dev_next:

@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+drizzle/meta
+openapi.json
+docs
+SPEC-REVIEW.md
+LICENSE
+NOTICE
+node_modules
+.next
+coverage
+test-results

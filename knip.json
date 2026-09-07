@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip/schema.json",
+  "entry": ["src/instrumentation.ts", "scripts/**/*.ts", "tools/eslint/index.mjs"],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "tools/**/*.mjs"],
+  "ignore": ["scripts/audit/tests/fixtures/**"]
+}
