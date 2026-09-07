@@ -1,0 +1,32 @@
+/** HOME-B02–B05: aggregate installed modules and collapse unavailable sections. */
+import 'server-only';
+import { z } from 'zod';
+import type { Context } from '@/core/auth/session';
+import { settingValue } from '@/core/db/settings-repo';
+import { getPerson, listPeople } from '@/modules/people';
+import { Home } from './schema/validation';
+export async function homeSummary(ctx: Context) {
+  const principalId = z
+    .uuid()
+    .nullable()
+    .parse((await settingValue(ctx.db, 'workspace.principal_person_id')) ?? null);
+  const principal = principalId ? await getPerson(ctx, principalId) : null;
+  const people = await listPeople(ctx, {
+    view: 'all',
+    q: '',
+    tag: '',
+    organization: '',
+    sort: 'name',
+    limit: 1,
+  });
+  return Home.parse({
+    name: ctx.user.name,
+    principal: principal?.fullName ?? null,
+    peopleCount: people.meta.total,
+    sections: Home.shape.sections.element.shape.key.options.map((key) => ({
+      key,
+      enabled: false,
+      count: 0,
+    })),
+  });
+}

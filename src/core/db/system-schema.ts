@@ -1,5 +1,5 @@
 import 'server-only';
-// WI-0001 proposal only: no migration has been generated or applied; see HANDOFF.md.
+// System schema; custom search and CHECK definitions are in drizzle/0001.
 import {
   pgTable,
   text,

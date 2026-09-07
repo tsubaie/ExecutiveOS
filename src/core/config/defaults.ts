@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const Locale = z.enum(['en', 'ar']);
 export const locales = Locale.options;
 export const defaults = {
-  locale: locales[0],
+  locale: Locale.enum.en,
   timezone: 'UTC',
   workspaceName: 'ExecutiveOS',
   appUrl: 'http://localhost:3000',

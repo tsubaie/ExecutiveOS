@@ -2,7 +2,7 @@
 FROM ghcr.io/gitleaks/gitleaks:v8.30.1 AS gitleaks
 FROM node:22-bookworm-slim AS base
 WORKDIR /app
-ENV COREPACK_HOME=/opt/corepack
+ENV COREPACK_HOME=/opt/corepack NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 COPY --from=gitleaks /usr/bin/gitleaks /usr/local/bin/gitleaks
 
@@ -33,6 +33,7 @@ COPY --from=builder --chown=executiveos:executiveos /app/.next/static ./.next/st
 COPY --from=builder --chown=executiveos:executiveos /app/public ./public
 COPY --from=builder --chown=executiveos:executiveos /app/src ./src
 COPY --from=builder --chown=executiveos:executiveos /app/scripts ./scripts
+COPY --from=builder --chown=executiveos:executiveos /app/tests/fixtures ./tests/fixtures
 COPY --from=builder --chown=executiveos:executiveos /app/drizzle ./drizzle
 COPY --from=builder --chown=executiveos:executiveos /app/tsconfig.json /app/package.json /app/pnpm-lock.yaml ./
 COPY --from=deps --chown=executiveos:executiveos /app/node_modules ./node_modules

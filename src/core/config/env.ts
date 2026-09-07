@@ -28,7 +28,10 @@ const Environment = z.object({
 });
 
 export function env() {
-  return Environment.parse(process.env);
+  const parsed = Environment.parse(process.env);
+  if (parsed.NODE_ENV === 'test')
+    return { ...parsed, DATABASE_URL: z.string().url().parse(parsed.DATABASE_URL_TEST) };
+  return parsed;
 }
 
 export function rawRuntime() {
