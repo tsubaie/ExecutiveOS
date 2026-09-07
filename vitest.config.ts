@@ -9,7 +9,12 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.test.{ts,tsx}', 'scripts/audit/tests/**/*.test.{ts,mjs}'],
+    include: [
+      'src/**/*.test.{ts,tsx}',
+      'tests/**/*.test.ts',
+      'scripts/audit/tests/**/*.test.{ts,mjs}',
+    ],
+    globalSetup: ['tests/setup/global-setup.ts'],
     exclude: ['**/fixtures/**'],
     testTimeout: 30_000,
     hookTimeout: 60_000,

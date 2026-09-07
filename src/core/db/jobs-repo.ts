@@ -43,72 +43,85 @@ export async function claim(owner: string, kind: string, concurrency: number, gl
   return db().transaction(async (database) => {
     await database.execute(sql`select pg_advisory_xact_lock(7234)`);
     const now = new Date();
-    const active = await database
-      .select({ kind: jobs.kind })
-      .from(jobs)
-      .where(and(eq(jobs.status, 'running'), gt(jobs.leaseExpiresAt, now)));
-    if (
-      active.length >= globalLimit ||
-      active.filter((row) => row.kind === kind).length >= concurrency
-    )
-      return null;
-    await database
-      .update(jobs)
-      .set({ status: 'cancelled', finishedAt: now })
-      .where(and(eq(jobs.status, 'queued'), eq(jobs.cancelRequested, true)));
-    await database
-      .update(jobs)
-      .set({ status: 'failed', lastError: 'deadline_exceeded', finishedAt: now })
-      .where(and(inArray(jobs.status, ['queued', 'running']), lte(jobs.deadlineAt, now)));
-    const [candidate] = await database
-      .select()
-      .from(jobs)
-      .where(
-        and(
-          eq(jobs.kind, kind),
-          eq(jobs.cancelRequested, false),
-          or(isNull(jobs.deadlineAt), gt(jobs.deadlineAt, now)),
-          lt(jobs.attempt, jobs.maxAttempts),
-          or(
-            and(eq(jobs.status, 'queued'), lte(jobs.runAfter, now)),
-            and(eq(jobs.status, 'running'), lte(jobs.leaseExpiresAt, now)),
-          ),
-        ),
-      )
-      .orderBy(desc(jobs.priority), jobs.createdAt)
-      .limit(1)
-      .for('update', { skipLocked: true });
+    if (!(await admits(database, kind, concurrency, globalLimit, now))) return null;
+    await sweepQueue(database, now);
+    const candidate = await selectCandidate(database, kind, now);
     if (!candidate) return null;
-    if (candidate.status === 'running')
-      await database
-        .update(jobAttempts)
-        .set({ status: 'abandoned', finishedAt: now, error: 'lease_expired' })
-        .where(
-          and(eq(jobAttempts.jobId, candidate.id), eq(jobAttempts.attempt, candidate.attempt)),
-        );
-    const [row] = await database
-      .update(jobs)
-      .set({
-        status: 'running',
-        attempt: candidate.attempt + 1,
-        leaseOwner: owner,
-        leaseExpiresAt: new Date(now.getTime() + 120000),
-        startedAt: now,
-      })
-      .where(eq(jobs.id, candidate.id))
-      .returning();
-    if (!row) throw new Error('Claim failed');
-    await database
-      .insert(jobAttempts)
-      .values({
-        id: id(),
-        jobId: row.id,
-        attempt: row.attempt,
-        leaseOwner: owner,
-        status: 'running',
-      });
-    return row;
+    return writeClaim(database, candidate, owner, now);
   });
+}
+async function admits(
+  database: Database,
+  kind: string,
+  concurrency: number,
+  globalLimit: number,
+  now: Date,
+) {
+  const active = await database
+    .select({ kind: jobs.kind })
+    .from(jobs)
+    .where(and(eq(jobs.status, 'running'), gt(jobs.leaseExpiresAt, now)));
+  return (
+    active.length < globalLimit && active.filter((row) => row.kind === kind).length < concurrency
+  );
+}
+async function sweepQueue(database: Database, now: Date) {
+  await database
+    .update(jobs)
+    .set({ status: 'cancelled', finishedAt: now })
+    .where(and(eq(jobs.status, 'queued'), eq(jobs.cancelRequested, true)));
+  await database
+    .update(jobs)
+    .set({ status: 'failed', lastError: 'deadline_exceeded', finishedAt: now })
+    .where(and(inArray(jobs.status, ['queued', 'running']), lte(jobs.deadlineAt, now)));
+}
+async function selectCandidate(database: Database, kind: string, now: Date) {
+  const [candidate] = await database
+    .select()
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.kind, kind),
+        eq(jobs.cancelRequested, false),
+        or(isNull(jobs.deadlineAt), gt(jobs.deadlineAt, now)),
+        lt(jobs.attempt, jobs.maxAttempts),
+        or(
+          and(eq(jobs.status, 'queued'), lte(jobs.runAfter, now)),
+          and(eq(jobs.status, 'running'), lte(jobs.leaseExpiresAt, now)),
+        ),
+      ),
+    )
+    .orderBy(desc(jobs.priority), jobs.createdAt)
+    .limit(1)
+    .for('update', { skipLocked: true });
+  return candidate;
+}
+async function writeClaim(database: Database, candidate: Claimed, owner: string, now: Date) {
+  if (candidate.status === 'running')
+    await database
+      .update(jobAttempts)
+      .set({ status: 'abandoned', finishedAt: now, error: 'lease_expired' })
+      .where(and(eq(jobAttempts.jobId, candidate.id), eq(jobAttempts.attempt, candidate.attempt)));
+  const [row] = await database
+    .update(jobs)
+    .set({
+      status: 'running',
+      attempt: candidate.attempt + 1,
+      leaseOwner: owner,
+      leaseExpiresAt: new Date(now.getTime() + 120000),
+      startedAt: now,
+    })
+    .where(eq(jobs.id, candidate.id))
+    .returning();
+  if (!row) throw new Error('Claim failed');
+  await database.insert(jobAttempts).values({
+    id: id(),
+    jobId: row.id,
+    attempt: row.attempt,
+    leaseOwner: owner,
+    status: 'running',
+  });
+  return row;
 }
 function fence(job: Claimed) {
   return and(

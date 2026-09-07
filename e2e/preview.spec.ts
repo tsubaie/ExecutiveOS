@@ -1,35 +1,14 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { test, expect } from '@playwright/test';
+import { loginAs, credentials } from './fixtures/auth';
 import { z } from 'zod';
 import en from '../src/core/i18n/messages/en.json' with { type: 'json' };
 import ar from '../src/core/i18n/messages/ar.json' with { type: 'json' };
-const Credentials = z.object({
-  email: z.string(),
-  password: z.string(),
-  name: z.string(),
-  setupToken: z.string(),
-});
-async function credentials() {
-  return Credentials.parse(JSON.parse(await readFile('tmp/preview-access.json', 'utf8')));
-}
-async function login(page: Page, locale: string) {
-  const account = await credentials();
-  await page
-    .context()
-    .addCookies([{ name: 'eos_locale', value: locale, url: 'http://localhost:3000' }]);
-  const messages = locale === 'ar' ? ar : en;
-  await page.goto('/login');
-  await page.getByLabel(messages.auth.email).fill(account.email);
-  await page.getByLabel(messages.auth.password).fill(account.password);
-  await page.getByRole('button', { name: messages.auth.login, exact: true }).click();
-  await expect(page).toHaveURL(/home/);
-}
 for (const locale of ['en', 'ar'])
   test(`PEOPLE-B01 PEOPLE-B02 PEOPLE-B03 PEOPLE-B06 PEOPLE-A05 EP-B01 EP-B05 EP-B08 EP-B09 create edit duplicate trash restore (${locale})`, async ({
     page,
   }) => {
     const m = locale === 'ar' ? ar : en;
-    await login(page, locale);
+    await loginAs(page, locale);
     await page.goto('/people');
     await expect(page.getByRole('heading', { name: m.common.people, exact: true })).toBeVisible();
     const name = `Preview ${crypto.randomUUID()}`;
@@ -87,11 +66,12 @@ for (const locale of ['en', 'ar'])
 test('ADMIN-A01 setup cannot run a second time; origin guard and private session boundary', async ({
   page,
 }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   const account = await credentials();
   const results = await page.evaluate(async (account) => {
     const body = {
-      setupToken: account.setupToken,
+      // Any token proves the point: an initialized workspace refuses setup before checking it.
+      setupToken: account.setupToken ?? 'already-initialized',
       email: account.email,
       password: account.password,
       name: account.name,
@@ -115,7 +95,7 @@ test('ADMIN-A01 setup cannot run a second time; origin guard and private session
   expect(results).toEqual({ repeat: 409, origin: 403 });
 });
 test('ADMIN-B04 last active administrator cannot be deactivated', async ({ page }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   await page.goto('/admin/users');
   await page.getByRole('button', { name: 'Edit', exact: true }).first().click();
   await page.getByRole('button', { name: 'Active', exact: true }).click();
@@ -125,7 +105,7 @@ test('ADMIN-B04 last active administrator cannot be deactivated', async ({ page 
 test('HOME-B02 HOME-A03 disabled sections collapse and AI review section is absent', async ({
   page,
 }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   await expect(page.getByText('Module not enabled', { exact: true })).toHaveCount(4);
   await expect(page.getByText('Pending AI reviews', { exact: true })).toHaveCount(0);
   await page.getByRole('link', { name: /Your people directory/ }).click();
@@ -134,7 +114,7 @@ test('HOME-B02 HOME-A03 disabled sections collapse and AI review section is abse
 test('idempotency replay returns one entity; changed payload with the same key conflicts', async ({
   page,
 }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   const result = await page.evaluate(async () => {
     const key = crypto.randomUUID();
     const body = {
@@ -174,7 +154,7 @@ test('idempotency replay returns one entity; changed payload with the same key c
   expect(result.statuses).toEqual([201, 201, 409]);
 });
 test('ADMIN-B12 backup created from the admin page completes as a fenced job', async ({ page }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   await page.goto('/admin/backups');
   const response = page.waitForResponse(
     (r) => r.url().endsWith('/api/v1/admin/backups') && r.request().method() === 'POST',

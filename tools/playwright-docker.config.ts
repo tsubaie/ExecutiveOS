@@ -3,6 +3,7 @@ import { lookup } from 'node:dns/promises';
 const { address } = await lookup('app');
 export default defineConfig({
   testDir: '../e2e',
+  globalSetup: '../e2e/global-setup.ts',
   workers: 1,
   timeout: 60000,
   reporter: 'list',

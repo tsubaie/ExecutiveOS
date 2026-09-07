@@ -6,7 +6,9 @@ test-results/
 .env
 .env.*
 !.env.example
+!.env.test.example
 *.tsbuildinfo
 next-env.d.ts
 .pnpm-store/
 tmp/
+e2e/.auth/

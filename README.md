@@ -10,18 +10,18 @@ Runnable development preview: setup/login, Home, administration surfaces, and a 
 
 ## Modules (v1)
 
-| Module | What it does |
-|---|---|
-| Home | Next meetings, prep not ready, overdue actions, pending AI reviews |
-| Tasks | GTD-style tasks with subtasks, owners, priorities, due-date bands, and links to committees, initiatives, meetings, and notes |
-| Notes | Thread-first meeting notes with types, tags, and AI refinement that extracts tasks |
-| Committees | Standing bodies (boards, councils, internal committees) that group tasks and notes |
-| KPIs | Objectives, KPIs, readings, quarterly targets, and computed status |
-| Initiatives | Strategic initiatives with deliverables, planned-vs-actual progress, health updates |
-| Meetings | Meetings with attendees, agenda, documents, AI executive briefs, minutes, and actions |
-| People | Lightweight directory of the people linked to tasks, meetings, and notes |
-| Links | A typed context graph: link any entity to any other (person↔task, KPI↔meeting, …) |
-| Admin | Users, settings, AI configuration, learnings review, backups, export, jobs, audit log |
+| Module      | What it does                                                                                                                 |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Home        | Next meetings, prep not ready, overdue actions, pending AI reviews                                                           |
+| Tasks       | GTD-style tasks with subtasks, owners, priorities, due-date bands, and links to committees, initiatives, meetings, and notes |
+| Notes       | Thread-first meeting notes with types, tags, and AI refinement that extracts tasks                                           |
+| Committees  | Standing bodies (boards, councils, internal committees) that group tasks and notes                                           |
+| KPIs        | Objectives, KPIs, readings, quarterly targets, and computed status                                                           |
+| Initiatives | Strategic initiatives with deliverables, planned-vs-actual progress, health updates                                          |
+| Meetings    | Meetings with attendees, agenda, documents, AI executive briefs, minutes, and actions                                        |
+| People      | Lightweight directory of the people linked to tasks, meetings, and notes                                                     |
+| Links       | A typed context graph: link any entity to any other (person↔task, KPI↔meeting, …)                                            |
+| Admin       | Users, settings, AI configuration, learnings review, backups, export, jobs, audit log                                        |
 
 Later modules (not in v1): My Day, Relationships cadence tracking, Daily Check-in, Calendar and Email integrations.
 
@@ -73,6 +73,25 @@ Restore replaces the target database and requires explicit confirmation, as spec
 ```bash
 docker compose exec app pnpm backup:restore /var/lib/executiveos/backups/BACKUP_ID --confirm
 ```
+
+## Development
+
+Run the checks from the source checkout with Node 22 and pnpm (`corepack enable`). Unit and integration suites need a disposable PostgreSQL database whose name ends in `_test`; the suite refuses anything else and creates the database when it is missing:
+
+```bash
+docker compose -f docker-compose.test.yml up -d   # PostgreSQL on localhost:5433
+cp .env.test.example .env.test                    # loaded automatically by pnpm test
+pnpm test
+```
+
+Browser tests run against a production build. Playwright starts the standalone server unless something is already listening on port 3000, and the global setup creates the browser-test administrator through the real first-run setup API on an empty database. Against an already initialized preview, put an existing administrator's `{"email","password","name"}` in the ignored `e2e/.auth/credentials.json` first:
+
+```bash
+pnpm build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public
+pnpm test:e2e
+```
+
+`pnpm audit:all` is the full gate; `.github/workflows/ci.yml` runs it on every pull request.
 
 ## Documentation
 

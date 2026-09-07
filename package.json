@@ -19,11 +19,11 @@
     "knip": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "node --env-file-if-exists=.env.test node_modules/vitest/vitest.mjs run",
+    "test:watch": "node --env-file-if-exists=.env.test node_modules/vitest/vitest.mjs",
     "test:e2e": "playwright test",
     "test:mutate": "stryker run",
-    "test:audits": "vitest run scripts/audit/tests",
+    "test:audits": "node --env-file-if-exists=.env.test node_modules/vitest/vitest.mjs run scripts/audit/tests tests",
     "db:migrate": "node --conditions=react-server --import tsx scripts/db/migrate.ts",
     "db:reset": "node --conditions=react-server --import tsx scripts/db/reset.ts",
     "db:seed": "node --conditions=react-server --import tsx scripts/db/seed.ts",
@@ -42,7 +42,8 @@
     "audit:a11y": "tsx scripts/audit/a11y.ts",
     "audit:perf": "tsx scripts/audit/perf.ts",
     "audit:dupes": "tsx scripts/audit/dupes.ts",
-    "audit:secrets": "tsx scripts/audit/secrets.ts"
+    "audit:secrets": "tsx scripts/audit/secrets.ts",
+    "db:e2e-account": "node --conditions=react-server --import tsx scripts/db/e2e-account.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.124.0",

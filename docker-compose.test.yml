@@ -1,0 +1,19 @@
+# Disposable PostgreSQL for `pnpm test` and `pnpm test:e2e` on a developer machine.
+# Usage: docker compose -f docker-compose.test.yml up -d ; then copy .env.test.example to .env.test.
+name: executiveos-test
+services:
+  test-db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: executiveos_test
+      POSTGRES_USER: executiveos
+      POSTGRES_PASSWORD: executiveos
+    ports:
+      - '127.0.0.1:${TEST_DB_PORT:-5433}:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U executiveos -d executiveos_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10

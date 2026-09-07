@@ -25,16 +25,18 @@ const Form = z.object({
   principalName: z.string(),
   token: z.string(),
 });
+type FormValues = z.infer<typeof Form>;
 type Mode = 'setup' | 'login' | 'recovery';
-export function AuthForm({
-  mode,
-  recoveryEnabled = false,
-}: {
-  mode: Mode;
-  recoveryEnabled?: boolean;
-}) {
-  const t = useTranslations('auth');
-  const c = useTranslations('common');
+const setupFields = z.enum(['name', 'workspaceName', 'timezone', 'principalName']);
+function authBody(mode: Mode, values: FormValues) {
+  if (mode === 'login') return { email: values.email, password: values.password };
+  if (mode === 'recovery')
+    return { email: values.email, password: values.password, token: values.token };
+  const { token, ...setup } = values;
+  void token;
+  return setup;
+}
+function useAuthState(mode: Mode) {
   const locale = Locale.parse(useLocale());
   const client = useQueryClient();
   const form = useForm({
@@ -52,24 +54,29 @@ export function AuthForm({
     },
   });
   const mutation = useMutation({
-    mutationFn: async (values: z.infer<typeof Form>) => {
-      const body =
-        mode === 'setup'
-          ? { ...values, token: undefined }
-          : mode === 'login'
-            ? { email: values.email, password: values.password }
-            : { email: values.email, password: values.password, token: values.token };
-      return request(mode === 'login' ? '/auth/login' : `/${mode}`, z.object({ data: z.json() }), {
+    mutationFn: (values: FormValues) =>
+      request(mode === 'login' ? '/auth/login' : `/${mode}`, z.object({ data: z.json() }), {
         method: 'POST',
-        body: z.json().parse(JSON.parse(JSON.stringify(body))),
-      });
-    },
+        body: authBody(mode, values),
+      }),
     onSuccess: () => {
       client.clear();
       location.assign(mode === 'recovery' ? '/login' : '/home');
     },
   });
-  const fields = mode === 'setup' ? ['name', 'workspaceName', 'timezone', 'principalName'] : [];
+  return { mode, locale, form, mutation };
+}
+type AuthState = ReturnType<typeof useAuthState>;
+export function AuthForm({
+  mode,
+  recoveryEnabled = false,
+}: {
+  mode: Mode;
+  recoveryEnabled?: boolean;
+}) {
+  const t = useTranslations('auth');
+  const c = useTranslations('common');
+  const state = useAuthState(mode);
   return (
     <div className="min-h-dvh">
       <header className="flex items-center justify-between px-5 py-5 sm:px-10">
@@ -86,57 +93,15 @@ export function AuthForm({
           <p className="mt-3 text-text-muted">{t(`${mode}Description`)}</p>
         </div>
         <form
-          onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          onSubmit={state.form.handleSubmit((values) => state.mutation.mutate(values))}
           className="grid gap-5 rounded-xl border bg-surface p-6 sm:p-8"
         >
-          {mode === 'setup' && (
-            <Field label={t('token')} hint={t('tokenHelp')}>
-              <Input autoComplete="off" required {...form.register('setupToken')} />
-            </Field>
-          )}
-          {mode === 'recovery' && (
-            <Field label={t('recoveryToken')}>
-              <Input autoComplete="off" required {...form.register('token')} />
-            </Field>
-          )}
-          {fields.map((field) => {
-            const key = z.enum(['name', 'workspaceName', 'timezone', 'principalName']).parse(field);
-            return (
-              <Field key={key} label={t(key)}>
-                <Input required={key !== 'principalName'} dir="auto" {...form.register(key)} />
-              </Field>
-            );
-          })}
-          {mode === 'setup' && (
-            <Field label={t('language')}>
-              <NativeSelect {...form.register('locale')}>
-                {Locale.options.map((item) => (
-                  <NativeSelectOption key={item} value={item}>
-                    {new Intl.DisplayNames(locale, { type: 'language' }).of(item)}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </Field>
-          )}
-          <Field label={t('email')} error={form.formState.errors.email?.message}>
-            <Input type="email" autoComplete="username" required {...form.register('email')} />
-          </Field>
-          <Field
-            label={t('password')}
-            hint={mode === 'login' ? undefined : t('passwordHelp')}
-            error={form.formState.errors.password?.message}
-          >
-            <Input
-              type="password"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              minLength={mode === 'login' ? 1 : 12}
-              required
-              {...form.register('password')}
-            />
-          </Field>
-          {mutation.isError && <ErrorPanel error={mutation.error} />}
-          <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? c('saving') : t(mode)}
+          {mode === 'setup' && <SetupFields state={state} />}
+          {mode === 'recovery' && <RecoveryTokenField state={state} />}
+          <CredentialFields state={state} />
+          {state.mutation.isError && <ErrorPanel error={state.mutation.error} />}
+          <Button type="submit" disabled={state.mutation.isPending}>
+            {state.mutation.isPending ? c('saving') : t(mode)}
             <ArrowRight className="ms-1 size-4 rtl:rotate-180" />
           </Button>
           {mode === 'login' && recoveryEnabled && (
@@ -151,5 +116,63 @@ export function AuthForm({
         </p>
       </main>
     </div>
+  );
+}
+function SetupFields({ state }: { state: AuthState }) {
+  const t = useTranslations('auth');
+  const names = new Intl.DisplayNames(state.locale, { type: 'language' });
+  return (
+    <>
+      <Field label={t('token')} hint={t('tokenHelp')}>
+        <Input autoComplete="off" required {...state.form.register('setupToken')} />
+      </Field>
+      {setupFields.options.map((key) => (
+        <Field key={key} label={t(key)}>
+          <Input required={key !== 'principalName'} dir="auto" {...state.form.register(key)} />
+        </Field>
+      ))}
+      <Field label={t('language')}>
+        <NativeSelect {...state.form.register('locale')}>
+          {Locale.options.map((item) => (
+            <NativeSelectOption key={item} value={item}>
+              {names.of(item)}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Field>
+    </>
+  );
+}
+function RecoveryTokenField({ state }: { state: AuthState }) {
+  const t = useTranslations('auth');
+  return (
+    <Field label={t('recoveryToken')}>
+      <Input autoComplete="off" required {...state.form.register('token')} />
+    </Field>
+  );
+}
+function CredentialFields({ state }: { state: AuthState }) {
+  const t = useTranslations('auth');
+  const login = state.mode === 'login';
+  const errors = state.form.formState.errors;
+  return (
+    <>
+      <Field label={t('email')} error={errors.email?.message}>
+        <Input type="email" autoComplete="username" required {...state.form.register('email')} />
+      </Field>
+      <Field
+        label={t('password')}
+        hint={login ? undefined : t('passwordHelp')}
+        error={errors.password?.message}
+      >
+        <Input
+          type="password"
+          autoComplete={login ? 'current-password' : 'new-password'}
+          minLength={login ? 1 : 12}
+          required
+          {...state.form.register('password')}
+        />
+      </Field>
+    </>
   );
 }

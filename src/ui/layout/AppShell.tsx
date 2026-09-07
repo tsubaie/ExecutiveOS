@@ -1,6 +1,7 @@
 'use client';
 import { type ReactNode } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShellLinks } from './ShellLinks';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -21,12 +22,14 @@ export function AppShell({
 }) {
   const t = useTranslations('common');
   const client = useQueryClient();
+  const router = useRouter();
   const logout = useMutation({
     mutationFn: () =>
       request('/auth/logout', z.object({ data: z.null() }), { method: 'POST', body: {} }),
     onSuccess: () => {
       client.clear();
-      location.assign('/login');
+      router.push('/login');
+      router.refresh();
     },
   });
 

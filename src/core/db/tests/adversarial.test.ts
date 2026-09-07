@@ -11,7 +11,6 @@ import { PersonCreate } from '@/modules/people/schema/validation';
 import { claim, enqueue, publish } from '../jobs-repo';
 import { scheduleDue } from '@/core/jobs/scheduler';
 import { id } from '../ids';
-import { env } from '@/core/config/env';
 import { seedPeople } from '../../../../tests/fixtures/people';
 const setupToken = token();
 const password = token();
@@ -26,8 +25,6 @@ const input = {
   principalName: '',
 };
 beforeAll(async () => {
-  if (!new URL(env().DATABASE_URL).pathname.endsWith('_test'))
-    throw new Error('Adversarial suite requires dedicated *_test database');
   await migrateDatabase();
 });
 beforeEach(async () => {

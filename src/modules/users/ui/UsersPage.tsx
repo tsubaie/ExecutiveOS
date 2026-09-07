@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogTitle } from '@/ui/primitives/dialog';
 import { Field } from '@/ui/layout/Field';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import Loading from '@/ui/layout/Loading';
-function EditMember({ user }: { user: z.infer<typeof User> }) {
+type Member = z.infer<typeof User>;
+function EditMember({ user }: { user: Member }) {
   const t = useTranslations('admin');
   const c = useTranslations('common');
   const mutation = useUpdateUser();
@@ -89,6 +90,34 @@ function NewMember() {
     </form>
   );
 }
+function UsersList({ users, onEdit }: { users: Member[]; onEdit: (id: string) => void }) {
+  const t = useTranslations('admin');
+  const c = useTranslations('common');
+  return (
+    <ul className="divide-y rounded-xl border bg-surface">
+      {users.map((user) => (
+        <li key={user.id} className="flex flex-wrap items-center justify-between gap-3 p-5">
+          <div className="min-w-0">
+            <p dir="auto" className="font-medium">
+              {user.name}
+            </p>
+            <p className="mt-1 break-all text-sm text-text-muted">
+              <bdi>{user.email}</bdi>
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-text-muted">
+              {t(user.role)} · {user.isActive ? c('active') : c('inactive')}
+            </span>
+            <Button variant="outline" onClick={() => onEdit(user.id)}>
+              {c('edit')}
+            </Button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
 export function UsersPage() {
   const t = useTranslations('admin');
   const c = useTranslations('common');
@@ -107,28 +136,7 @@ export function UsersPage() {
       ) : query.error ? (
         <ErrorPanel error={query.error} />
       ) : (
-        <ul className="divide-y rounded-xl border bg-surface">
-          {query.data.data.map((user) => (
-            <li key={user.id} className="flex flex-wrap items-center justify-between gap-3 p-5">
-              <div className="min-w-0">
-                <p dir="auto" className="font-medium">
-                  {user.name}
-                </p>
-                <p className="mt-1 break-all text-sm text-text-muted">
-                  <bdi>{user.email}</bdi>
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-text-muted">
-                  {t(user.role)} · {user.isActive ? c('active') : c('inactive')}
-                </span>
-                <Button variant="outline" onClick={() => setSelected(user.id)}>
-                  {c('edit')}
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <UsersList users={query.data.data} onEdit={setSelected} />
       )}
       <Dialog open={adding} onOpenChange={setAdding}>
         <DialogContent>

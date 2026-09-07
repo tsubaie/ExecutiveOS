@@ -1,0 +1,70 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: executiveos
+          POSTGRES_PASSWORD: executiveos
+          POSTGRES_DB: executiveos
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U executiveos"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://executiveos:executiveos@localhost:5432/executiveos
+      DATABASE_URL_TEST: postgresql://executiveos:executiveos@localhost:5432/executiveos_test
+      SESSION_SECRET: ci-only-session-secret-0123456789abcdefghij
+      APP_URL: http://localhost:3000
+      FILES_DIR: ${{ github.workspace }}/tmp/files
+      BACKUP_DIR: ${{ github.workspace }}/tmp/backups
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # Until the remaining audit scripts land, run the gate steps that exist.
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm depcruise
+      # knip is enforced through audit:deps once the audit scripts land (see docs/history).
+      - run: pnpm test
+      - run: pnpm build
+      - name: Assemble standalone server
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target runtime .

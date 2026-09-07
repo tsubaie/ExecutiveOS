@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { loginAs } from './fixtures/auth';
 import en from '../src/core/i18n/messages/en.json' with { type: 'json' };
 import ar from '../src/core/i18n/messages/ar.json' with { type: 'json' };
 const created = new WeakMap<Page, Promise<string>[]>();
@@ -21,18 +21,6 @@ test.afterEach(async ({ page }) => {
       await api(page, `/${id}`, 'DELETE', { revision: current.body.data.revision });
   }
 });
-async function login(page: Page, locale: string) {
-  const account = JSON.parse(await readFile('tmp/preview-access.json', 'utf8'));
-  await page
-    .context()
-    .addCookies([{ name: 'eos_locale', value: locale, url: 'http://localhost:3000' }]);
-  const m = locale === 'ar' ? ar : en;
-  await page.goto('/login');
-  await page.getByLabel(m.auth.email).fill(account.email);
-  await page.getByLabel(m.auth.password).fill(account.password);
-  await page.getByRole('button', { name: m.auth.login, exact: true }).click();
-  await expect(page).toHaveURL(/home/);
-}
 async function api(page: Page, path: string, method = 'GET', body?: object, key?: string) {
   return page.evaluate(
     async ({ path, method, body, key }) => {
@@ -61,7 +49,7 @@ for (const locale of ['en', 'ar'])
     page,
   }) => {
     const m = locale === 'ar' ? ar : en;
-    await login(page, locale);
+    await loginAs(page, locale);
     await page.goto('/tasks?view=inbox');
     await expect(page.getByRole('heading', { name: m.common.tasks, exact: true })).toBeVisible();
     const title = `Office review ${crypto.randomUUID()}`;
@@ -143,7 +131,7 @@ for (const locale of ['en', 'ar'])
     });
   });
 test('TASKS-A05 TASKS-B09 group selected tasks through framework selection', async ({ page }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   const prefix = `Group ${crypto.randomUUID()}`;
   const children = [];
   for (const suffix of ['One', 'Two', 'Three'])
@@ -168,7 +156,7 @@ test('TASKS-A05 TASKS-B09 group selected tasks through framework selection', asy
 test('TASKS-A09 EP-B08 stale editor offers reload and reapply without resetting other fields', async ({
   page,
 }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   const task = (
     await api(page, '', 'POST', { title: `Conflict ${crypto.randomUUID()}`, priority: 'high' })
   ).body.data;
@@ -193,7 +181,7 @@ test('TASKS-A07 TASKS-B02 API authorization validation idempotency and disabled 
   request,
 }) => {
   expect((await request.get('http://app:3000/api/v1/tasks')).status()).toBe(401);
-  await login(page, 'en');
+  await loginAs(page, 'en');
   expect((await api(page, '', 'POST', { title: '' })).status).toBe(400);
   const key = crypto.randomUUID();
   const first = await api(page, '', 'POST', { title: 'Idempotent task' }, key);
@@ -211,7 +199,7 @@ test('TASKS-A07 TASKS-B02 API authorization validation idempotency and disabled 
 test('TASKS-B08 TASKS-I04 reorder children and restore an independently deleted child from detail', async ({
   page,
 }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   const parent = (await api(page, '', 'POST', { title: `Reorder ${crypto.randomUUID()}` })).body
     .data;
   const children = [];
@@ -237,7 +225,7 @@ test('TASKS-B08 TASKS-I04 reorder children and restore an independently deleted 
   await expect(page.getByLabel(en.tasks.subtaskTitle, { exact: true })).toHaveCount(4);
 });
 test('TASKS-B10 TASKS-B15 HOME-B01 assigned work appears in People and Home', async ({ page }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   const owners = await page.evaluate(
     async () => (await (await fetch('/api/v1/people?view=assignable')).json()).data,
   );
@@ -261,7 +249,7 @@ for (const locale of ['en', 'ar']) {
     page,
   }) => {
     const m = locale === 'ar' ? ar : en;
-    await login(page, locale);
+    await loginAs(page, locale);
     const task = (
       await api(page, '', 'POST', { title: `UX ${crypto.randomUUID()}`, priority: 'low' })
     ).body.data;
@@ -327,7 +315,7 @@ for (const locale of ['en', 'ar']) {
 test('EP-B10 EP-B11 queued save failure blocks view changes and preserves the draft', async ({
   page,
 }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   const task = (await api(page, '', 'POST', { title: `UX save ${crypto.randomUUID()}` })).body.data;
   await page.goto(`/tasks?view=all&id=${task.id}`);
   const title = page.getByLabel(en.tasks.title, { exact: true });
@@ -355,7 +343,7 @@ test('EP-B10 EP-B11 queued save failure blocks view changes and preserves the dr
 test('EP-B01 EP-B02 search keeps typing focus, debounces and follows browser history', async ({
   page,
 }) => {
-  await login(page, 'en');
+  await loginAs(page, 'en');
   const title = `UX search ${crypto.randomUUID()}`;
   await api(page, '', 'POST', { title });
   await page.goto('/tasks?view=all');

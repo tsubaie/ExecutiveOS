@@ -6,7 +6,6 @@ import { users } from '@/core/db/system-schema';
 import { people } from '@/modules/people/schema/db';
 import { User } from '@/core/http/user-schema';
 import { id } from '@/core/db/ids';
-import { env } from '@/core/config/env';
 import { tasks } from '../schema/db';
 import { TaskCreate, TaskListQuery, TaskPatch } from '../schema/validation';
 import * as service from '../service';
@@ -17,8 +16,6 @@ const run = <T>(action: (ctx: { db: Database; user: User; requestId: string }) =
 const create = (title: string, fields: Partial<TaskCreate> = {}) =>
   run((ctx) => service.createTask(ctx, TaskCreate.parse({ title, ...fields })));
 beforeAll(async () => {
-  if (!new URL(env().DATABASE_URL).pathname.endsWith('_test'))
-    throw new Error('Dedicated test database required');
   await migrateDatabase();
 });
 beforeEach(async () => {

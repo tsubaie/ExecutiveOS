@@ -26,6 +26,20 @@ export const emptyPerson: Values = {
   isAssignable: false,
   userId: null,
 };
+const textFields = z.enum([
+  'fullName',
+  'displayName',
+  'honorific',
+  'organization',
+  'roleTitle',
+  'email',
+  'phone',
+]);
+function usePersonForm(initial: Values, save?: (patch: Patch) => void) {
+  const form = useForm({ resolver: zodResolver(PersonFields), defaultValues: initial });
+  return { form, initial, save };
+}
+type Editor = ReturnType<typeof usePersonForm>;
 export function PersonForm({
   initial = emptyPerson,
   submit,
@@ -37,21 +51,28 @@ export function PersonForm({
   save?: (patch: Patch) => void;
   pending?: boolean;
 }) {
-  const t = useTranslations('people');
   const c = useTranslations('common');
-  const form = useForm({ resolver: zodResolver(PersonFields), defaultValues: initial });
-  const assignable = useWatch({ control: form.control, name: 'isAssignable' });
-  const textFields = z.enum([
-    'fullName',
-    'displayName',
-    'honorific',
-    'organization',
-    'roleTitle',
-    'email',
-    'phone',
-  ]);
+  const editor = usePersonForm(initial, save);
   return (
-    <form className="grid gap-5" onSubmit={form.handleSubmit((values) => submit?.(values))}>
+    <form className="grid gap-5" onSubmit={editor.form.handleSubmit((values) => submit?.(values))}>
+      <PersonTextFields editor={editor} />
+      <PersonKind editor={editor} />
+      <PersonAssignable editor={editor} />
+      <PersonTags editor={editor} />
+      <PersonNotes editor={editor} />
+      {submit && (
+        <Button type="submit" disabled={pending}>
+          {pending ? c('saving') : c('create')}
+        </Button>
+      )}
+    </form>
+  );
+}
+function PersonTextFields({ editor }: { editor: Editor }) {
+  const t = useTranslations('people');
+  const { form, save } = editor;
+  return (
+    <>
       {textFields.options.map((key) => (
         <Field key={key} label={t(key)} error={form.formState.errors[key]?.message}>
           <Input
@@ -66,62 +87,83 @@ export function PersonForm({
           />
         </Field>
       ))}
-      <Field label={t('kind')}>
-        <NativeSelect
-          {...form.register('kind')}
-          onChange={(event) => {
-            const kind = Kind.parse(event.target.value);
-            form.setValue('kind', kind);
-            save?.({ kind });
-          }}
-        >
-          {Kind.options.map((kind) => (
-            <NativeSelectOption key={kind} value={kind}>
-              {c(kind)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </Field>
-      <label className="flex min-h-11 items-center gap-3 text-sm">
-        <Checkbox
-          checked={assignable}
-          onCheckedChange={(checked) => {
-            form.setValue('isAssignable', checked);
-            save?.({ isAssignable: checked });
-          }}
-        />
-        {t('isAssignable')}
-      </label>
-      <Field label={t('tags')}>
-        <Input
-          dir="auto"
-          defaultValue={initial.tags.join(', ')}
-          onBlur={(event) => {
-            const tags = event.target.value
-              .split(',')
-              .map((v) => v.trim())
-              .filter(Boolean);
-            form.setValue('tags', tags);
-            if (PersonFields.shape.tags.safeParse(tags).success) save?.({ tags });
-          }}
-        />
-      </Field>
-      <Field label={t('notes')} error={form.formState.errors.notes?.message}>
-        <Textarea
-          dir="auto"
-          rows={5}
-          {...form.register('notes')}
-          onBlur={async (event) => {
-            await form.register('notes').onBlur(event);
-            if (await form.trigger('notes')) save?.({ notes: form.getValues('notes') });
-          }}
-        />
-      </Field>
-      {submit && (
-        <Button type="submit" disabled={pending}>
-          {pending ? c('saving') : c('create')}
-        </Button>
-      )}
-    </form>
+    </>
+  );
+}
+function PersonKind({ editor }: { editor: Editor }) {
+  const t = useTranslations('people');
+  const c = useTranslations('common');
+  const { form, save } = editor;
+  return (
+    <Field label={t('kind')}>
+      <NativeSelect
+        {...form.register('kind')}
+        onChange={(event) => {
+          const kind = Kind.parse(event.target.value);
+          form.setValue('kind', kind);
+          save?.({ kind });
+        }}
+      >
+        {Kind.options.map((kind) => (
+          <NativeSelectOption key={kind} value={kind}>
+            {c(kind)}
+          </NativeSelectOption>
+        ))}
+      </NativeSelect>
+    </Field>
+  );
+}
+function PersonAssignable({ editor }: { editor: Editor }) {
+  const t = useTranslations('people');
+  const { form, save } = editor;
+  const assignable = useWatch({ control: form.control, name: 'isAssignable' });
+  return (
+    <label className="flex min-h-11 items-center gap-3 text-sm">
+      <Checkbox
+        checked={assignable}
+        onCheckedChange={(checked) => {
+          form.setValue('isAssignable', checked);
+          save?.({ isAssignable: checked });
+        }}
+      />
+      {t('isAssignable')}
+    </label>
+  );
+}
+function PersonTags({ editor }: { editor: Editor }) {
+  const t = useTranslations('people');
+  const { form, save, initial } = editor;
+  return (
+    <Field label={t('tags')}>
+      <Input
+        dir="auto"
+        defaultValue={initial.tags.join(', ')}
+        onBlur={(event) => {
+          const tags = event.target.value
+            .split(',')
+            .map((v) => v.trim())
+            .filter(Boolean);
+          form.setValue('tags', tags);
+          if (PersonFields.shape.tags.safeParse(tags).success) save?.({ tags });
+        }}
+      />
+    </Field>
+  );
+}
+function PersonNotes({ editor }: { editor: Editor }) {
+  const t = useTranslations('people');
+  const { form, save } = editor;
+  return (
+    <Field label={t('notes')} error={form.formState.errors.notes?.message}>
+      <Textarea
+        dir="auto"
+        rows={5}
+        {...form.register('notes')}
+        onBlur={async (event) => {
+          await form.register('notes').onBlur(event);
+          if (await form.trigger('notes')) save?.({ notes: form.getValues('notes') });
+        }}
+      />
+    </Field>
   );
 }
