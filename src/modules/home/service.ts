@@ -3,7 +3,7 @@ import 'server-only';
 import { z } from 'zod';
 import type { Context } from '@/core/auth/session';
 import { settingValue } from '@/core/db/settings-repo';
-import { getPerson, listPeople } from '@/modules/people';
+import { getPerson, countPeople } from '@/modules/people';
 import { homeSummary as tasksSummary } from '@/modules/tasks';
 import { Home } from './schema/validation';
 export async function homeSummary(ctx: Context) {
@@ -12,19 +12,12 @@ export async function homeSummary(ctx: Context) {
     .nullable()
     .parse((await settingValue(ctx.db, 'workspace.principal_person_id')) ?? null);
   const principal = principalId ? await getPerson(ctx, principalId) : null;
-  const people = await listPeople(ctx, {
-    view: 'all',
-    q: '',
-    tag: '',
-    organization: '',
-    sort: 'name',
-    limit: 1,
-  });
+  const peopleCount = await countPeople(ctx);
   const tasks = await tasksSummary(ctx);
   return Home.parse({
     name: ctx.user.name,
     principal: principal?.fullName ?? null,
-    peopleCount: people.meta.total,
+    peopleCount,
     sections: Home.shape.sections.element.shape.key.options.map(
       (key) =>
         tasks.find((section) => section.key === key) ?? {

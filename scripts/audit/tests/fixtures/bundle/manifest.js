@@ -1,0 +1,2 @@
+globalThis.__RSC_MANIFEST = globalThis.__RSC_MANIFEST || {};
+globalThis.__RSC_MANIFEST["/(app)/tasks/page"] = {"moduleLoading":{"prefix":""},"clientModules":{"[project]/a.js":{"id":1,"name":"*","chunks":["/_next/static/chunks/a.js","/_next/static/chunks/shared.js"],"async":false},"[project]/b.js":{"id":2,"name":"*","chunks":["/_next/static/chunks/shared.js"],"async":false}},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"rscModuleMapping":{},"edgeRscModuleMapping":{},"entryCSSFiles":{},"entryJSFiles":{}};

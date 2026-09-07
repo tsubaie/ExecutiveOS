@@ -1,6 +1,15 @@
 {
   "$schema": "https://unpkg.com/knip/schema.json",
-  "entry": ["src/instrumentation.ts", "scripts/**/*.ts", "tools/eslint/index.mjs"],
+  "entry": [
+    "src/instrumentation.ts",
+    "src/core/i18n/request.ts",
+    "src/modules/*/index.ts",
+    "src/modules/*/schema/index.ts",
+    "scripts/**/*.ts",
+    "tools/**/*.mjs"
+  ],
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "tools/**/*.mjs"],
-  "ignore": ["scripts/audit/tests/fixtures/**"]
+  "ignore": ["scripts/audit/tests/fixtures/**"],
+  "ignoreDependencies": ["tailwindcss", "jscpd"],
+  "ignoreExportsUsedInFile": true
 }

@@ -40,7 +40,7 @@ This folder is the specification. Implementation follows it; when they disagree,
 
 ## Review response
 
-`REVIEW-RESPONSE.md` maps every finding of the 2026-09-07 external review (`../SPEC-REVIEW.md`) to what changed and where.
+`REVIEW-RESPONSE.md` maps every finding of the 2026-09-07 external review (`history/SPEC-REVIEW.md`) to what changed and where.
 
 ## Templates
 

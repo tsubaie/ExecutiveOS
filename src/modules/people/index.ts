@@ -1,5 +1,6 @@
 export {
   createPerson,
+  countPeople,
   listPeople,
   getPerson,
   patchPerson,

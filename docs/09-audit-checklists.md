@@ -8,17 +8,18 @@ Audits keep an agent-built codebase honest. Script audits run in `pnpm audit:all
 |---|---|---|
 | `audit:structure` | Module manifest (`02-architecture.md`), no extra top-level entries, every module has a spec, every linkable module registers a link resolver and a job kind file if it declares jobs | runtime |
 | `depcruise` | Layering matrix on the real import graph including barrels, aliases, dynamic imports; `server-only` boundaries; no cycles | static |
-| `audit:bundle` | No server-only module in client chunks; per-route client JS ≤ 250 KB gzipped measured on the production build in CI | runtime |
-| `audit:i18n` | Catalog key parity; typed keys resolve; `tEnum` namespaces complete; ICU syntax and arguments valid | runtime |
+| `audit:bundle` | No server code markers in client chunks; route-specific client JS (chunks beyond the root bundle every route loads) ≤ 250 KB gzipped, measured on the production build; the root bundle size is reported so growth stays visible | runtime |
+| `audit:i18n` | Catalog key parity; every literal `t('key')` resolves; ICU syntax valid and argument names equal in both catalogs; dynamic keys (`t(value)`, template keys) are reported per file as warnings because they cannot be resolved statically | runtime |
 | `audit:portability` | Tripwire denylist outside allowed locations; timezone and locale literals outside allowed locations | runtime |
-| `gitleaks` | Secrets in the tree or history | runtime |
-| `audit:schema` | Migrations apply to empty DB; `drizzle-kit check`; `information_schema` and `pg_catalog` match `schema/db.ts` and the relationship inventory; FK indexes; table-class columns; CHECKs generated from enums | runtime |
-| `audit:docs` | Every spec has the required sections; requirement IDs cross-reference tests; ADR index matches files; no accepted ADR modified (git diff of `docs/adr` against its acceptance commit) | runtime |
-| `audit:tests` | Required scenario files exist; no `fs.readFileSync` in tests outside audit self-tests; no skipped tests without issue links; mutation-test list present per module | runtime |
-| `audit:deps` | `knip`; one library per concern; exact versions; `pnpm audit` policy | runtime |
+| `audit:secrets` | `gitleaks` over the tree and history; CI installs the binary, a local run without it fails with an install hint | runtime |
+| `audit:schema` | Migrations apply to an empty database; `drizzle-kit check`; `pg_catalog` matches `schema/db.ts` plus the custom objects declared in `drizzle/custom-objects.json`; every FK indexed; table-class columns; CHECKs contain every Zod enum option | runtime |
+| `audit:docs` | Every spec has the header fields and the `Purpose`, `Acceptance criteria`, `Required scenarios` sections; every requirement ID named in a test or a `rule` detail exists in a spec; for specs with `Status: implemented` every `-B` and `-A` ID appears in a test name (reported as a warning for `accepted` specs); ADR index matches files; accepted ADRs unchanged since acceptance except the `Status` line; `--status` writes `docs/STATUS.md` | runtime |
+| `audit:tests` | Every module has `tests/` with at least one scenario file; modules whose spec is `implemented` have every layer file from `08-testing-strategy.md` and a mutation-target list in the spec; no `fs` reads in tests outside audit self-tests; no skipped tests without issue links | runtime |
+| `audit:deps` | `knip`; one library per concern; exact versions; `pnpm audit` has no high or critical advisory without a dated entry in `scripts/audit/deps-exceptions.json` | runtime |
+| `audit:dupes` | `jscpd` on files changed against `main` (`--all` for the whole tree, used by `audit:all`); any duplicated block of ten or more lines fails | runtime |
 | `audit:openapi` | Regenerate and diff | runtime |
 | `audit:a11y` | Playwright + axe on every route, both locales; zero serious or critical | runtime |
-| `audit:perf` | Seed `--large`; list first page server time ≤ 300 ms and ≤ 6 queries on golden paths, measured in the CI container | runtime |
+| `audit:perf` | Seed `--large`; first-page list services ≤ 300 ms and ≤ 6 queries on golden paths, measured through the query logger in the CI container | runtime |
 
 ## B. Pull request audit (every PR)
 

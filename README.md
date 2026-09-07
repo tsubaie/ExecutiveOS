@@ -6,7 +6,7 @@ ExecutiveOS is self-hosted, multi-user, and bilingual-ready (English and Arabic 
 
 ## Status
 
-Runnable development preview: setup/login, Home, administration surfaces, and a PostgreSQL-backed People slice in English and Arabic. WI-0001 is incomplete: the full audit gate, several core hardening requirements, and framework behaviors remain outstanding. See `HANDOFF.md` for verified behavior and the exact gaps. The v1 module table below describes the intended product, not completed modules.
+Runnable development preview: setup/login, Home, administration surfaces, and a PostgreSQL-backed People slice in English and Arabic. WI-0001 is incomplete: the full audit gate, several core hardening requirements, and framework behaviors remain outstanding. See `docs/history/HANDOFF.md` for verified behavior and the exact gaps. The v1 module table below describes the intended product, not completed modules.
 
 ## Modules (v1)
 
@@ -52,7 +52,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 The development override publishes PostgreSQL on localhost only. Use a separate disposable database for `DATABASE_URL_TEST`; never point tests at production.
 
-The complete audit gate is not green yet. Checks run from the source checkout with Node 22; the exact Docker tooling commands used for this preview are in `HANDOFF.md`:
+The complete audit gate is not green yet. Checks run from the source checkout with Node 22; the exact Docker tooling commands used for this preview are in `docs/history/HANDOFF.md`:
 
 ```bash
 docker compose exec app pnpm test
@@ -84,14 +84,14 @@ cp .env.test.example .env.test                    # loaded automatically by pnpm
 pnpm test
 ```
 
-Browser tests run against a production build. Playwright starts the standalone server unless something is already listening on port 3000, and the global setup creates the browser-test administrator through the real first-run setup API on an empty database. Against an already initialized preview, put an existing administrator's `{"email","password","name"}` in the ignored `e2e/.auth/credentials.json` first:
+Browser tests run against a production build. Playwright starts the standalone server unless something is already listening on port 3000, and the global setup creates the browser-test administrator through the real first-run setup API on an empty database. Point `DATABASE_URL` at a database other than the unit-test one (for example `executiveos_e2e_test`); the unit suites truncate tables and would otherwise be mistaken for an initialized workspace. Against an already initialized preview, put an existing administrator's `{"email","password","name"}` in the ignored `e2e/.auth/credentials.json` first:
 
 ```bash
 pnpm build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public
 pnpm test:e2e
 ```
 
-`pnpm audit:all` is the full gate; `.github/workflows/ci.yml` runs it on every pull request.
+`pnpm audit:all` is the full gate; `.github/workflows/ci.yml` runs it on every pull request. Locally it needs the `gitleaks` binary for `audit:secrets` and a production build for `audit:bundle`, `audit:openapi`, and `audit:a11y`. `pnpm audit:docs --status` regenerates `docs/STATUS.md`.
 
 ## Documentation
 
@@ -111,4 +111,4 @@ Update the local running stack without resetting its database:
 docker compose up -d --build
 ```
 
-Migrations apply on startup. See [TASKS-HANDOFF.md](TASKS-HANDOFF.md) for validation, screenshots, assumptions, and deferred functionality. The earlier [WI-0001 hand-off](HANDOFF.md) still records unfinished foundation work.
+Migrations apply on startup. See [the Tasks hand-off](docs/history/TASKS-HANDOFF.md) for validation, screenshots, assumptions, and deferred functionality. The earlier [WI-0001 hand-off](docs/history/HANDOFF.md) still records unfinished foundation work.

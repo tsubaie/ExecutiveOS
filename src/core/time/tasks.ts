@@ -12,7 +12,3 @@ export function bandOf(task: { status: string; dueDate: string | null }, today: 
   if (task.dueDate === today) return 'today';
   return task.dueDate <= addDays(today, 7) ? 'week' : 'later';
 }
-export function nextMidnight(timezone: string) {
-  const now = Temporal.Now.zonedDateTimeISO(timezone);
-  return Number(now.add({ days: 1 }).startOfDay().epochMilliseconds - now.epochMilliseconds);
-}

@@ -1,0 +1,8 @@
+{
+  "common": {
+    "hello": "مرحبا {person}",
+    "items": "{count, plural, one {# عنصر} other {# عناصر}}",
+    "broken": "{count, plural, one {# item} other {# items}}",
+    "onlyAr": "y"
+  }
+}

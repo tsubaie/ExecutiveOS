@@ -1,6 +1,6 @@
 # Response to the 2026-09-07 specification review
 
-Source: `../SPEC-REVIEW.md` (external review by Codex). Each finding below maps to a resolution and the document that now carries it. "Accepted" means the spec changed as recommended; "Accepted with change" means a different fix for the same problem; "Declined" means kept as designed with the reason.
+Source: `history/SPEC-REVIEW.md` (external review by Codex). Each finding below maps to a resolution and the document that now carries it. "Accepted" means the spec changed as recommended; "Accepted with change" means a different fix for the same problem; "Declined" means kept as designed with the reason.
 
 ## Blockers
 

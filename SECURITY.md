@@ -1,6 +1,6 @@
 # Security status
 
-ExecutiveOS is a development preview. There are no supported production releases yet. The remaining authentication, backup, job recovery, audit, and release-security requirements are recorded in HANDOFF.md.
+ExecutiveOS is a development preview. There are no supported production releases yet. The remaining authentication, backup, job recovery, audit, and release-security requirements are recorded in docs/history/HANDOFF.md.
 
 The default Compose deployment publishes the application on loopback only and does not publish PostgreSQL. Secrets belong in the ignored `.env` file. The setup token is printed in the application log only while the installation has no users.
 

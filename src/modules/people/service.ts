@@ -46,6 +46,9 @@ export async function listPeople(ctx: Context, query: PersonListQuery) {
     },
   };
 }
+export async function countPeople(ctx: Context) {
+  return repo.countPeople(ctx.db, { view: 'all', q: '', tag: '', organization: '' });
+}
 export async function getPerson(ctx: Context, personId: string, deleted = false) {
   const row = await repo.selectPerson(ctx.db, personId);
   if (!row || (!deleted && row.deletedAt))

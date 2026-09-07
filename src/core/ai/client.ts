@@ -1,7 +1,7 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import { env } from '@/core/config/env';
-export type Connection = {
+type Connection = {
   state: 'disabled' | 'enabled' | 'error';
   checkedAt: string | null;
   error: string | null;

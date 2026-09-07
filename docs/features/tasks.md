@@ -2,7 +2,7 @@
 
 **Status:** accepted
 **Spec reviewed:** 2026-09-07
-**Implementation verified:** core task-management slice; see ../../TASKS-HANDOFF.md for implemented and deferred requirements.
+**Implementation verified:** core task-management slice; see ../history/TASKS-HANDOFF.md for implemented and deferred requirements.
 **Owner module:** `src/modules/tasks`
 
 ## Purpose

@@ -1,7 +1,7 @@
 import 'server-only';
 import { z } from 'zod';
 import { Locale, defaults } from '@/core/config/defaults';
-export { Role, User, Password } from '@/core/http/user-schema';
+export { User } from '@/core/http/user-schema';
 import { Password } from '@/core/http/user-schema';
 export const Login = z.strictObject({
   email: z.email().transform((v) => v.toLowerCase()),

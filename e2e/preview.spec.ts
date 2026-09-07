@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs, credentials } from './fixtures/auth';
+import { selectView } from './fixtures/views';
 import { z } from 'zod';
 import en from '../src/core/i18n/messages/en.json' with { type: 'json' };
 import ar from '../src/core/i18n/messages/ar.json' with { type: 'json' };
@@ -42,11 +43,11 @@ for (const locale of ['en', 'ar'])
       .getByRole('button', { name: m.common.delete, exact: true })
       .click();
     await expect(page).not.toHaveURL(/id=/);
-    await page.getByRole('button', { name: new RegExp(m.common.trash) }).click();
+    await selectView(page, locale, new RegExp(m.common.trash));
     await page.getByRole('button').filter({ hasText: name }).click();
     await page.getByRole('button', { name: m.common.restore, exact: true }).click();
     await expect(page).not.toHaveURL(/id=/);
-    await page.getByRole('button', { name: new RegExp(m.common.all) }).click();
+    await selectView(page, locale, new RegExp(m.common.all));
     await expect(page.getByRole('button').filter({ hasText: name })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');

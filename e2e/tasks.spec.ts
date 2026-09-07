@@ -312,7 +312,7 @@ for (const locale of ['en', 'ar']) {
   });
 }
 
-test('EP-B10 EP-B11 queued save failure blocks view changes and preserves the draft', async ({
+test('EP-B10 EP-B11 queued save failure blocks view changes and preserves the draft @desktop', async ({
   page,
 }) => {
   await loginAs(page, 'en');

@@ -1,0 +1,16 @@
+{
+  "issues": [
+    {
+      "file": "src/unused.ts",
+      "files": [{ "name": "src/unused.ts" }],
+      "dependencies": [],
+      "devDependencies": [{ "name": "leftover" }],
+      "exports": [{ "name": "stale" }],
+      "types": [],
+      "unlisted": [],
+      "unresolved": [],
+      "duplicates": [],
+      "binaries": []
+    }
+  ]
+}

@@ -9,3 +9,4 @@ node_modules
 .next
 coverage
 test-results
+scripts/audit/tests/fixtures

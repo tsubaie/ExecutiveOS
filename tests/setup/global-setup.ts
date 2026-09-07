@@ -15,8 +15,9 @@ export default async function setup() {
     await ensureTestDatabase(url);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Cannot prepare the test database (${reason}). Start one with: docker compose -f docker-compose.test.yml up -d`,
+    if (/_test/u.test(reason)) throw error;
+    process.stdout.write(
+      `Test database unavailable (${reason}); integration suites will fail. Start one with: docker compose -f docker-compose.test.yml up -d\n`,
     );
   }
 }

@@ -13,6 +13,14 @@ import type { User } from '@/core/auth/validation';
 import { isRestoring } from '@/core/backup/maintenance';
 
 type HandlerContext = { user: User | null; db: Database; requestId: string };
+export type HandlerMeta = {
+  guard: 'public' | 'session' | 'admin';
+  input: z.ZodType;
+  response: z.ZodType;
+  status: number;
+  source: 'body' | 'query';
+  idempotent: boolean;
+};
 type Options<I extends z.ZodType, O extends z.ZodType> = {
   guard: 'public' | 'session' | 'admin';
   input: I;
@@ -43,7 +51,7 @@ async function inputFor(request: Request, source?: 'body' | 'query') {
   }
 }
 export function defineHandler<I extends z.ZodType, O extends z.ZodType>(options: Options<I, O>) {
-  return async (request: Request, route?: { params: Promise<Record<string, string>> }) => {
+  const handler = async (request: Request, route?: { params: Promise<Record<string, string>> }) => {
     const requestId = id();
     try {
       if ((await isRestoring()) || (await maintenance(db())))
@@ -71,6 +79,17 @@ export function defineHandler<I extends z.ZodType, O extends z.ZodType>(options:
     } catch (error) {
       return errorResponse(error, requestId);
     }
+  };
+  return Object.assign(handler, { meta: metaOf(options) });
+}
+function metaOf<I extends z.ZodType, O extends z.ZodType>(options: Options<I, O>): HandlerMeta {
+  return {
+    guard: options.guard,
+    input: options.input,
+    response: options.response,
+    status: options.status ?? 200,
+    source: options.source ?? 'body',
+    idempotent: options.idempotent ?? false,
   };
 }
 async function execute<I extends z.ZodType, O extends z.ZodType>(

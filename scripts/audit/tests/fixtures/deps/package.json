@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "react": "^19.0.0",
+    "dayjs": "1.11.0",
+    "@js-temporal/polyfill": "0.5.1"
+  },
+  "devDependencies": {
+    "vitest": "latest"
+  }
+}

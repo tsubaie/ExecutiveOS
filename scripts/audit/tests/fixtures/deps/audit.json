@@ -1,0 +1,22 @@
+{
+  "advisories": {
+    "1": {
+      "id": 1,
+      "severity": "high",
+      "module_name": "leftpad",
+      "url": "https://example.test/advisories/1"
+    },
+    "2": {
+      "id": 2,
+      "severity": "moderate",
+      "module_name": "qs",
+      "url": "https://example.test/advisories/2"
+    },
+    "3": {
+      "id": 3,
+      "severity": "critical",
+      "module_name": "old",
+      "url": "https://example.test/advisories/3"
+    }
+  }
+}

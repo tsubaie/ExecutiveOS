@@ -1,0 +1,16 @@
+{
+  "extensions": ["pg_trgm", "btree_gist"],
+  "functions": ["eos_normalize", "eos_tasks_depth_check"],
+  "columns": { "people": ["search_text"] },
+  "indexes": { "people": ["people_search_idx"] },
+  "constraints": {
+    "workspace": ["workspace_singleton"],
+    "users": ["users_role_check", "users_email_lower_check"],
+    "jobs": ["jobs_status_check"],
+    "job_attempts": ["attempts_status_check"],
+    "files": ["files_availability_check"],
+    "ai_invocations": ["ai_status_check"],
+    "tasks": ["tasks_active_order_excl"]
+  },
+  "triggers": { "tasks": ["tasks_depth_check"] }
+}

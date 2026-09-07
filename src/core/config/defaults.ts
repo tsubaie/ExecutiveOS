@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 export const Locale = z.enum(['en', 'ar']);
-export const locales = Locale.options;
 export const defaults = {
   locale: Locale.enum.en,
   timezone: 'UTC',

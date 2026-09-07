@@ -28,6 +28,8 @@ export default defineConfig({
     },
     {
       name: 'mobile',
+      // Scenarios tagged @desktop exercise controls that only exist beside an open detail panel.
+      grepInvert: /@desktop/u,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 390, height: 844 },

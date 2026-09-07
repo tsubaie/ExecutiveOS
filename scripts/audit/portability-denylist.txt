@@ -1,0 +1,5 @@
+# One case-insensitive token per line. Matches anywhere in source text outside the allowed
+# locations (see docs/07-coding-guidelines.md § Configuration and portability).
+tsubaie
+alsubaie
+talal

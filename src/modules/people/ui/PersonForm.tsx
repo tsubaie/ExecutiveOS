@@ -12,7 +12,7 @@ import { Checkbox } from '@/ui/primitives/checkbox';
 import { Button } from '@/ui/primitives/button';
 export type Values = z.infer<typeof PersonFields>;
 export type Patch = Partial<Values>;
-export const emptyPerson: Values = {
+const emptyPerson: Values = {
   fullName: '',
   displayName: null,
   honorific: null,
