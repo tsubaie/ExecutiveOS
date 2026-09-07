@@ -26,7 +26,7 @@ This folder is the specification. Implementation follows it; when they disagree,
 | [Admin](features/admin.md) | Setup, users, settings, AI, learnings, backups, export, jobs, audit |
 | [Entity pages](features/entity-pages.md) | Shared list + detail framework every module uses |
 | [Tasks](features/tasks.md) | Tasks, subtasks, owners, bands, grouping |
-| [Notes](features/notes.md) | Threads, notes, types, tags, AI refine |
+| [Notes](features/notes.md) | Standalone notes, types, tags, AI refine; no threading |
 | [Committees](features/committees.md) | Committees and their linked work |
 | [KPIs](features/kpis.md) | Objectives, KPIs, readings, quarterly targets, status |
 | [Initiatives](features/initiatives.md) | Initiatives, deliverables, progress, health updates |

@@ -27,7 +27,7 @@ Source: `history/SPEC-REVIEW.md` (external review by Codex). Each finding below 
 | Finding | Resolution | Where |
 |---|---|---|
 | Classification rule conceptually wrong | Accepted: classify by cardinality and constraints; finite inventory. | ADR 0009; `03` |
-| "Everything about X" incomplete | Accepted: context query defined over `entity_edges`, direct only, deduplicated, thread rollup. | `features/links.md` B01 |
+| "Everything about X" incomplete | Accepted: context query defined over `entity_edges`, direct only, and deduplicated. Product decision ADR 0012 removes note threading and requires every linked note to remain independently visible. | `features/links.md` B01; ADR 0012 |
 | People / owners / users duplication | Accepted: `task_owners` removed; people are the owner identity; merge fully specified. | ADR 0011; `features/people.md` |
 | Restore provenance | Accepted: `deleted_op_id` on all soft-deletable tables; restore by op. | `03` global rules; links B05; tasks I04 |
 | Denormalized initiative fields | Accepted: removed; computed via lateral joins with explicit ordering; row lock on writes. | `features/initiatives.md`; `03` |

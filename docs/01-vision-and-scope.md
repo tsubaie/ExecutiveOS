@@ -15,7 +15,7 @@ It is opinionated software. It is not a general project-management tool, not a C
 ## Product principles
 
 1. **Decision-ready, not data-heavy.** Summaries first, detail on click. Every list has a default view that shows what needs attention.
-2. **One surface, linked.** Structural relationships (task→committee, note→thread, minutes→meeting) are typed columns. Everything else connects through a context graph with a fixed relation vocabulary. "Everything about this person or meeting" is one query.
+2. **One surface, linked.** Structural relationships (task→committee, task→source note, meeting→committee) are typed columns. Everything else connects through a context graph with a fixed relation vocabulary. Notes always remain independent entities; contextual links never group or collapse them. "Everything about this person or meeting" is one query.
 3. **Fast and explainable.** No opaque scoring. When something is flagged (overdue, off target, at risk) the reason is visible.
 4. **Bilingual by design.** English and Arabic are both first-class, including right-to-left layout, mixed-direction text, and Arabic typography. Other locales can be added by contributing a message catalog. Calendar is Gregorian in v1.
 5. **AI proposes, humans decide.** AI produces refined notes, extracted tasks, briefs, drafts, and proposed prompt learnings. Nothing AI produces changes shared data or future AI behavior without an explicit user action.

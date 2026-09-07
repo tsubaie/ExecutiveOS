@@ -7,19 +7,18 @@
 
 ## Purpose
 
-A meeting is where people, documents, KPIs, initiatives, notes, and actions meet. The module keeps the meetings the office cares about, prepares them (documents analyzed into an executive brief written for the principal), records what happened (minutes, actions), and improves briefs through reviewed learnings.
+A meeting is where people, documents, KPIs, initiatives, and actions meet. The module keeps the meetings the office cares about, prepares them (documents analyzed into an executive brief written for the principal), records actions, and improves briefs through reviewed learnings. Notes remain standalone records in v1 and are not owned, grouped, or threaded by meetings.
 
 ## Vocabulary
 
 | Term | Meaning |
 |---|---|
-| Meeting | dated event with title, committee, attendees, agenda, documents, briefs, minutes, actions |
+| Meeting | dated event with title, committee, attendees, agenda, documents, briefs, and actions |
 | Private notes | per-user prep notes on a meeting (`meeting_private_notes`) |
 | Document | an immutable file attached to a meeting (`pdf`, `docx`, `md`, `txt`) |
 | Brief | AI analysis of one document in one locale, versioned; `mode` analysis or translation |
 | Prep status | per user locale: `n/a` `not_started` `generating` `ready` `failed` |
 | Agenda item | ordered line, optionally linked to a KPI, initiative, task, or note (projected as `discussed_in`) |
-| Minutes | the note thread referenced by `minutes_thread_id` |
 | Actions | tasks with an `agreed_in` edge to the meeting |
 | Proposed action | a `next_actions` item in a brief; becomes an action only when a user creates it |
 | Feedback | one per user per brief |
@@ -38,22 +37,22 @@ See `03-data-model.md`. Invariants:
 - MEET-I07 Prep status for a user is computed over non-deleted documents and that user's locale: no documents → `n/a`; any brief job running for that locale → `generating`; every document has a `ready` brief in the locale → `ready`; any document's latest brief in the locale is `failed` and none running → `failed`; else `not_started`.
 - MEET-I08 Files are immutable; a document row is soft-deleted with its briefs under one op id; the binary is purged only by retention or when no non-deleted document references the file.
 - MEET-I09 Private notes are readable and writable only by their `user_id`; never audited, exported only for the requesting user, never included in AI inputs.
-- MEET-I10 Minutes thread is unique per meeting and per thread (`minutes_thread_id` unique).
+- MEET-I10 Meetings have no structural note or minutes relationship in v1. Creating, holding, duplicating, deleting, or restoring a meeting never creates, groups, hides, or deletes a note.
 - MEET-I11 A meeting with `status = cancelled` is excluded from `upcoming` and `today`; `held` meetings are excluded from `upcoming` regardless of time.
 
 ## Behaviors — meetings
 
 - MEET-B01 **Create**: title; `starts_at` defaults to the next full hour in `ctx.timezone`; optional end, location, committee, attendees, objective, tags. From a committee page the committee is pre-filled.
 - MEET-B02 **List** rows: date and time, title, committee chip, attendee avatars (4 + n), prep status badge (user locale), document count, open actions count. Views `upcoming` (default; `starts_at ≥ now`, status scheduled, soonest first), `today`, `this_week`, `needs_prep` (upcoming with documents and prep status not ready), `past` (held or `starts_at < now`, newest first), `cancelled`, `trash`. Facets committee, attendee (via edges), tag, date range, `linkedTo`. Search title, objective, agenda titles (agenda titles are folded into `meetings.search_text` by a trigger). Sort: default per view; `starts_at`, `title`.
-- MEET-B03 **Detail** tabs: Overview (time, location, committee, attendees with roles, objective, tags, my private notes), Agenda, Documents and Briefs, Minutes, Actions, Context.
+- MEET-B03 **Detail** tabs: Overview (time, location, committee, attendees with roles, objective, tags, my private notes), Agenda, Documents and Briefs, Actions, Context. There is no Minutes tab in v1.
 - MEET-B04 **Attendees** `PUT /meetings/:id/attendees { revision, attendees: [{ personId, role }] }` replaces the roster; add-from-search or create person inline.
 - MEET-B05 **Agenda**: add item with optional link (search across kpi, initiative, task, note); KPI items show current status inline; initiative items show health; reorder with keyboard alternative; edit and delete. Deleting an item removes its projected edge only if no other item links the same entity.
 - MEET-B06 **Private notes**: `PUT /meetings/:id/private-notes { revision, body }` for the current user; other users see nothing, not even an indicator.
-- MEET-B07 **Mark held** `POST …/held { revision }` sets status and, if no minutes thread exists, the UI offers "Write minutes". **Cancel** `{ revision }`. **Reschedule** is a PATCH of `starts_at`.
-- MEET-B08 **Duplicate** `POST …/duplicate { startsAt }` copies title, committee, attendees, objective, tags, and agenda titles; agenda links are copied for KPIs and initiatives and dropped for tasks and notes; documents, briefs, minutes, actions are not copied.
-- MEET-B09 **Minutes** `POST …/minutes { revision }` creates a thread with a first note titled from the meeting, `note_date = starts_at` date, `meeting_id` set, and sets `minutes_thread_id`; 409 if one exists. `DELETE …/minutes` unlinks (thread remains).
+- MEET-B07 **Mark held** `POST …/held { revision }` sets status. It does not create or offer to create a note. **Cancel** `{ revision }`. **Reschedule** is a PATCH of `starts_at`.
+- MEET-B08 **Duplicate** `POST …/duplicate { startsAt }` copies title, committee, attendees, objective, tags, and agenda titles; agenda links are copied for KPIs and initiatives and dropped for tasks and notes; documents, briefs, and actions are not copied.
+- MEET-B09 **Standalone notes boundary**: the meeting API and UI expose no minutes-note create, attach, group, or thread operation in v1. Users create any meeting-related prose as an ordinary standalone note, without a structural meeting association.
 - MEET-B10 **Actions** tab: `tasks?linkedTo=meeting:<id>&relation=agreed_in`; "+ Action" creates a task with `committeeId` pre-filled and `links: [{ type: "meeting", id, relation: "agreed_in" }]`.
-- MEET-B11 **Invalidation**: meeting list, detail, counts, Home; attendee changes invalidate people details; agenda changes invalidate the linked entities' `links`; actions invalidate tasks; minutes invalidate notes.
+- MEET-B11 **Invalidation**: meeting list, detail, counts, Home; attendee changes invalidate people details; agenda changes invalidate the linked entities' `links`; actions invalidate tasks.
 
 ## Behaviors — documents and briefs
 
@@ -72,14 +71,13 @@ See `03-data-model.md`. Invariants:
 | Verb | Path |
 |---|---|
 | GET/POST | `/meetings` (`view, q, committeeId, personId, tag, from, to, linkedTo, relation, sort, limit, cursor`) |
-| GET/PATCH/DELETE/restore | `/meetings/:id` (detail: attendees, agenda, documents with per-locale brief summaries, minutesThreadId, actionsSummary, prepStatus for `ctx.locale`, myPrivateNotes) |
+| GET/PATCH/DELETE/restore | `/meetings/:id` (detail: attendees, agenda, documents with per-locale brief summaries, actionsSummary, prepStatus for `ctx.locale`, myPrivateNotes) |
 | POST | `…/:id/held` `cancel` `duplicate` |
 | PUT | `…/:id/attendees` ; PUT `…/:id/private-notes` |
 | GET/POST/PATCH/DELETE | `…/:id/agenda`, `…/agenda/:itemId`; PATCH `…/agenda/reorder` |
 | POST | `…/:id/documents` ; GET/DELETE/restore `…/documents/:docId` ; GET `…/documents/:docId/file` |
 | POST | `…/documents/:docId/briefs` ; GET `…/documents/:docId/briefs?locale=` (latest + versions) ; GET `…/briefs/:briefId` |
 | PUT | `…/briefs/:briefId/feedback` ; POST `…/briefs/:briefId/actions` |
-| POST/DELETE | `…/:id/minutes` |
 | GET | `/jobs/:id` for polling |
 
 ## `BriefSections` schema (complete)
@@ -128,7 +126,7 @@ Prep badge colors from tokens; Needs prep view highlighted. Brief viewer: sticky
 - MEET-A03 Generating Arabic and English briefs concurrently produces two briefs; prep status is `ready` for a user only when their locale's brief is ready. (en, ar)
 - MEET-A04 Creating an action from a `next_actions` item creates a task with an `agreed_in` edge and the brief reference; repeating with the same key creates none. (en)
 - MEET-A05 Two users each submit feedback; a learnings proposal appears in Admin; activating it makes the next brief job's payload contain it (fake provider capture); an admin reset rejects pending proposals. (en)
-- MEET-A06 "Write minutes" creates a linked thread; refining it and applying tasks links them `agreed_in`. (en, ar)
+- MEET-A06 Marking a meeting held does not create, attach, group, or hide any note, and the meeting has no Minutes tab or minutes API. (en, ar)
 - MEET-A07 Uploading the same file twice to one meeting is refused naming the existing document; the same file on another meeting reuses the stored binary. (en)
 - MEET-A08 User B cannot read user A's private notes through the API, the page, the audit log, or export. (en)
 - MEET-A09 Killing the app during a brief job and restarting produces exactly one ready brief version. (en)

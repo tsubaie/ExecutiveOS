@@ -15,5 +15,6 @@ One decision per file. Format: **Status**, **Context**, **Decision**, **Conseque
 | 0009 | Contextual links table plus a projected edges view | accepted |
 | 0010 | Job execution contract: leases, fencing, dedup keys, all AI as jobs | accepted |
 | 0011 | People are the single identity for task owners and attendees | accepted |
+| 0012 | Notes are standalone entities and are never threaded | accepted |
 
 Open decisions awaiting an ADR: license (see roadmap); chart library confirmation (`recharts`); markdown editor component.
