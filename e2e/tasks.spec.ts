@@ -167,7 +167,11 @@ test('TASKS-A09 EP-B08 stale editor offers reload and reapply without resetting 
     description: 'Another editor changed this',
   });
   await page.getByLabel(en.tasks.title, { exact: true }).fill(`${task.title} edited`);
-  await page.getByRole('heading', { name: task.title, exact: true }).click();
+  // The title is the heading itself, so blur it by clicking a non-field element in the panel.
+  await page
+    .locator('aside.entity-detail')
+    .getByRole('heading', { name: en.tasks.subtasks, exact: true })
+    .click();
   await expect(page.getByRole('button', { name: en.common.reapply, exact: true })).toBeVisible();
   await page.getByRole('button', { name: en.common.reapply, exact: true }).click();
   await expect(page.getByRole('status')).toContainText(en.common.saved);

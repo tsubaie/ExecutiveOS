@@ -1,7 +1,7 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import type { Person } from '../schema/validation';
-import { initials } from './initials';
+import { initials } from '@/ui/format';
 export function PersonRow({ person }: { person: Person }) {
   const t = useTranslations('common');
   const p = useTranslations('people');

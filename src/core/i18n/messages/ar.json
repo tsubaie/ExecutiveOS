@@ -230,6 +230,10 @@
     "completedHint": "أعد فتح المهمة باستخدام مربع الاختيار لتعديلها.",
     "updated": "آخر تحديث {date}",
     "assignedTasks": "المهام المسندة",
-    "viewAssigned": "عرض المهام المسندة ({count})"
+    "viewAssigned": "عرض المهام المسندة ({count})",
+    "tomorrow": "غدًا",
+    "yesterday": "أمس",
+    "progressShort": "{done}/{total}",
+    "addSubtask": "أضف مهمة فرعية"
   }
 }

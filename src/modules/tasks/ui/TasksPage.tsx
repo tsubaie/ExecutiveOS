@@ -1,5 +1,18 @@
 'use client';
 import { useTranslations } from 'next-intl';
+import {
+  ListChecks,
+  Sun,
+  AlertCircle,
+  CalendarDays,
+  Play,
+  Clock,
+  Inbox,
+  Moon,
+  CheckCircle2,
+  Trash2,
+} from 'lucide-react';
+import type { View as ViewDef } from '@/ui/entity/types';
 import { EntityPage } from '@/ui/entity/EntityPage';
 import { View, Priority, Sort } from '../schema/validation';
 import { useTasks, useTask, useTaskMutations, useOwners } from './queries';
@@ -8,12 +21,25 @@ import { TaskDetail } from './TaskDetail';
 import { TaskToggle } from './TaskToggle';
 import { CreateTask } from './CreateTask';
 import { GroupTasksDialog, canGroup } from './GroupTasks';
+// Rail icons, the count strip (featured) and the archive divider per view.
+const presentation: Record<string, Partial<ViewDef>> = {
+  all: { icon: ListChecks },
+  today: { icon: Sun, featured: true, tone: 'accent' },
+  overdue: { icon: AlertCircle, featured: true, tone: 'danger' },
+  upcoming: { icon: CalendarDays },
+  next: { icon: Play, featured: true },
+  waiting: { icon: Clock, featured: true },
+  inbox: { icon: Inbox },
+  someday: { icon: Moon },
+  completed: { icon: CheckCircle2, separated: true },
+  trash: { icon: Trash2 },
+};
 function useTaskFilters() {
   const t = useTranslations('tasks');
   const c = useTranslations('common');
   const owners = useOwners();
   return {
-    views: View.options.map((view) => ({ id: view, label: t(view) })),
+    views: View.options.map((view) => ({ id: view, label: t(view), ...presentation[view] })),
     sort: {
       default: '',
       options: Sort.options.map((value) => ({
@@ -55,6 +81,7 @@ export function TasksPage() {
       title={c('tasks')}
       description={t('descriptionIntro')}
       filters={filters}
+      emptyState={{ icon: ListChecks }}
       useList={useTasks}
       useDetail={useTask}
       mutations={mutations}

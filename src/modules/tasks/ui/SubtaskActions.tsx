@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, CornerUpRight, Trash2 } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { NativeSelect, NativeSelectOption } from '@/ui/primitives/native-select';
@@ -22,22 +22,34 @@ export function SubtaskActions({ task, parent }: { task: Task; parent: TaskDetai
   const operation = useTaskOperation();
   const [deleting, setDeleting] = useState(false);
   return (
-    <div className="mt-3 grid gap-2">
+    <div className="grid gap-1">
       {operation.error && <ErrorPanel error={operation.error} />}
       {!task.deletedAt && (
-        <fieldset disabled={operation.pending || Boolean(parent.deletedAt)} className="grid gap-2">
-          <SubtaskFields task={task} operation={operation} />
-          <div className="flex flex-wrap items-center justify-between gap-1">
+        <div className="hover-reveal-target">
+          <fieldset
+            disabled={operation.pending || Boolean(parent.deletedAt)}
+            className="flex flex-wrap items-center gap-1 ps-8 pb-1"
+          >
+            <SubtaskFields task={task} operation={operation} />
+            <span className="flex-1" />
             <SubtaskOrdering task={task} parent={parent} operation={operation} />
-            <Button size="sm" variant="ghost" onClick={() => setDeleting(true)}>
-              {c('delete')}
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              className="text-text-muted hover:text-danger"
+              aria-label={c('delete')}
+              onClick={() => setDeleting(true)}
+            >
+              <Trash2 className="size-4" />
             </Button>
-          </div>
-        </fieldset>
+          </fieldset>
+        </div>
       )}
       {task.deletedOpId && !parent.deletedAt && (
         <Button
           size="sm"
+          variant="outline"
+          className="mt-1 ms-2 justify-self-start"
           disabled={operation.pending}
           onClick={() =>
             void operation.run(() => mutations.restore(task.id, task.deletedOpId ?? ''))
@@ -46,33 +58,55 @@ export function SubtaskActions({ task, parent }: { task: Task; parent: TaskDetai
           {c('restore')}
         </Button>
       )}
-      <Dialog open={deleting} onOpenChange={setDeleting}>
-        <DialogContent>
-          <DialogTitle>{c('delete')}</DialogTitle>
-          <DialogDescription>{c('deleteDescription', { name: task.title })}</DialogDescription>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleting(false)}>
-              {c('cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={operation.pending}
-              onClick={() =>
-                void operation.run(
-                  () => mutations.remove(task.id, task.revision),
-                  () => setDeleting(false),
-                )
-              }
-            >
-              {c('delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SubtaskDeleteDialog
+        task={task}
+        open={deleting}
+        setOpen={setDeleting}
+        operation={operation}
+      />
     </div>
   );
 }
 type Operation = ReturnType<typeof useTaskOperation>;
+function SubtaskDeleteDialog({
+  task,
+  open,
+  setOpen,
+  operation,
+}: {
+  task: Task;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  operation: Operation;
+}) {
+  const c = useTranslations('common');
+  const mutations = useTaskMutations();
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>
+        <DialogTitle>{c('delete')}</DialogTitle>
+        <DialogDescription>{c('deleteDescription', { name: task.title })}</DialogDescription>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            {c('cancel')}
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={operation.pending}
+            onClick={() =>
+              void operation.run(
+                () => mutations.remove(task.id, task.revision),
+                () => setOpen(false),
+              )
+            }
+          >
+            {c('delete')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 function SubtaskFields({ task, operation }: { task: Task; operation: Operation }) {
   const t = useTranslations('tasks');
   const owners = useOwners();
@@ -80,8 +114,10 @@ function SubtaskFields({ task, operation }: { task: Task; operation: Operation }
   const patch = (fields: { ownerId?: string | null; dueDate?: string | null }) =>
     operation.run(() => mutations.patch(task.id, task.revision, fields, crypto.randomUUID()));
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <>
       <NativeSelect
+        size="sm"
+        className="w-32"
         aria-label={t('owner')}
         value={task.ownerId ?? ''}
         onChange={(event) => void patch({ ownerId: event.target.value || null })}
@@ -96,10 +132,11 @@ function SubtaskFields({ task, operation }: { task: Task; operation: Operation }
       <Input
         aria-label={t('dueDate')}
         type="date"
+        className="h-7 w-32 min-w-0 text-xs"
         value={task.dueDate ?? ''}
         onChange={(event) => void patch({ dueDate: event.target.value || null })}
       />
-    </div>
+    </>
   );
 }
 function SubtaskOrdering({
@@ -115,9 +152,9 @@ function SubtaskOrdering({
   const mutations = useTaskMutations();
   const { index, length, reorder } = useSubtaskOrder(task, parent, operation);
   return (
-    <div className="flex flex-wrap gap-1">
+    <>
       <Button
-        size="sm"
+        size="icon-sm"
         variant="ghost"
         aria-label={t('moveUp')}
         disabled={index <= 0}
@@ -126,7 +163,7 @@ function SubtaskOrdering({
         <ArrowUp className="size-4" />
       </Button>
       <Button
-        size="sm"
+        size="icon-sm"
         variant="ghost"
         aria-label={t('moveDown')}
         disabled={index >= length - 1}
@@ -135,17 +172,19 @@ function SubtaskOrdering({
         <ArrowDown className="size-4" />
       </Button>
       <Button
-        size="sm"
-        variant="outline"
+        size="icon-sm"
+        variant="ghost"
+        aria-label={t('convert')}
+        title={t('convert')}
         onClick={() =>
           void operation.run(() =>
             mutations.action(task.id, 'convert-to-task', { revision: task.revision }),
           )
         }
       >
-        {t('convert')}
+        <CornerUpRight className="size-4" />
       </Button>
-    </div>
+    </>
   );
 }
 

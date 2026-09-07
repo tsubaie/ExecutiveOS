@@ -6,7 +6,7 @@ import type { DetailApi } from '@/ui/entity/types';
 import { Button } from '@/ui/primitives/button';
 import { PersonForm, type Patch } from './PersonForm';
 import { OwnerTasks } from '@/modules/tasks/ui';
-import { initials } from './initials';
+import { initials } from '@/ui/format';
 export function PersonDetail({ person, api }: { person: Person; api: DetailApi<Patch> }) {
   const t = useTranslations('people');
   const c = useTranslations('common');

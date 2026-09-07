@@ -230,6 +230,10 @@
     "completedHint": "Reopen using the checkbox to edit this completed task.",
     "updated": "Updated {date}",
     "assignedTasks": "Assigned tasks",
-    "viewAssigned": "View assigned tasks ({count})"
+    "viewAssigned": "View assigned tasks ({count})",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday",
+    "progressShort": "{done}/{total}",
+    "addSubtask": "Add a subtask"
   }
 }
