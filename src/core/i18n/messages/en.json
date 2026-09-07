@@ -67,7 +67,15 @@
     "position": "{position} of {count}",
     "titleRequired": "Enter a title before leaving this field.",
     "selectedCount": "{count} selected",
-    "actions": "Actions"
+    "actions": "Actions",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "endOfWeek": "End of week",
+    "nextWeek": "Next week",
+    "noDate": "No date",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "pickDate": "Choose a date"
   },
   "people": {
     "fullName": "Full name",
@@ -234,6 +242,9 @@
     "tomorrow": "Tomorrow",
     "yesterday": "Yesterday",
     "progressShort": "{done}/{total}",
-    "addSubtask": "Add a subtask"
+    "addSubtask": "Add a subtask",
+    "subtaskDetails": "Subtask details",
+    "subtaskDetailsDescription": "Owner, due date, order and actions for this subtask.",
+    "dragHandle": "Drag to reorder"
   }
 }

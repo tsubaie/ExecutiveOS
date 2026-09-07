@@ -2,13 +2,13 @@
 
 ## Design system
 
-- **Primitives:** shadcn/ui components generated on Base UI in `src/ui/primitives/`. Use them for buttons, inputs, selects, dialogs, sheets, popovers, tabs, tooltips, toasts, menus, and combobox. Hand-rolling any of these is an audit failure. Generated primitive files are exempt from the size and prop-count lint rules.
-- **Tokens:** `src/ui/tokens.css` defines every color, radius, shadow, and spacing scale as CSS variables under `@theme`. Semantic names only: `--color-bg`, `--color-surface`, `--color-surface-raised`, `--color-border`, `--color-text`, `--color-text-muted`, `--color-accent`, `--color-success`, `--color-warning`, `--color-danger`, `--color-info`. Light and dark values are both defined; dark is the default.
+- **Primitives:** shadcn/ui components generated on Base UI in `src/ui/primitives/`. Use them for buttons, inputs, selects, dialogs, sheets, popovers, tabs, tooltips, toasts, menus, and combobox. Hand-rolling any of these is an audit failure. Fixed-list choices go through `src/ui/layout/ChoiceSelect` (a Select up to ten options, a Combobox with a search box beyond that); calendar dates through `src/ui/layout/DatePicker` (quick picks and a month grid in a Popover). Generated primitive files are exempt from the size and prop-count lint rules.
+- **Tokens:** `src/ui/tokens.css` defines every color, radius, shadow, and spacing scale as CSS variables under `@theme`. The dark values are Catppuccin Mocha (mantle ground, base surfaces, green accent); the light values are the house sage palette. Semantic names only: `--color-bg`, `--color-surface`, `--color-surface-raised`, `--color-border`, `--color-text`, `--color-text-muted`, `--color-accent`, `--color-success`, `--color-warning`, `--color-danger`, `--color-info`. Light and dark values are both defined; dark is the default.
 - **No raw colors in TSX** (static lint `no-color-literals`). Status colors come from `tone()` helpers mapping an enum to a semantic class.
-- **Typography:** Inter (Latin) and IBM Plex Sans Arabic via `next/font`. The Arabic family is applied by `<html lang dir>`, never per element. Mixed-direction fields use `dir="auto"`; inline mixed runs are wrapped in `<bdi>` by the `Text` component so an English acronym inside an Arabic title does not flip punctuation.
+- **Typography:** Inter (Latin) and IBM Plex Sans Arabic via `next/font`. Both faces are always in the stack, ordered by `<html lang dir>` (Inter first in LTR, the Arabic face first in RTL), so mixed-script text renders each script in its own face; nothing is applied per element. Mixed-direction fields use `dir="auto"`; inline mixed runs are wrapped in `<bdi>` by the `Text` component so an English acronym inside an Arabic title does not flip punctuation.
 - **Density:** base 14px; list rows 44px single-line; form controls 36px with a pointer and 44px on touch (`pointer: coarse`), so hit areas never drop below 44px where fingers are used; 8px grid. Tinted surfaces for emphasis come from `--color-accent-soft`, `--color-warning-soft`, `--color-danger-soft`; the foreground on each is its matching solid token and both pairs meet 4.5:1 in both themes.
 - **Icons:** Lucide only. Icon buttons have `aria-label` from i18n.
-- **Theme:** `next-themes`, class attribute, pre-hydration script; per-user setting.
+- **Theme:** `next-themes`, class attribute, pre-hydration script; per-user setting. Dialog and sheet backdrops use `--color-scrim`, a dark translucent ground in both themes.
 
 ## Layout shell
 

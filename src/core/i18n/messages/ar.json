@@ -67,7 +67,15 @@
     "position": "{position} من {count}",
     "titleRequired": "أدخل عنوانًا قبل مغادرة هذا الحقل.",
     "selectedCount": "{count} محدد",
-    "actions": "إجراءات"
+    "actions": "إجراءات",
+    "today": "اليوم",
+    "tomorrow": "غدًا",
+    "endOfWeek": "نهاية الأسبوع",
+    "nextWeek": "الأسبوع القادم",
+    "noDate": "بلا تاريخ",
+    "previousMonth": "الشهر السابق",
+    "nextMonth": "الشهر التالي",
+    "pickDate": "اختر تاريخًا"
   },
   "people": {
     "fullName": "الاسم الكامل",
@@ -234,6 +242,9 @@
     "tomorrow": "غدًا",
     "yesterday": "أمس",
     "progressShort": "{done}/{total}",
-    "addSubtask": "أضف مهمة فرعية"
+    "addSubtask": "أضف مهمة فرعية",
+    "subtaskDetails": "تفاصيل المهمة الفرعية",
+    "subtaskDetailsDescription": "المسؤول وتاريخ الاستحقاق والترتيب والإجراءات لهذه المهمة الفرعية.",
+    "dragHandle": "اسحب لإعادة الترتيب"
   }
 }

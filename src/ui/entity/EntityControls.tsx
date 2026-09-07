@@ -4,7 +4,7 @@ import { SlidersHorizontal, ListChecks, PanelLeftClose, Plus } from 'lucide-reac
 import { Button } from '@/ui/primitives/button';
 import { EntitySearch } from './EntitySearch';
 import { EntityBulkBar } from './EntityBulkBar';
-import { NativeSelect, NativeSelectOption } from '@/ui/primitives/native-select';
+import { ChoiceSelect } from '@/ui/layout/ChoiceSelect';
 import { useCount } from '@/ui/format';
 import type { Entity, EntityPageProps } from './types';
 import type { EntityController } from './use-entity-controller';
@@ -86,37 +86,48 @@ export function EntityFacets<T extends Entity, P extends object, C>({
   return (
     <div className="grid gap-3">
       {sort && (
-        <label className="grid min-w-0 gap-1 text-sm text-text-muted">
-          {sort.options.find((option) => option.id === '')?.label ?? sort.options[0]?.label}
-          <NativeSelect
-            aria-label={sort.options.find((option) => option.id === '')?.label}
-            value={c.state.sort}
-            onChange={(event) => change({ sort: event.target.value })}
-          >
-            {sort.options.map((option) => (
-              <NativeSelectOption key={option.id} value={option.id}>
-                {option.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </label>
+        <FacetSelect
+          label={
+            sort.options.find((option) => option.id === '')?.label ?? sort.options[0]?.label ?? ''
+          }
+          value={c.state.sort}
+          options={sort.options.map((option) => ({ value: option.id, label: option.label }))}
+          onChange={(value) => change({ sort: value })}
+        />
       )}
       {config.filters.facets?.map((filter) => (
-        <label key={filter.key} className="grid min-w-0 gap-1 text-sm text-text-muted">
-          {filter.label}
-          <NativeSelect
-            aria-label={filter.label}
-            value={c.facets[filter.key] ?? ''}
-            onChange={(event) => change({ [filter.key]: event.target.value })}
-          >
-            {filter.options.map((option) => (
-              <NativeSelectOption key={option.value} value={option.value}>
-                {option.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </label>
+        <FacetSelect
+          key={filter.key}
+          label={filter.label}
+          value={c.facets[filter.key] ?? ''}
+          options={filter.options}
+          onChange={(value) => change({ [filter.key]: value })}
+        />
       ))}
+    </div>
+  );
+}
+
+function FacetSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="grid min-w-0 gap-1 text-sm text-text-muted">
+      <span>{label}</span>
+      <ChoiceSelect
+        items={options.map((option) => ({ ...option, text: option.label }))}
+        value={value}
+        label={label}
+        onChange={onChange}
+      />
     </div>
   );
 }
