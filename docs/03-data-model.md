@@ -6,7 +6,7 @@ Source of truth for schema is `src/modules/*/schema/db.ts` (Drizzle) plus custom
 
 | Class | Tables | Required columns |
 |---|---|---|
-| **Entity** | tasks, notes, note_threads, committees, objectives, kpis, initiatives, meetings, people, users | `id uuid pk`, `revision int not null default 1`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_op_id` |
+| **Entity** | tasks, notes, committees, objectives, kpis, initiatives, meetings, people, users | `id uuid pk`, `revision int not null default 1`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_op_id` |
 | **Child** (owned rows edited by users) | kpi_readings, kpi_targets, initiative_deliverables, initiative_updates, initiative_progress, meeting_agenda_items, meeting_documents, meeting_briefs, note_refinements, brief_feedback, comments, meeting_private_notes | `id`, `created_at`, `updated_at`, `created_by`, `deleted_at`, `deleted_op_id`; `revision` only where the spec says the row is inline-editable |
 | **Junction** | meeting_attendees, entity_links | `created_at`, `created_by`, `deleted_at`, `deleted_op_id` |
 | **History / system** | sessions, login_attempts, jobs, job_attempts, schedules, ai_invocations, audit_log, files, prep_learnings, idempotency_keys, settings, workspace | as specified per table |
@@ -104,12 +104,8 @@ Field semantics live in the feature specs; this section fixes shape and constrai
 Constraints: trigger `tasks_depth_check` rejects a `parent_id` whose parent has a parent, and rejects updating `parent_id` on a row that has children; `CHECK ((status = 'completed') = (completed_at is not null))`; uniqueness of `(coalesce(parent_id, '00000000-0000-0000-0000-000000000000'::uuid), sort_order) where deleted_at is null`, enforced by a deferrable GiST exclusion constraint with equality operators (`btree_gist`), with reorder done in one statement.
 Indexes: `(status, due_date) where deleted_at is null`, `(owner_id)`, `(parent_id)`, `(committee_id)`, `(initiative_id)`, `(source_note_id)`, `(due_date, priority, created_at)`.
 
-### note_threads
-`title, search_text` + entity columns. `updated_at` bumped when a member note changes.
-
 ### notes
-`thread_id fk note_threads restrict, title, content, type, note_date date, tags, committee_id set null, initiative_id set null, meeting_id fk meetings set null, archived_at, search_text` + entity columns.
-Constraints: unique `(meeting_id) where deleted_at is null and meeting_id is not null` is NOT used because minutes uniqueness is per thread; instead unique `(thread_id) where meeting_id is not null` and the service ensures one minutes thread per meeting with a `meetings.minutes_thread_id` column (below).
+`title, content, type, note_date date, tags, committee_id set null, initiative_id set null, archived_at, search_text` + entity columns. Every row is a standalone note and list item. There is no thread foreign key, grouping container, merge provenance, or structural meeting foreign key in v1.
 
 ### note_refinements
 `note_id fk, job_id fk, note_revision int (revision of the note when generated), content_hash text, capability_version int, refined_content, suggested_tasks jsonb, suggested_tags text[], summary_of_changes, status (pending|applied|discarded|stale), applied_task_ids uuid[], reviewed_at, reviewed_by` + child columns. Unique `(note_id) where status = 'pending'`.
@@ -142,7 +138,7 @@ Constraints: unique `(meeting_id) where deleted_at is null and meeting_id is not
 `initiative_id fk cascade, progress_date date, planned_pct, actual_pct numeric(5,2) check 0..100, note` + child columns. Unique `(initiative_id, progress_date) where deleted_at is null`. Latest ordering as above.
 
 ### meetings
-`title, starts_at, ends_at, location, committee_id fk set null, objective text, status (scheduled|held|cancelled), tags, minutes_thread_id fk note_threads set null unique, search_text` + entity columns. Index `(starts_at)`.
+`title, starts_at, ends_at, location, committee_id fk set null, objective text, status (scheduled|held|cancelled), tags, search_text` + entity columns. Index `(starts_at)`. Meetings do not own or reference notes in v1.
 
 ### meeting_private_notes
 `meeting_id fk cascade, user_id fk cascade, body, updated_at, revision`, pk `(meeting_id, user_id)`. Never audited, never sent to AI, readable only by `user_id`.
@@ -177,9 +173,7 @@ Constraints: unique `(meeting_id) where deleted_at is null and meeting_id is not
 | task → owner person | `tasks.owner_id` | N:1 | `owner` |
 | task → parent task | `tasks.parent_id` | N:1, depth 1 | not projected |
 | task → source note | `tasks.source_note_id` | N:1 | `source` |
-| note → thread | `notes.thread_id` | N:1 | not projected (threads aggregate notes) |
 | note → committee / initiative | `notes.*_id` | N:1 | `about` |
-| minutes thread → meeting | `meetings.minutes_thread_id` | 1:1 | `minutes` |
 | meeting → committee | `meetings.committee_id` | N:1 | `belongs_to` |
 | meeting ↔ person | `meeting_attendees` | N:M with role | `attendee` |
 | meeting → agenda-linked entity | `meeting_agenda_items.linked_*` | N:M | `discussed_in` |
@@ -199,4 +193,4 @@ Adding a relationship requires adding a row to this table in the same PR and, if
 
 ## Import from legacy Mission Control
 
-`scripts/db/import-mission-control.ts` maps the legacy schema to this one (integer ids to UUID v7, `task_owners` to assignable people, `notion_notes` to threads and notes, `strategy_*` tables to objectives, KPIs, initiatives). Optional, documented in its header, not part of the product surface. Rights to reuse any legacy code are a separate decision recorded in the roadmap.
+`scripts/db/import-mission-control.ts` maps the legacy schema to this one (integer ids to UUID v7, `task_owners` to assignable people, every `notion_notes` record to one standalone note, `strategy_*` tables to objectives, KPIs, initiatives). It must not infer or create note groups from shared titles, dates, types, or legacy metadata. Optional, documented in its header, not part of the product surface. Rights to reuse any legacy code are a separate decision recorded in the roadmap.

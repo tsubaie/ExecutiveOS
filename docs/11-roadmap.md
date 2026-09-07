@@ -35,7 +35,7 @@ Done when: module audits for People and Tasks pass; framework scenarios pass; go
 
 ## Phase 3 — Notes and Committees
 
-- Notes with threads, merge with reverse, archive, minutes column, `notes.refine`, `notes.suggest_tags`, refinement review and apply with stale detection.
+- Standalone notes with one row and detail page per note, archive, `notes.refine`, `notes.suggest_tags`, refinement review and apply with stale detection. No threading, merge/unmerge, or structural meeting-note relationship in v1.
 - Committees with stats, tabs, activity endpoint.
 - Framework multiselect finalized; framework declared frozen.
 

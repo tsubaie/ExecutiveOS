@@ -13,7 +13,7 @@ Things connect: a person to the tasks they asked for, a task to the meeting wher
 
 - **Edge**: a row of the `entity_edges` view: `source_type, source_id, target_type, target_id, relation, origin ('structural' | 'contextual'), link_id (null for structural), note, origin_ref`.
 - **Relation**: a value from the registry below. Each relation has a fixed direction (source role → target role), allowed endpoint pairs, and labels for both directions.
-- **Context query**: all direct edges touching one entity, grouped, deduplicated, with note edges rolled up to their thread.
+- **Context query**: all direct edges touching one entity, grouped and deduplicated. Every linked note remains a separate edge summary and opens its own note detail.
 
 ## Relation registry (`core/links/relations.ts`)
 
@@ -22,7 +22,6 @@ Things connect: a person to the tasks they asked for, a task to the meeting wher
 | `belongs_to` | task \| note \| meeting \| kpi \| initiative → committee \| objective \| initiative | structural columns | no | "belongs to" / "contains" |
 | `owner` | task → person | `tasks.owner_id` | no | "owned by" / "owns" |
 | `source` | task → note | `tasks.source_note_id` | no | "extracted from" / "produced" |
-| `minutes` | thread → meeting | `meetings.minutes_thread_id` | no | "minutes of" / "has minutes" |
 | `attendee` | person → meeting | `meeting_attendees` (with role) | no | "attends" / "attended by" |
 | `discussed_in` | kpi \| initiative \| task \| note → meeting | `meeting_agenda_items.linked_*` | no | "on the agenda of" / "discusses" |
 | `related` | any → any (different ids) | `entity_links` | yes | "related to" / "related to" |
@@ -48,7 +47,7 @@ select 'contextual', id, source_type, source_id, target_type, target_id, relatio
 union all select 'structural', null, 'task', id, 'person', owner_id, 'owner', … from tasks where owner_id is not null and deleted_at is null
 union all … tasks.committee_id, tasks.initiative_id, tasks.source_note_id
 union all … notes.committee_id, notes.initiative_id
-union all … meetings.committee_id, meetings.minutes_thread_id
+union all … meetings.committee_id
 union all … meeting_attendees (person → meeting)
 union all select distinct … meeting_agenda_items (linked → meeting, deduplicated per meeting)
 union all … kpis.objective_id, initiatives.objective_id
@@ -58,10 +57,10 @@ The view is the only read path for edges. Repos use `core/links/edges.ts` helper
 
 ## Behaviors
 
-- LINKS-B01 **Context query** `GET /links?type&id` returns direct edges in both directions, grouped by the other endpoint's type, each with a summary from the type's resolver (title, status, date, url) and the relation label from the perspective of the queried entity. Notes are rolled up to their thread (one group entry per thread with the note ids that carry the edges). Transitive edges are not included.
+- LINKS-B01 **Context query** `GET /links?type&id` returns direct edges in both directions, grouped by the other endpoint's type, each with a summary from the type's resolver (title, status, date, url) and the relation label from the perspective of the queried entity. Each note is returned independently; notes are never rolled up, threaded, stacked, or collapsed. Transitive edges are not included.
 - LINKS-B02 **Add link**: the `LinkedSection` add flow searches across types (`GET /search`) with a type filter, then chooses a relation from those allowed for the pair; default `related`.
 - LINKS-B03 **Remove link**: only contextual edges show a remove action; structural edges show "edit on <entity>" that navigates to the owning entity.
-- LINKS-B04 **List filters**: every list of a linkable type accepts `linkedTo=<type>:<id>` and optional `relation=`; the predicate uses `entity_edges` in either direction. Thread lists match any note in the thread.
+- LINKS-B04 **List filters**: every list of a linkable type accepts `linkedTo=<type>:<id>` and optional `relation=`; the predicate uses `entity_edges` in either direction. Note filters operate on each note independently.
 - LINKS-B05 **Delete provenance**: soft-deleting an entity soft-deletes its contextual links with the same `deleted_op_id`; restoring with that op id restores those links whose opposite endpoint is currently non-deleted; links whose opposite endpoint is deleted stay deleted and are restored when that endpoint is restored (its op restores them only if they carry its op id; otherwise a repair job re-evaluates links deleted by either op). Structural edges follow their owning row automatically.
 - LINKS-B06 **Purge** hard-deletes contextual links before their endpoints.
 - LINKS-B07 **Search**: `GET /search?q&types` runs each resolver's search (normalized `search_text`) and returns `{ type, id, title, subtitle }`, ≤ 10 per type.
@@ -95,7 +94,7 @@ Invalidation: `["links", type, id]` for both endpoints; `detail` of both endpoin
 ## Required scenarios
 
 - service: I01–I05, B05 (four cases: both alive, opposite deleted, manual prior delete, restore order), B06, B08.
-- repo: `edgesFor` returns structural and contextual edges; deduplicated agenda edges; `linkedToPredicate` used by tasks and threads; note rollup.
+- repo: `edgesFor` returns structural and contextual edges; deduplicated agenda edges; `linkedToPredicate` used by tasks and standalone notes; no note rollup.
 - api: all endpoints; idempotent POST; 409 existing; 404; 422.
 - ui: grouping, add flow with pair validation, structural lock, remove confirm.
 - Mutation targets: `validatePair`, `restoreLinksForOp`, `edgesFor`.

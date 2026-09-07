@@ -85,7 +85,7 @@ State-creating requests (`POST` creates, `apply`, `merge`, `group`, action route
 - Cursor: opaque base64 of `{ v: 1, sort, filtersHash, last: [tuple values] }`. A cursor whose `sort` or `filtersHash` does not match the request → 400. Cursors are valid for the request's day; the band rank can change across midnight, so the UI restarts from the first page when the day changes (it already refreshes on the day boundary, `TASKS-B03`).
 - `limit` default 50, max 200. `withTotal=true` adds `meta.total`.
 - `includeDeleted=true` only where the spec says (trash views).
-- `linkedTo=<type>:<id>` and `relation=` are accepted by every list of a linkable entity type. For thread lists they match any note in the thread.
+- `linkedTo=<type>:<id>` and `relation=` are accepted by every list of a linkable entity type. Note lists match links on each individual note; linked notes are never rolled up or grouped.
 
 ## Auth endpoints
 
