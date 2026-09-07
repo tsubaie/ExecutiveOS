@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, GripVertical } from 'lucide-react';
+import { CirclePlus, GripVertical } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
@@ -163,7 +163,7 @@ function AddSubtask({ parent }: { parent: TaskDetail }) {
           void create(event.currentTarget);
         }}
       >
-        <Plus className="ms-3.5 size-4 shrink-0 text-text-muted" aria-hidden />
+        <CirclePlus className="ms-3 size-4.5 shrink-0 text-text-muted" aria-hidden />
         <Input
           name="title"
           dir="auto"

@@ -74,8 +74,9 @@
   * {
     border-color: var(--border);
   }
+  /* 16px base: the office reads on tablets and many readers are over forty (docs/05 § Density). */
   html {
-    font-size: 14px;
+    font-size: 16px;
     background: var(--bg);
   }
   /* Both faces are always in the stack: an Arabic title in the English view renders in the

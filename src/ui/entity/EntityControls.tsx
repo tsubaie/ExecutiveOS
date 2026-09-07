@@ -1,6 +1,6 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { SlidersHorizontal, ListChecks, PanelLeftClose, Plus } from 'lucide-react';
+import { SlidersHorizontal, ListChecks, PanelLeftClose, CirclePlus } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { EntitySearch } from './EntitySearch';
 import { EntityBulkBar } from './EntityBulkBar';
@@ -38,7 +38,7 @@ export function EntityToolbar<T extends Entity, P extends object, C>({
           <EntityToolbarSummary config={config} controller={c} />
         </div>
         <Button className="@2xl:order-last" onClick={() => c.navigate({ new: '1' })}>
-          <Plus className="size-4" />
+          <CirclePlus className="size-5" strokeWidth={2.25} />
           {t('create')}
         </Button>
         <EntityToolbarControls config={config} controller={c} />
