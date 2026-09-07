@@ -2,7 +2,7 @@
 
 **Status:** accepted
 **Spec reviewed:** 2026-09-07
-**Implementation verified:** not yet
+**Implementation verified:** core task-management slice; see ../../TASKS-HANDOFF.md for implemented and deferred requirements.
 **Owner module:** `src/modules/tasks`
 
 ## Purpose
@@ -27,7 +27,7 @@ See `03-data-model.md` § tasks. Invariants:
 - TASKS-I02 No self-parent or cycles (trigger).
 - TASKS-I03 `completed_at` non-null iff `status = completed` (CHECK).
 - TASKS-I04 Cascade delete: deleting a parent soft-deletes its non-deleted subtasks with the same op id; restoring by op id restores exactly those; a subtask deleted earlier by its own op stays deleted.
-- TASKS-I05 `sort_order` unique within a parent among non-deleted rows (deferrable unique index); reorder rewrites all positions of that parent in one statement.
+- TASKS-I05 `sort_order` unique within a parent among non-deleted rows (deferrable partial exclusion constraint using equality operators); reorder rewrites all positions of that parent in one statement.
 - TASKS-I06 Links to committee, initiative, note, owner survive soft delete of the target and are nulled on purge.
 
 ## Behaviors
@@ -35,7 +35,7 @@ See `03-data-model.md` § tasks. Invariants:
 - TASKS-B01 **Create** defaults: status `inbox`, no priority, owner, or date; `title` required. Optional `committeeId`, `initiativeId`, `sourceNoteId`, `parentId`, and `links: [{ type, id, relation }]` created in the same transaction (used by meetings Actions: `agreed_in`).
 - TASKS-B02 **Status transitions** are allowed between any two statuses except into `completed`, which requires `POST /tasks/:id/complete`; PATCH with `status: completed` → 422 `TASKS-B02`. `complete { revision, force? }`: if the task has non-completed subtasks and `force` is false → 409 `conflict reason: "state"` with `details.openSubtasks`; with `force` the subtasks are completed too. `reopen { revision }` sets `next_action` and clears `completed_at`; it does not reopen subtasks.
 - TASKS-B03 **Bands** computed by one function `bandOf(task, today)` where `today` is the date in `ctx.timezone`: completed → none; `due < today` overdue; `= today` today; `today < due ≤ today + 7 days` week (rolling); `> today + 7` later; null → nodate. The UI recomputes bands at the next local midnight without reload (a timer keyed on the day) and refetches counts.
-- TASKS-B04 **Views**: `inbox`, `next`, `today` (band today or overdue, not completed), `upcoming` (band week), `waiting`, `someday`, `completed` (completed within 90 days), `trash`, `all` (not completed). Default: `today` if its count > 0 else `next`. Subtasks appear in lists only when `parentId` is set or `includeSubtasks=true`; counts exclude subtasks.
+- TASKS-B04 **Views**: `inbox`, `next`, `today` (band today or overdue, not completed), `upcoming` (band week), `overdue` (overdue band only, from Mission Control’s dedicated overdue view), `waiting`, `someday`, `completed` (completed within 90 days), `trash`, `all` (not completed). Default: `today` if its count > 0 else `next`. Subtasks appear in lists only when `parentId` is set or `includeSubtasks=true`; counts exclude subtasks.
 - TASKS-B05 **Facets**: owner, priority, committee, initiative, hasSubtasks, dueFrom/dueTo, `linkedTo`, `relation`. AND semantics.
 - TASKS-B06 **Search** on title and description via `search_text`.
 - TASKS-B07 **Sort** default `(band_rank, due_date asc nulls last, priority_rank desc, created_at desc, id desc)`; allowed: `due_date`, `priority`, `created_at`, `updated_at`, `title` each with `id` tiebreak.
@@ -102,3 +102,13 @@ Row: checkbox (complete), title (`dir="auto"`), due label (relative, absolute on
 ## Out of scope
 
 Recurring tasks, reminders, attachments, task comments, time tracking.
+
+## Current implementation boundary — Tasks management
+
+The manual workflow from Mission Control's `docs/tasks-patterns.md` and `docs/notion-tasks-api.md` is implemented with ExecutiveOS UUIDs, People ownership, API envelopes, transaction guards, and localization. The predecessor's private data, Notion integration, task-owner table, fire-and-forget writes, and TailAdmin palette are not copied.
+
+The current slice includes create/edit, status/priority/owner/date, views/counts/search/sort/cursors, completion with force confirmation, one-level subtasks, keyboard-accessible reorder, conversion to top-level, grouping, soft delete/restore, Home summaries, and assigned tasks on People detail. Deleted children of active parents are accessible through the detail's Trash disclosure. Restored rows append to the current sibling order, preserving the relative order of siblings restored together and avoiding collisions after reordering.
+
+TASKS-B13/A06 (AI), contextual Links and future-module fields in B01/B05/B14/A08, drag/swipe/shortcut polish, top-level reorder, scheduled purge, and full acceptance/performance audits remain deferred. The disabled breakdown endpoint implements A07. Full coverage is explicitly not claimed for partially delivered IDs; see the hand-off table.
+
+`reorder.revisions` supplies B12's revision fences for every affected child. Grouping retains the specified `childIds` request and checks eligibility under a transaction lock. The current hierarchy writes use one task advisory lock; this is conservative for a small office, not a throughput benchmark. Bands/counts refresh every 30 seconds while the list is active; the exact midnight timer is still deferred.

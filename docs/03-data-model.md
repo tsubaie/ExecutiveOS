@@ -101,7 +101,7 @@ Field semantics live in the feature specs; this section fixes shape and constrai
 
 ### tasks
 `title, description, status (inbox|next_action|waiting_on|someday|completed), priority (low|medium|high|urgent) null, due_date date null, completed_at, owner_id fk people set null, parent_id fk tasks set null, committee_id fk committees set null, initiative_id fk initiatives set null, source_note_id fk notes set null, sort_order int, search_text` + entity columns.
-Constraints: trigger `tasks_depth_check` rejects a `parent_id` whose parent has a parent, and rejects updating `parent_id` on a row that has children; `CHECK ((status = 'completed') = (completed_at is not null))`; unique `(coalesce(parent_id, '0'), sort_order) where deleted_at is null` deferrable, with reorder done in one statement.
+Constraints: trigger `tasks_depth_check` rejects a `parent_id` whose parent has a parent, and rejects updating `parent_id` on a row that has children; `CHECK ((status = 'completed') = (completed_at is not null))`; uniqueness of `(coalesce(parent_id, '00000000-0000-0000-0000-000000000000'::uuid), sort_order) where deleted_at is null`, enforced by a deferrable GiST exclusion constraint with equality operators (`btree_gist`), with reorder done in one statement.
 Indexes: `(status, due_date) where deleted_at is null`, `(owner_id)`, `(parent_id)`, `(committee_id)`, `(initiative_id)`, `(source_note_id)`, `(due_date, priority, created_at)`.
 
 ### note_threads

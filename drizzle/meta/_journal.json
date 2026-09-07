@@ -15,6 +15,20 @@
       "when": 1788770551575,
       "tag": "0001_normalization-and-system-checks",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788774157504,
+      "tag": "0002_tasks",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788774245848,
+      "tag": "0003_task-invariants",
+      "breakpoints": true
     }
   ]
 }

@@ -154,5 +154,5 @@ it('migration lock serializes concurrent migrators without schema drift', async 
   const rows = await db().execute(
     sql`select count(*)::int as count from drizzle.__drizzle_migrations`,
   );
-  expect(rows.rows[0]).toEqual({ count: 2 });
+  expect(rows.rows[0]).toEqual({ count: 4 });
 });

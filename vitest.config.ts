@@ -14,6 +14,8 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 60_000,
     restoreMocks: true,
+    // Integration suites share the explicitly configured PostgreSQL test database.
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       include: [
