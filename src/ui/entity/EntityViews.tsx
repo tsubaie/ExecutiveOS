@@ -56,21 +56,28 @@ export function EntityStats<T extends Entity, P extends object, C>({
   const featured = config.filters.views.filter((view) => view.featured);
   if (!featured.length) return null;
   return (
-    <div className="grid grid-cols-4 gap-1 border-b px-2 py-1.5 @lg:px-3 @lg:py-2">
+    <div className="grid grid-cols-4 gap-1.5 border-b px-2 py-2 @lg:gap-2 @lg:px-3 @lg:py-2.5">
       {featured.map((view) => {
         const value = c.list.counts[view.id] ?? 0;
         const active = c.state.view === view.id;
+        const Icon = view.icon;
         return (
           <Button
             key={view.id}
             variant="ghost"
             aria-pressed={active}
             className={cn(
-              'h-auto min-w-0 flex-col items-start gap-0 px-2 py-1 @lg:px-2.5 @lg:py-1.5',
-              active && 'bg-surface-raised',
+              'h-auto min-w-0 flex-col items-start gap-1 rounded-lg border px-2 py-1.5 text-start @lg:px-3 @lg:py-2',
+              active
+                ? 'border-accent/50 bg-accent-soft hover:bg-accent-soft'
+                : 'border-border bg-bg/60 hover:bg-surface-raised',
             )}
             onClick={() => c.navigate({ view: view.id }, true)}
           >
+            <span className="flex w-full min-w-0 items-center gap-1.5 text-[10px] font-semibold tracking-wider text-text-muted uppercase">
+              {Icon && <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden />}
+              <span className="truncate">{view.label}</span>
+            </span>
             <span
               className={cn(
                 'text-xl leading-none font-semibold tabular-nums @lg:text-2xl',
@@ -80,9 +87,6 @@ export function EntityStats<T extends Entity, P extends object, C>({
               )}
             >
               {count(value)}
-            </span>
-            <span className="mt-1 w-full truncate text-[10px] font-semibold tracking-wider text-text-muted uppercase">
-              {view.label}
             </span>
           </Button>
         );
