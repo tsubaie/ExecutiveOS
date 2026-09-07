@@ -58,36 +58,49 @@ for (const locale of ['en', 'ar']) {
       );
     for (const title of fixture.children) await api('', 'POST', { title, parentId: created[0].id });
     const messages = JSON.parse(await readFile(`src/core/i18n/messages/${locale}.json`, 'utf8'));
-    for (const [viewport, size] of Object.entries({
-      desktop: { width: 1440, height: 900 },
-      mobile: { width: 390, height: 844 },
-    })) {
-      await page.setViewportSize(size);
-      for (const route of ['list', 'detail', 'create']) {
-        await page.goto(
-          `http://localhost:3000/tasks?view=all&q=${encodeURIComponent(fixture.prefix)}${route === 'detail' ? `&id=${created[0].id}` : route === 'create' ? '&new=1' : ''}`,
-        );
-        if (route === 'list') await page.locator('[data-row-id]').first().waitFor();
-        else
-          await page
-            .getByRole('heading', {
-              name: route === 'detail' ? fixture.titles[0] : messages.tasks.newTask,
-              exact: true,
-            })
-            .waitFor();
-        await page.evaluate(() => document.fonts.ready);
-        await page.waitForTimeout(350);
-        const overflow = await page.evaluate(
-          () => document.documentElement.scrollWidth > innerWidth,
-        );
-        const axe = await new AxeBuilder({ page }).analyze();
-        const violations = axe.violations
-          .filter((v) => ['serious', 'critical'].includes(v.impact))
-          .map((v) => ({ id: v.id, nodes: v.nodes.map((n) => n.target) }));
-        evidence.push({ locale, viewport, route, overflow, violations, errors: [...errors] });
-        await page.screenshot({
-          path: `docs/screenshots/tasks-${route}-${locale}-${viewport}.png`,
-        });
+    for (const theme of ['dark', 'light']) {
+      await page.evaluate((theme) => localStorage.setItem('theme', theme), theme);
+      for (const [viewport, size] of Object.entries({
+        desktop: { width: 1440, height: 900 },
+        mobile: { width: 390, height: 844 },
+        narrow: { width: 320, height: 844 },
+        tablet: { width: 1024, height: 900 },
+      })) {
+        await page.setViewportSize(size);
+        for (const route of ['list', 'detail', 'create']) {
+          await page.goto(
+            `http://localhost:3000/tasks?view=all&q=${encodeURIComponent(fixture.prefix)}${route === 'detail' ? `&id=${created[0].id}` : route === 'create' ? '&new=1' : ''}`,
+          );
+          if (route === 'list') await page.locator('[data-row-id]').first().waitFor();
+          else
+            await page
+              .getByRole('heading', {
+                name: route === 'detail' ? fixture.titles[0] : messages.tasks.newTask,
+                exact: true,
+              })
+              .waitFor();
+          await page.evaluate(() => document.fonts.ready);
+          await page.waitForTimeout(350);
+          const overflow = await page.evaluate(
+            () => document.documentElement.scrollWidth > innerWidth,
+          );
+          const axe = await new AxeBuilder({ page }).analyze();
+          const violations = axe.violations
+            .filter((v) => ['serious', 'critical'].includes(v.impact))
+            .map((v) => ({ id: v.id, nodes: v.nodes.map((n) => n.target) }));
+          evidence.push({
+            locale,
+            theme,
+            viewport,
+            route,
+            overflow,
+            violations,
+            errors: [...errors],
+          });
+          await page.screenshot({
+            path: `docs/screenshots/tasks-${route}-${locale}-${viewport}${theme === 'light' ? '-light' : ''}.png`,
+          });
+        }
       }
     }
   } finally {
@@ -100,6 +113,6 @@ for (const locale of ['en', 'ar']) {
 }
 await browser.close();
 await writeFile('tmp/tasks-accessibility.json', JSON.stringify(evidence, null, 2));
-console.log(JSON.stringify(evidence));
+process.stdout.write(JSON.stringify(evidence) + '\n');
 if (evidence.some((row) => row.overflow || row.violations.length || row.errors.length))
   process.exitCode = 1;

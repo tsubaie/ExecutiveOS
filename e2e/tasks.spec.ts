@@ -100,7 +100,7 @@ for (const locale of ['en', 'ar'])
     await page
       .locator('aside.entity-detail')
       .getByRole('button', { name: m.common.delete, exact: true })
-      .first()
+      .last()
       .click();
     await page
       .getByRole('dialog')
@@ -149,6 +149,7 @@ test('TASKS-A05 TASKS-B09 group selected tasks through framework selection', asy
   for (const suffix of ['One', 'Two', 'Three'])
     children.push((await api(page, '', 'POST', { title: `${prefix} ${suffix}` })).body.data);
   await page.goto(`/tasks?view=all&q=${encodeURIComponent(prefix)}`);
+  await page.getByRole('button', { name: en.common.select, exact: true }).click();
   for (const child of children)
     await page.getByRole('checkbox', { name: `Select ${child.title}`, exact: true }).click();
   await page.getByRole('button', { name: en.tasks.group, exact: true }).click();
@@ -253,4 +254,119 @@ test('TASKS-B10 TASKS-B15 HOME-B01 assigned work appears in People and Home', as
   await expect(page).toHaveURL(new RegExp(`id=${task.id}`));
   await page.goto('/home');
   await expect(page.getByRole('link', { name: task.title, exact: true })).toBeVisible();
+});
+
+for (const locale of ['en', 'ar']) {
+  test(`EP-B03 EP-B06 EP-B07 EP-B08 EP-B15 EP-B17 filters, touch targets and focus ${locale}`, async ({
+    page,
+  }) => {
+    const m = locale === 'ar' ? ar : en;
+    await login(page, locale);
+    const task = (
+      await api(page, '', 'POST', { title: `UX ${crypto.randomUUID()}`, priority: 'low' })
+    ).body.data;
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/tasks?view=all&q=${encodeURIComponent(task.title)}`);
+    await expect(page.getByRole('button', { name: m.tasks.group, exact: true })).toBeHidden();
+    const toggle = page.getByRole('checkbox', {
+      name: m.tasks.completeNamed.replace('{name}', task.title),
+      exact: true,
+    });
+    const bounds = await toggle.boundingBox();
+    expect(bounds?.width).toBeGreaterThanOrEqual(44);
+    expect(bounds?.height).toBeGreaterThanOrEqual(44);
+    const row = page.locator(`[data-row-id="${task.id}"]`);
+    expect((await row.boundingBox())?.y).toBeLessThan(320);
+    await row.focus();
+    await page.keyboard.press('x');
+    await expect(
+      page.getByRole('checkbox', {
+        name: m.common.selectItem.replace('{name}', task.title),
+        exact: true,
+      }),
+    ).toBeChecked();
+    await page.keyboard.press('Escape');
+    await expect(page).not.toHaveURL(/sel=/);
+    await row.click();
+    await expect(page.getByRole('button', { name: m.common.previous, exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: m.common.next, exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: m.common.close, exact: true }).click();
+    await expect(row).toBeFocused();
+    await page.goto(`/tasks?view=all&priority=urgent&id=${task.id}`);
+    await expect(page.getByText(m.common.outside, { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: m.common.showAll }).click();
+    await expect(page).toHaveURL(new RegExp(`view=all&id=${task.id}`));
+    await page.getByRole('button', { name: m.common.close, exact: true }).click();
+    await page.getByRole('button', { name: m.common.filter, exact: true }).click();
+    await page
+      .getByRole('dialog')
+      .getByLabel(m.tasks.priority, { exact: true })
+      .selectOption('urgent');
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: m.common.close, exact: true })
+      .click();
+    await expect(page).toHaveURL(/priority=urgent/);
+    await page.getByRole('button', { name: m.common.clear, exact: true }).first().click();
+    await expect(page).not.toHaveURL(/priority=/);
+    for (const width of [320, 1024, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/tasks?view=all&id=${task.id}`);
+      await expect(page.getByRole('heading', { name: task.title, exact: true })).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
+        false,
+      );
+      if (width >= 1024)
+        expect(
+          (await page.locator('[data-entity-list]').boundingBox())?.width,
+        ).toBeGreaterThanOrEqual(300);
+    }
+  });
+}
+
+test('EP-B10 EP-B11 queued save failure blocks view changes and preserves the draft', async ({
+  page,
+}) => {
+  await login(page, 'en');
+  const task = (await api(page, '', 'POST', { title: `UX save ${crypto.randomUUID()}` })).body.data;
+  await page.goto(`/tasks?view=all&id=${task.id}`);
+  const title = page.getByLabel(en.tasks.title, { exact: true });
+  await title.fill('');
+  await page.getByLabel(en.tasks.description, { exact: true }).click();
+  await expect(page.getByRole('alert').filter({ hasText: en.common.titleRequired })).toBeVisible();
+  await title.fill(`${task.title} edited`);
+  await page.route(`**/api/v1/tasks/${task.id}`, async (route) => {
+    if (route.request().method() === 'PATCH') await route.abort();
+    else await route.continue();
+  });
+  await page.getByLabel(en.tasks.description, { exact: true }).click();
+  await page.getByRole('button', { name: en.tasks.inbox, exact: false }).first().click();
+  await expect(page.getByRole('dialog')).toContainText(en.common.unsaved);
+  await expect(title).toHaveValue(`${task.title} edited`);
+  await page.unroute(`**/api/v1/tasks/${task.id}`);
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: en.common.retry, exact: true })
+    .click();
+  await expect(page).toHaveURL(/view=inbox/);
+  expect((await api(page, `/${task.id}`)).body.data.title).toBe(`${task.title} edited`);
+});
+
+test('EP-B01 EP-B02 search keeps typing focus, debounces and follows browser history', async ({
+  page,
+}) => {
+  await login(page, 'en');
+  const title = `UX search ${crypto.randomUUID()}`;
+  await api(page, '', 'POST', { title });
+  await page.goto('/tasks?view=all');
+  const search = page.getByRole('textbox', { name: en.common.search });
+  await search.pressSequentially(title, { delay: 10 });
+  await expect(search).toBeFocused();
+  await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe(title);
+  await expect(page.locator('[data-row-id]')).toHaveCount(1);
+  await page.locator('[data-row-id]').click();
+  await expect(page).toHaveURL(/id=/);
+  await page.goBack();
+  await expect(search).toHaveValue(title);
+  await expect(page).not.toHaveURL(/id=/);
 });
