@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus } from 'lucide-react';
+import { Plus, GripVertical } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
@@ -9,10 +9,14 @@ import { TaskCreate, type TaskDetail, type Task } from '../schema/validation';
 import { TaskToggle } from './TaskToggle';
 import { useTaskMutations } from './queries';
 import { SubtaskActions } from './SubtaskActions';
-// A checklist: toggle and title on the line, owner, date and ordering revealed under it on hover
-// or focus (always on touch), and an inline row to add the next one (TASKS-B08).
+import { useSubtaskReorder } from './use-subtask-drag';
+import { cn } from '@/ui/cn';
+// A checklist: toggle, title and an eye button that opens the subtask's details (owner, date,
+// order, conversion, trash), plus an inline row to add the next one (TASKS-B08).
 export function Subtasks({ task }: { task: TaskDetail }) {
   const t = useTranslations('tasks');
+  const drag = useSubtaskReorder(task);
+  const byId = new Map(task.subtasks.map((child) => [child.id, child]));
   if (task.parentId) return null;
   const done = task.subtasks.filter((child) => child.status === 'completed').length;
   return (
@@ -27,13 +31,33 @@ export function Subtasks({ task }: { task: TaskDetail }) {
           </span>
         )}
       </div>
-      <ul className="divide-y border-y">
-        {task.subtasks.map((child) => (
-          <li key={child.id} className="hover-reveal py-1">
-            <SubtaskTitle task={child} />
-            <SubtaskActions task={child} parent={task} />
-          </li>
-        ))}
+      {drag.error && <ErrorPanel error={drag.error} />}
+      <ul className="divide-y border-y" onPointerMove={drag.move} onPointerUp={drag.end}>
+        {drag.order.map((id) => {
+          const child = byId.get(id);
+          return child ? (
+            <li
+              key={child.id}
+              ref={drag.register(child.id)}
+              className={cn(
+                'flex items-center gap-1 py-0.5 transition-colors',
+                drag.dragging === child.id && 'bg-accent-soft',
+              )}
+            >
+              <button
+                type="button"
+                aria-label={t('dragHandle')}
+                disabled={Boolean(task.deletedAt) || drag.active.length < 2}
+                className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-text-muted/70 hover:text-text active:cursor-grabbing disabled:opacity-30"
+                onPointerDown={drag.start(child.id)}
+              >
+                <GripVertical className="size-4" />
+              </button>
+              <SubtaskTitle task={child} />
+              <SubtaskActions task={child} parent={task} />
+            </li>
+          ) : null;
+        })}
       </ul>
       <DeletedSubtasks task={task} />
       {!task.deletedAt && task.status !== 'completed' && <AddSubtask parent={task} />}
@@ -55,7 +79,7 @@ function SubtaskTitle({ task }: { task: Task }) {
   }
   return (
     <>
-      <div className="-ms-2.5 flex items-center gap-1">
+      <div className="-ms-2 flex min-w-0 flex-1 items-center gap-1">
         <TaskToggle task={task} />
         <Input
           dir="auto"
@@ -94,8 +118,10 @@ function DeletedSubtasks({ task }: { task: TaskDetail }) {
           <summary className="cursor-pointer text-xs text-text-muted">{c('trash')}</summary>
           <ul className="mt-2 divide-y border-y">
             {task.deletedSubtasks.map((child) => (
-              <li key={child.id} className="py-2">
-                <bdi className="plaintext block px-2 text-sm text-text-muted">{child.title}</bdi>
+              <li key={child.id} className="flex items-center gap-2 py-1.5">
+                <bdi className="plaintext min-w-0 flex-1 truncate px-2 text-sm text-text-muted">
+                  {child.title}
+                </bdi>
                 <SubtaskActions task={child} parent={task} />
               </li>
             ))}

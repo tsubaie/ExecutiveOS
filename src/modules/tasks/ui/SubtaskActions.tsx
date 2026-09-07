@@ -1,10 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowUp, ArrowDown, CornerUpRight, Trash2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, CornerUpRight, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
-import { Input } from '@/ui/primitives/input';
-import { NativeSelect, NativeSelectOption } from '@/ui/primitives/native-select';
 import {
   Dialog,
   DialogContent,
@@ -13,61 +11,157 @@ import {
   DialogFooter,
 } from '@/ui/primitives/dialog';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
+import { Property } from '@/ui/layout/Property';
 import type { Task, TaskDetail } from '../schema/validation';
 import { useTaskMutations, useOwners } from './queries';
 import { useTaskOperation } from './use-task-operation';
+import { OwnerSelect, DueDateField } from './TaskPickers';
+// The eye button opens a dialog with the subtask's owner, due date, order, conversion and trash.
+// A dialog rather than hover: the office works on tablets, where nothing hovers (TASKS-B08).
 export function SubtaskActions({ task, parent }: { task: Task; parent: TaskDetail }) {
+  const t = useTranslations('tasks');
   const c = useTranslations('common');
   const mutations = useTaskMutations();
   const operation = useTaskOperation();
+  const [open, setOpen] = useState(false);
+  if (task.deletedAt)
+    return task.deletedOpId && !parent.deletedAt ? (
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={operation.pending}
+        onClick={() => void operation.run(() => mutations.restore(task.id, task.deletedOpId ?? ''))}
+      >
+        {c('restore')}
+      </Button>
+    ) : null;
+  return (
+    <>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="shrink-0 text-text-muted"
+        aria-label={t('subtaskDetails')}
+        disabled={Boolean(parent.deletedAt)}
+        onClick={() => setOpen(true)}
+      >
+        <Eye className="size-4" />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogTitle dir="auto" className="plaintext pe-8">
+            {task.title}
+          </DialogTitle>
+          <DialogDescription>{t('subtaskDetailsDescription')}</DialogDescription>
+          {operation.error && <ErrorPanel error={operation.error} />}
+          <SubtaskFields task={task} operation={operation} />
+          <SubtaskOrdering task={task} parent={parent} operation={operation} />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+type Operation = ReturnType<typeof useTaskOperation>;
+function SubtaskFields({ task, operation }: { task: Task; operation: Operation }) {
+  const t = useTranslations('tasks');
+  const owners = useOwners();
+  const mutations = useTaskMutations();
+  const patch = (fields: { ownerId?: string | null; dueDate?: string | null }) =>
+    operation.run(() => mutations.patch(task.id, task.revision, fields, crypto.randomUUID()));
+  return (
+    <fieldset disabled={operation.pending} className="grid gap-2">
+      <Property label={t('owner')}>
+        <OwnerSelect
+          value={task.ownerId ?? ''}
+          people={owners.data?.data ?? []}
+          onChange={(ownerId) => {
+            if ((ownerId || null) !== task.ownerId) void patch({ ownerId: ownerId || null });
+          }}
+        />
+      </Property>
+      <Property label={t('dueDate')}>
+        <DueDateField
+          value={task.dueDate}
+          onChange={(dueDate) => {
+            if (dueDate !== task.dueDate) void patch({ dueDate });
+          }}
+        />
+      </Property>
+    </fieldset>
+  );
+}
+function SubtaskOrdering({
+  task,
+  parent,
+  operation,
+}: {
+  task: Task;
+  parent: TaskDetail;
+  operation: Operation;
+}) {
+  const t = useTranslations('tasks');
+  const mutations = useTaskMutations();
+  const { index, length, reorder } = useSubtaskOrder(task, parent, operation);
+  return (
+    <DialogFooter className="flex-row flex-wrap items-center gap-1 sm:justify-start">
+      <Button
+        size="icon"
+        variant="outline"
+        aria-label={t('moveUp')}
+        disabled={index <= 0 || operation.pending}
+        onClick={() => reorder(-1)}
+      >
+        <ArrowUp className="size-4" />
+      </Button>
+      <Button
+        size="icon"
+        variant="outline"
+        aria-label={t('moveDown')}
+        disabled={index >= length - 1 || operation.pending}
+        onClick={() => reorder(1)}
+      >
+        <ArrowDown className="size-4" />
+      </Button>
+      <Button
+        variant="outline"
+        disabled={operation.pending}
+        onClick={() =>
+          void operation.run(() =>
+            mutations.action(task.id, 'convert-to-task', { revision: task.revision }),
+          )
+        }
+      >
+        <CornerUpRight className="size-4" />
+        {t('convert')}
+      </Button>
+      <span className="flex-1" />
+      <SubtaskDelete task={task} operation={operation} />
+    </DialogFooter>
+  );
+}
+function SubtaskDelete({ task, operation }: { task: Task; operation: Operation }) {
+  const c = useTranslations('common');
   const [deleting, setDeleting] = useState(false);
   return (
-    <div className="grid gap-1">
-      {operation.error && <ErrorPanel error={operation.error} />}
-      {!task.deletedAt && (
-        <div className="hover-reveal-target">
-          <fieldset
-            disabled={operation.pending || Boolean(parent.deletedAt)}
-            className="flex flex-wrap items-center gap-1 ps-8 pb-1"
-          >
-            <SubtaskFields task={task} operation={operation} />
-            <span className="flex-1" />
-            <SubtaskOrdering task={task} parent={parent} operation={operation} />
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              className="text-text-muted hover:text-danger"
-              aria-label={c('delete')}
-              onClick={() => setDeleting(true)}
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </fieldset>
-        </div>
-      )}
-      {task.deletedOpId && !parent.deletedAt && (
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-1 ms-2 justify-self-start"
-          disabled={operation.pending}
-          onClick={() =>
-            void operation.run(() => mutations.restore(task.id, task.deletedOpId ?? ''))
-          }
-        >
-          {c('restore')}
-        </Button>
-      )}
+    <>
+      <Button
+        variant="ghost"
+        className="text-danger hover:text-danger"
+        disabled={operation.pending}
+        onClick={() => setDeleting(true)}
+      >
+        <Trash2 className="size-4" />
+        {c('delete')}
+      </Button>
       <SubtaskDeleteDialog
         task={task}
         open={deleting}
         setOpen={setDeleting}
         operation={operation}
       />
-    </div>
+    </>
   );
 }
-type Operation = ReturnType<typeof useTaskOperation>;
 function SubtaskDeleteDialog({
   task,
   open,
@@ -105,86 +199,6 @@ function SubtaskDeleteDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-function SubtaskFields({ task, operation }: { task: Task; operation: Operation }) {
-  const t = useTranslations('tasks');
-  const owners = useOwners();
-  const mutations = useTaskMutations();
-  const patch = (fields: { ownerId?: string | null; dueDate?: string | null }) =>
-    operation.run(() => mutations.patch(task.id, task.revision, fields, crypto.randomUUID()));
-  return (
-    <>
-      <NativeSelect
-        size="sm"
-        className="w-32"
-        aria-label={t('owner')}
-        value={task.ownerId ?? ''}
-        onChange={(event) => void patch({ ownerId: event.target.value || null })}
-      >
-        <NativeSelectOption value="">{t('unassigned')}</NativeSelectOption>
-        {owners.data?.data.map((person) => (
-          <NativeSelectOption key={person.id} value={person.id}>
-            {person.fullName}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
-      <Input
-        aria-label={t('dueDate')}
-        type="date"
-        className="h-7 w-32 min-w-0 text-xs"
-        value={task.dueDate ?? ''}
-        onChange={(event) => void patch({ dueDate: event.target.value || null })}
-      />
-    </>
-  );
-}
-function SubtaskOrdering({
-  task,
-  parent,
-  operation,
-}: {
-  task: Task;
-  parent: TaskDetail;
-  operation: Operation;
-}) {
-  const t = useTranslations('tasks');
-  const mutations = useTaskMutations();
-  const { index, length, reorder } = useSubtaskOrder(task, parent, operation);
-  return (
-    <>
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        aria-label={t('moveUp')}
-        disabled={index <= 0}
-        onClick={() => reorder(-1)}
-      >
-        <ArrowUp className="size-4" />
-      </Button>
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        aria-label={t('moveDown')}
-        disabled={index >= length - 1}
-        onClick={() => reorder(1)}
-      >
-        <ArrowDown className="size-4" />
-      </Button>
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        aria-label={t('convert')}
-        title={t('convert')}
-        onClick={() =>
-          void operation.run(() =>
-            mutations.action(task.id, 'convert-to-task', { revision: task.revision }),
-          )
-        }
-      >
-        <CornerUpRight className="size-4" />
-      </Button>
-    </>
   );
 }
 

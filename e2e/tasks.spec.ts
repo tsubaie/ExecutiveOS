@@ -59,7 +59,8 @@ for (const locale of ['en', 'ar'])
     await expect(page).toHaveURL(/id=/);
     const id = new URL(page.url()).searchParams.get('id')!;
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
-    await page.getByLabel(m.tasks.priority, { exact: true }).last().selectOption('high');
+    await page.getByLabel(m.tasks.priority, { exact: true }).last().click();
+    await page.getByRole('option', { name: m.tasks.high, exact: true }).click();
     await expect(page.getByRole('status')).toContainText(m.common.saved);
     await page.getByLabel(m.tasks.description, { exact: true }).fill('Quarterly office review');
     await page.getByRole('heading', { name: title, exact: true }).click();
@@ -84,7 +85,7 @@ for (const locale of ['en', 'ar'])
     await expect(checkbox).not.toBeChecked();
     await expect(
       page.locator('aside.entity-detail').getByLabel(m.tasks.status, { exact: true }),
-    ).toHaveValue('next_action');
+    ).toContainText(m.tasks.next_action);
     await page
       .locator('aside.entity-detail')
       .getByRole('button', { name: m.common.delete, exact: true })
@@ -213,7 +214,13 @@ test('TASKS-B08 TASKS-I04 reorder children and restore an independently deleted 
   await expect(
     page.locator('aside.entity-detail').getByRole('heading', { name: parent.title }),
   ).toBeVisible();
-  await page.getByRole('button', { name: en.tasks.moveDown, exact: true }).first().click();
+  await page.getByRole('button', { name: en.tasks.subtaskDetails, exact: true }).first().click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: en.tasks.moveDown, exact: true })
+    .click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
   await expect(page.getByLabel(en.tasks.subtaskTitle, { exact: true }).first()).toHaveValue(
     'Confirm attendance',
   );
@@ -290,10 +297,8 @@ for (const locale of ['en', 'ar']) {
     await expect(page).toHaveURL(new RegExp(`view=all&id=${task.id}`));
     await page.getByRole('button', { name: m.common.close, exact: true }).click();
     await page.getByRole('button', { name: m.common.filter, exact: true }).click();
-    await page
-      .getByRole('dialog')
-      .getByLabel(m.tasks.priority, { exact: true })
-      .selectOption('urgent');
+    await page.getByRole('dialog').getByLabel(m.tasks.priority, { exact: true }).click();
+    await page.getByRole('option', { name: m.tasks.urgent, exact: true }).click();
     await page
       .getByRole('dialog')
       .getByRole('button', { name: m.common.close, exact: true })

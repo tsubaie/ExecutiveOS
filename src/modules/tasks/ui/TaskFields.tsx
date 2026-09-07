@@ -1,18 +1,12 @@
 'use client';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { Input } from '@/ui/primitives/input';
 import { TaskTitle, TaskDescription, useTaskText } from './TaskTextFields';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
-import { NativeSelect, NativeSelectOption } from '@/ui/primitives/native-select';
-import {
-  OpenStatus,
-  Priority,
-  type TaskCreate,
-  type Task,
-  type TaskPatch,
-} from '../schema/validation';
+import { Property } from '@/ui/layout/Property';
+import type { TaskCreate, Task, TaskPatch } from '../schema/validation';
 import { useOwners } from './queries';
+import { StatusSelect, PrioritySelect, OwnerSelect, DueDateField } from './TaskPickers';
 type Patch = Omit<TaskPatch, 'revision'>;
 type Initial = Partial<Omit<TaskCreate, 'status'>> & { status?: Task['status'] };
 // `heading` renders the title as the panel heading with `leading` (the completion toggle) beside
@@ -50,12 +44,29 @@ export function TaskFields({
       ) : (
         <TaskTitle editor={editor} />
       )}
-      <TaskProperties initial={initial} save={save} />
+      <TaskProperties key={propertyKey(initial)} initial={initial} save={save} />
       <TaskDescription editor={editor} />
     </fieldset>
   );
 }
 
+type Properties = {
+  status: Task['status'];
+  priority: NonNullable<Task['priority']> | '';
+  ownerId: string;
+  dueDate: string | null;
+};
+const propertiesOf = (initial: Initial | undefined): Properties => ({
+  status: initial?.status ?? 'inbox',
+  priority: initial?.priority ?? '',
+  ownerId: initial?.ownerId ?? '',
+  dueDate: initial?.dueDate ?? null,
+});
+const propertyKey = (initial: Initial | undefined) =>
+  Object.values(propertiesOf(initial)).join('|');
+// Pickers are controlled from a draft; the parent remounts this block whenever the saved task
+// changes so the draft always starts from server truth. In the create form the draft is the form
+// state and hidden inputs carry it into FormData.
 function TaskProperties({
   initial,
   save,
@@ -64,134 +75,54 @@ function TaskProperties({
   save: ((patch: Patch) => void) | undefined;
 }) {
   const t = useTranslations('tasks');
+  const owners = useOwners();
+  const [draft, setDraft] = useState(() => propertiesOf(initial));
+  // A picker reporting the value it already shows is not an edit and must never write.
+  const same = (patch: Partial<Properties>) =>
+    (patch.status === undefined || patch.status === draft.status) &&
+    (patch.priority === undefined || patch.priority === draft.priority) &&
+    (patch.ownerId === undefined || patch.ownerId === draft.ownerId) &&
+    (patch.dueDate === undefined || patch.dueDate === draft.dueDate);
+  const change = (patch: Partial<Properties>, saved: Patch) => {
+    if (same(patch)) return;
+    setDraft((current) => ({ ...current, ...patch }));
+    save?.(saved);
+  };
   return (
     <div className="grid gap-2">
       <Property label={t('status')}>
-        <NativeSelect
+        <StatusSelect
           name="status"
-          key={initial?.status}
-          aria-label={t('status')}
-          defaultValue={initial?.status ?? 'inbox'}
-          onChange={(event) => save?.({ status: OpenStatus.parse(event.target.value) })}
-        >
-          {initial?.status === 'completed' && (
-            <NativeSelectOption value="completed">{t('completed')}</NativeSelectOption>
-          )}
-          {OpenStatus.options.map((status) => (
-            <NativeSelectOption key={status} value={status}>
-              {t(status)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+          value={draft.status}
+          onChange={(next) => next !== 'completed' && change({ status: next }, { status: next })}
+        />
       </Property>
       <Property label={t('priority')}>
-        <NativeSelect
+        <PrioritySelect
           name="priority"
-          aria-label={t('priority')}
-          key={initial?.priority ?? ''}
-          defaultValue={initial?.priority ?? ''}
-          onChange={(event) =>
-            save?.({ priority: event.target.value ? Priority.parse(event.target.value) : null })
-          }
-        >
-          <NativeSelectOption value="">{t('none')}</NativeSelectOption>
-          {Priority.options.map((priority) => (
-            <NativeSelectOption key={priority} value={priority}>
-              {t(priority)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+          value={draft.priority}
+          onChange={(next) => change({ priority: next }, { priority: next || null })}
+        />
       </Property>
-      <TaskOwner initial={initial} save={save} />
-      <TaskDate initial={initial} save={save} />
-    </div>
-  );
-}
-
-function TaskOwner({
-  initial,
-  save,
-}: {
-  initial: Initial | undefined;
-  save: ((patch: Patch) => void) | undefined;
-}) {
-  const t = useTranslations('tasks');
-  const owners = useOwners();
-  // The select is uncontrolled, so it remounts when the people list arrives; otherwise a cold
-  // load rendered before the query resolved kept showing "Unassigned" for an assigned task.
-  const key = `${initial?.ownerId ?? ''}:${owners.data ? 'loaded' : 'pending'}`;
-  return (
-    <div className="min-w-0">
-      <Property label={t('owner')}>
-        <NativeSelect
-          name="ownerId"
-          aria-label={t('owner')}
-          key={key}
-          defaultValue={initial?.ownerId ?? ''}
-          disabled={owners.isPending || Boolean(owners.error)}
-          onChange={(event) => save?.({ ownerId: event.target.value || null })}
-        >
-          <OwnerOptions ownerId={initial?.ownerId ?? null} people={owners.data?.data ?? []} />
-        </NativeSelect>
+      <div className="min-w-0">
+        <Property label={t('owner')}>
+          <OwnerSelect
+            name="ownerId"
+            value={draft.ownerId}
+            people={owners.data?.data ?? []}
+            disabled={owners.isPending || Boolean(owners.error)}
+            onChange={(next) => change({ ownerId: next }, { ownerId: next || null })}
+          />
+        </Property>
+        {owners.error && <ErrorPanel error={owners.error} retry={() => void owners.refetch()} />}
+      </div>
+      <Property label={t('dueDate')}>
+        <DueDateField
+          name="dueDate"
+          value={draft.dueDate}
+          onChange={(next) => change({ dueDate: next }, { dueDate: next })}
+        />
       </Property>
-      {owners.error && <ErrorPanel error={owners.error} retry={() => void owners.refetch()} />}
     </div>
-  );
-}
-
-// A previous owner who is no longer assignable stays selectable until the user changes it.
-function OwnerOptions({
-  ownerId,
-  people,
-}: {
-  ownerId: string | null;
-  people: { id: string; displayName: string | null; fullName: string }[];
-}) {
-  const t = useTranslations('tasks');
-  return (
-    <>
-      <NativeSelectOption value="">{t('unassigned')}</NativeSelectOption>
-      {ownerId && !people.some((person) => person.id === ownerId) && (
-        <NativeSelectOption value={ownerId}>{t('previousOwner')}</NativeSelectOption>
-      )}
-      {people.map((person) => (
-        <NativeSelectOption key={person.id} value={person.id}>
-          {person.displayName ?? person.fullName}
-        </NativeSelectOption>
-      ))}
-    </>
-  );
-}
-
-function TaskDate({
-  initial,
-  save,
-}: {
-  initial: Initial | undefined;
-  save: ((patch: Patch) => void) | undefined;
-}) {
-  const t = useTranslations('tasks');
-  return (
-    <Property label={t('dueDate')}>
-      <Input
-        name="dueDate"
-        type="date"
-        defaultValue={initial?.dueDate ?? ''}
-        onBlur={(event) => {
-          if (event.target.validity.valid && event.target.value !== (initial?.dueDate ?? ''))
-            save?.({ dueDate: event.target.value || null });
-        }}
-      />
-    </Property>
-  );
-}
-
-// A property reads label, then value, on one line; the control keeps its accessible label.
-function Property({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-3 text-sm">
-      <span className="text-text-muted">{label}</span>
-      {children}
-    </label>
   );
 }
