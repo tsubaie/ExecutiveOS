@@ -282,8 +282,6 @@ for (const locale of ['en', 'ar']) {
     await page.keyboard.press('Escape');
     await expect(page).not.toHaveURL(/sel=/);
     await row.click();
-    await expect(page.getByRole('button', { name: m.common.previous, exact: true })).toBeDisabled();
-    await expect(page.getByRole('button', { name: m.common.next, exact: true })).toBeDisabled();
     await page.getByRole('button', { name: m.common.close, exact: true }).click();
     await expect(row).toBeFocused();
     await page.goto(`/tasks?view=all&priority=urgent&id=${task.id}`);

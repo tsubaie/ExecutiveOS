@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronUp, ChevronDown, ChevronLeft, X } from 'lucide-react';
+import { ChevronLeft, X } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { SaveStatus } from '@/ui/layout/SaveStatus';
@@ -40,7 +40,6 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
       <PanelToolbar
         state={c.queue.state}
         neighbors={props.neighbors}
-        move={(direction) => guarded(() => props.move(direction))()}
         close={guarded(props.close)}
       />
       <div ref={root} tabIndex={-1} className="p-4 outline-none lg:p-5">
@@ -139,17 +138,15 @@ function useUnloadGuard(state: SaveState) {
     return () => window.removeEventListener('beforeunload', unload);
   }, [state]);
 }
-// On a phone the bar reads Back · status · previous/next; beside the list it reads
-// previous/next · status · close, so the dismiss control sits where each layout expects it.
+// On a phone the bar reads Back · status; beside the list it reads status · close, so the
+// dismiss control sits where each layout expects it. Moving between items is the list's job.
 function PanelToolbar({
   state,
   neighbors,
-  move,
   close,
 }: {
   state: SaveState;
   neighbors: Neighbors;
-  move: (direction: number) => void;
   close: () => void;
 }) {
   const t = useTranslations('common');
@@ -174,26 +171,6 @@ function PanelToolbar({
         ) : (
           <SaveStatus state={state} />
         )}
-      </div>
-      <div className="flex gap-0.5 lg:order-first">
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={!neighbors.previous}
-          aria-label={t('previous')}
-          onClick={() => move(-1)}
-        >
-          <ChevronUp className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={!neighbors.next}
-          aria-label={t('next')}
-          onClick={() => move(1)}
-        >
-          <ChevronDown className="size-4" />
-        </Button>
       </div>
     </div>
   );

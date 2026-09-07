@@ -31,7 +31,7 @@
   --color-scrim: var(--scrim);
   --radius-lg: 0.625rem;
   --radius-xl: 0.875rem;
-  --font-sans: var(--font-inter), var(--font-arabic), sans-serif;
+  --font-sans: 'Inter', 'IBM Plex Sans Arabic', 'Inter Fallback', sans-serif;
 }
 :root {
   --bg: #f5f5f2;
@@ -79,15 +79,19 @@
     font-size: 16px;
     background: var(--bg);
   }
-  /* Both faces are always in the stack: an Arabic title in the English view renders in the
-     Arabic face and a Latin acronym in the Arabic view in Inter (docs/05 § Typography). */
+  /* Both faces are always in the stack and the real faces come before the size-matched
+     fallbacks next/font synthesises (those carry Arabic glyphs and would win otherwise): an
+     Arabic title in the English view renders in the Arabic face and a Latin acronym in the
+     Arabic view in Inter (docs/05 § Typography). */
   body {
     margin: 0;
     color: var(--text);
-    font-family: var(--font-inter), var(--font-arabic), sans-serif;
+    font-family:
+      'Inter', 'IBM Plex Sans Arabic', 'Inter Fallback', 'IBM Plex Sans Arabic Fallback', sans-serif;
   }
   html[dir='rtl'] body {
-    font-family: var(--font-arabic), var(--font-inter), sans-serif;
+    font-family:
+      'IBM Plex Sans Arabic', 'Inter', 'IBM Plex Sans Arabic Fallback', 'Inter Fallback', sans-serif;
   }
   button:not(:disabled),
   a {
