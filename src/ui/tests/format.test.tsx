@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider, type DateTimeFormatOptions } from 'next-intl';
 import { useCount, usePlainDate } from '../format';
+import { extremeZones } from '../../../tests/fixtures/timezones';
 function Sample({ date }: { date: string }) {
   const plainDate = usePlainDate();
   const count = useCount();
@@ -43,9 +44,9 @@ describe('formatting hooks', () => {
     expect(screen.getByTestId('date').textContent).toContain('٢٠٢٦');
   });
   it('renders the same calendar day for a plain date under any workspace timezone', () => {
-    mount('en', 'latn', 'Pacific/Kiritimati');
+    mount('en', 'latn', extremeZones.east);
     const east = screen.getByTestId('date').textContent;
-    mount('en', 'latn', 'Pacific/Pago_Pago');
+    mount('en', 'latn', extremeZones.west);
     expect(screen.getByTestId('date').textContent).toBe(east);
     expect(east).toContain('Mar 1');
   });

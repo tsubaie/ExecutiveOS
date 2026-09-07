@@ -65,7 +65,9 @@
     "expandViews": "إظهار العروض",
     "selectionHint": "حدد العناصر لاستخدام الإجراءات الجماعية.",
     "position": "{position} من {count}",
-    "titleRequired": "أدخل عنوانًا قبل مغادرة هذا الحقل."
+    "titleRequired": "أدخل عنوانًا قبل مغادرة هذا الحقل.",
+    "selectedCount": "{count} محدد",
+    "actions": "إجراءات"
   },
   "people": {
     "fullName": "الاسم الكامل",

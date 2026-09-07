@@ -6,7 +6,7 @@ import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { routes } from '@/core/routes';
 export function OwnerTasks({ personId }: { personId: string }) {
   const t = useTranslations('tasks');
-  const query = useTasks({ view: 'all', q: '', ownerId: personId });
+  const query = useTasks({ view: 'all', q: '', sort: '', ownerId: personId });
   return (
     <section className="mt-6 border-t pt-5">
       <h3 className="font-medium">{t('assignedTasks')}</h3>

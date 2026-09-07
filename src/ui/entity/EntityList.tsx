@@ -29,21 +29,33 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
     </>
   );
 }
-function EntityEmpty<T extends Entity, P extends object, C>({ controller: c }: Surface<T, P, C>) {
+function isFiltered<T extends Entity, P extends object, C>(c: Surface<T, P, C>['controller']) {
+  return Boolean(
+    c.state.q || c.state.sort || c.state.view !== 'all' || Object.values(c.facets).some(Boolean),
+  );
+}
+export function EntityEmpty<T extends Entity, P extends object, C>({
+  config,
+  controller: c,
+}: Surface<T, P, C>) {
   const t = useTranslations('common');
-  const filtered = c.state.q || c.state.view !== 'all' || Object.values(c.facets).some(Boolean);
+  const filtered = isFiltered(c);
+  const custom = filtered ? {} : (config.emptyState ?? {});
+  const copy = {
+    title: custom.title ?? t(filtered ? 'noMatches' : 'empty'),
+    description: custom.description ?? t(filtered ? 'noMatchesDescription' : 'emptyDescription'),
+    action: custom.action ?? {
+      label: t(filtered ? 'clear' : 'create'),
+      onSelect: () => (filtered ? c.clearFilters() : c.navigate({ new: '1' })),
+    },
+  };
   return (
     <div className="grid justify-items-center gap-4 px-6 py-16 text-center">
       <Users className="size-8 text-text-muted" />
-      <h2 className="text-lg font-medium">{t(filtered ? 'noMatches' : 'empty')}</h2>
-      <p className="max-w-sm text-sm text-text-muted">
-        {t(filtered ? 'noMatchesDescription' : 'emptyDescription')}
-      </p>
-      <Button
-        variant="outline"
-        onClick={() => (filtered ? c.clearFilters() : c.navigate({ new: '1' }))}
-      >
-        {t(filtered ? 'clear' : 'create')}
+      <h2 className="text-lg font-medium">{copy.title}</h2>
+      <p className="max-w-sm text-sm text-text-muted">{copy.description}</p>
+      <Button variant="outline" onClick={copy.action.onSelect}>
+        {copy.action.label}
       </Button>
     </div>
   );
@@ -59,7 +71,7 @@ function EntityListRow<T extends Entity, P extends object, C>({
     <li>
       <EntityGroupHeading config={config} controller={c} item={item} index={index} />
       <div className="flex min-w-0 items-center border-b">
-        {config.bulk && c.selecting && (
+        {config.bulkActions?.length && c.selecting ? (
           <Checkbox
             className="entity-check ms-1 shrink-0"
             aria-label={t('selectItem', { name: config.renderers.name(item) })}
@@ -76,7 +88,7 @@ function EntityListRow<T extends Entity, P extends object, C>({
               )
             }
           />
-        )}
+        ) : null}
         {config.rowAction && !c.selecting && (
           <div className="ms-1 shrink-0">{config.rowAction(item)}</div>
         )}
@@ -104,7 +116,7 @@ function EntityGroupHeading<T extends Entity, P extends object, C>({
   item,
   index,
 }: Surface<T, P, C> & { item: T; index: number }) {
-  const heading = c.facets.sort ? null : config.group?.(item);
+  const heading = c.state.sort ? null : config.group?.(item);
   if (!heading || (index > 0 && heading === config.group?.(c.list.items[index - 1] ?? item)))
     return null;
   return (

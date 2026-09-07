@@ -15,7 +15,7 @@ export function PeoplePage() {
       module="people"
       title={t('people')}
       description={p('directoryDescription')}
-      views={View.options.map((view) => ({ id: view, label: t(view) }))}
+      filters={{ views: View.options.map((view) => ({ id: view, label: t(view) })) }}
       useList={usePeople}
       useDetail={usePerson}
       mutations={mutations}

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useEffectEvent, type RefObject } from 'react';
 import type { Entity } from './types';
 type Options = {
   items: Entity[];
@@ -12,34 +12,40 @@ type Options = {
   selectable: boolean;
   select: () => void;
   clear: () => void;
+  openBulk: () => void;
 };
 export function useEntityKeyboard(root: RefObject<HTMLElement | null>, options: Options) {
+  const keyboard = useEffectEvent((event: KeyboardEvent) => {
+    if (ignoredKey(event)) return;
+    if (!options.panel && ['ArrowDown', 'j', 'ArrowUp', 'k'].includes(event.key)) {
+      event.preventDefault();
+      focusNeighbor(event, options, root.current);
+    }
+    if (!options.panel && event.key === 'x') {
+      event.preventDefault();
+      selectFocused(options);
+    }
+    if (!options.panel && event.key === 'a' && options.selected.length) {
+      event.preventDefault();
+      options.openBulk();
+    }
+    if (event.key === 'n') {
+      event.preventDefault();
+      options.navigate({ new: '1' });
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (options.panel) options.close();
+      else options.clear();
+    }
+  });
   // sync: delegated DOM keyboard events belong to the entity surface, not individual modules.
   useEffect(() => {
     const element = root.current;
-    function keyboard(event: KeyboardEvent) {
-      if (ignoredKey(event)) return;
-      if (!options.panel && ['ArrowDown', 'j', 'ArrowUp', 'k'].includes(event.key)) {
-        event.preventDefault();
-        focusNeighbor(event, options, element);
-      }
-      if (!options.panel && event.key === 'x') {
-        event.preventDefault();
-        selectFocused(options);
-      }
-      if (event.key === 'n') {
-        event.preventDefault();
-        options.navigate({ new: '1' });
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        if (options.panel) options.close();
-        else options.clear();
-      }
-    }
-    element?.addEventListener('keydown', keyboard);
-    return () => element?.removeEventListener('keydown', keyboard);
-  }, [root, options]);
+    const listener = (event: KeyboardEvent) => keyboard(event);
+    element?.addEventListener('keydown', listener);
+    return () => element?.removeEventListener('keydown', listener);
+  }, [root]);
 }
 
 function ignoredKey(event: KeyboardEvent) {

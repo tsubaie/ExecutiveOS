@@ -6,11 +6,19 @@ import { Button } from '@/ui/primitives/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/ui/primitives/dialog';
 import { cn } from '@/ui/cn';
 import { useEntityController } from './use-entity-controller';
+import { EntityNavigationProvider } from './navigation';
 import { EntityViews, EntityToolbar, EntityFacets, EntityOutside } from './EntityControls';
 import { EntityList } from './EntityList';
 import { EntityContent } from './EntityContent';
 import type { Entity, EntityPageProps } from './types';
 export function EntityPage<T extends Entity, P extends object, C>(props: EntityPageProps<T, P, C>) {
+  return (
+    <EntityNavigationProvider>
+      <EntitySurface {...props} />
+    </EntityNavigationProvider>
+  );
+}
+function EntitySurface<T extends Entity, P extends object, C>(props: EntityPageProps<T, P, C>) {
   const t = useTranslations('common');
   const root = useRef<HTMLElement>(null);
   const c = useEntityController(props, root);

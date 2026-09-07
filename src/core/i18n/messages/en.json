@@ -65,7 +65,9 @@
     "expandViews": "Expand views",
     "selectionHint": "Select rows to use bulk actions.",
     "position": "{position} of {count}",
-    "titleRequired": "Enter a title before leaving this field."
+    "titleRequired": "Enter a title before leaving this field.",
+    "selectedCount": "{count} selected",
+    "actions": "Actions"
   },
   "people": {
     "fullName": "Full name",

@@ -1,9 +1,11 @@
+const filterKeys = ['view', 'q', 'sort'];
 export function resolveUrlState(params: URLSearchParams) {
   return {
     creating: params.get('new') === '1',
     id: params.get('new') === '1' ? null : params.get('id'),
     view: params.get('view') ?? 'all',
     q: params.get('q') ?? '',
+    sort: params.get('sort') ?? '',
   };
 }
 export function changeUrl(params: URLSearchParams, patch: Record<string, string | null>) {
@@ -13,7 +15,7 @@ export function changeUrl(params: URLSearchParams, patch: Record<string, string 
     else result.set(key, value);
   if (patch.new === '1') result.delete('id');
   if (patch.id) result.delete('new');
-  if ('view' in patch || 'q' in patch) {
+  if (filterKeys.some((key) => key in patch)) {
     result.delete('sel');
     if (!patch.id) result.delete('id');
     if (!patch.new) result.delete('new');
@@ -26,6 +28,7 @@ export function clearEntityFilters(keys: string[]) {
     ...keys.map((key) => [key, null]),
     ['view', 'all'],
     ['q', null],
+    ['sort', null],
     ['id', null],
     ['new', null],
     ['sel', null],

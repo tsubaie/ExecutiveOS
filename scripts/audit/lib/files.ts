@@ -15,7 +15,11 @@ export async function walk(root: string, dir = root): Promise<string[]> {
   return files.sort();
 }
 export function tracked(root: string) {
-  return execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
+  // Tracked plus new files that are not ignored, so audits see work before it is staged.
+  return execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
+    cwd: root,
+    encoding: 'utf8',
+  })
     .split('\n')
     .filter((path) => path && existsSync(join(root, path)));
 }

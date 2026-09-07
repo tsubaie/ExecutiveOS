@@ -7,10 +7,21 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/ui/prim
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import type { TaskDetail } from '../schema/validation';
 import { useTaskMutations } from './queries';
-export function GroupTasks({ items, clear }: { items: TaskDetail[]; clear: () => void }) {
+export function canGroup(items: TaskDetail[]) {
+  return (
+    items.length >= 2 &&
+    items.every((item) => !item.deletedAt && !item.parentId && item.subtaskCount === 0)
+  );
+}
+// Rendered by the entity bulk bar; `finish(true)` clears the selection after a successful group.
+export function GroupTasksDialog({
+  items,
+  finish,
+}: {
+  items: TaskDetail[];
+  finish: (clearSelection: boolean) => void;
+}) {
   const t = useTranslations('tasks');
-  const c = useTranslations('common');
-  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const mutations = useTaskMutations();
@@ -21,49 +32,37 @@ export function GroupTasks({ items, clear }: { items: TaskDetail[]; clear: () =>
         title,
         items.map((item) => item.id),
       );
-      clear();
-      setOpen(false);
+      finish(true);
     } catch (error) {
-      setError(error instanceof Error ? error : new Error(c('error')));
+      setError(error instanceof Error ? error : new Error(t('group')));
     } finally {
       setPending(false);
     }
   }
   return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
-        <span>{t('selected', { count: items.length })}</span>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={
-            items.length < 2 ||
-            items.some((item) => item.deletedAt || item.parentId || item.subtaskCount > 0)
-          }
-          onClick={() => setOpen(true)}
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) finish(false);
+      }}
+    >
+      <DialogContent>
+        <DialogTitle>{t('group')}</DialogTitle>
+        <DialogDescription>{t('groupDescription')}</DialogDescription>
+        {error && <ErrorPanel error={error} />}
+        <form
+          className="grid gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void group(String(new FormData(event.currentTarget).get('title') ?? ''));
+          }}
         >
-          {t('group')}
-        </Button>
-      </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogTitle>{t('group')}</DialogTitle>
-          <DialogDescription>{t('groupDescription')}</DialogDescription>
-          {error && <ErrorPanel error={error} />}
-          <form
-            className="grid gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void group(String(new FormData(event.currentTarget).get('title') ?? ''));
-            }}
-          >
-            <Input name="title" aria-label={t('title')} required maxLength={500} />
-            <Button type="submit" disabled={pending}>
-              {t('group')}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+          <Input name="title" aria-label={t('title')} required maxLength={500} />
+          <Button type="submit" disabled={pending}>
+            {t('group')}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

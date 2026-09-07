@@ -16,7 +16,13 @@ export function usePeople(filters: Filters) {
     initialPageParam: '',
     queryFn: ({ pageParam }) =>
       request(
-        `/people?${new URLSearchParams({ ...filters, ...(pageParam ? { cursor: pageParam } : {}) })}`,
+        `/people?${new URLSearchParams(
+          Object.fromEntries(
+            Object.entries({ ...filters, ...(pageParam ? { cursor: pageParam } : {}) }).filter(
+              ([, value]) => value !== '',
+            ),
+          ),
+        )}`,
         PersonList,
       ),
     getNextPageParam: (last) => last.meta.nextCursor ?? undefined,

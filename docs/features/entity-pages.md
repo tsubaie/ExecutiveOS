@@ -2,7 +2,7 @@
 
 **Status:** accepted
 **Spec reviewed:** 2026-09-07
-**Implementation verified:** not yet
+**Implementation verified:** 2026-09-07 for EP-B01, B03, B05–B11, B13, B15, B17 (People and Tasks); B12, B14, B16, B18 and the acceptance walkthroughs remain open
 **Owner module:** `src/ui/entity`
 
 ## Purpose
@@ -12,36 +12,38 @@ One implementation of list + detail behavior for every module: selection, URL st
 ## Public API
 
 ```ts
-<EntityPage<TItem, TDetail, TFilters, TPatch, TCreate>
+<EntityPage<TItem, TPatch, TCreate>
   module="tasks"
-  filters={filtersDef}                       // views, facets, search
-  useList={useTaskList}                      // (filters) => ListResult<TItem>
-  useDetail={useTaskDetail}                  // (id) => DetailResult<TDetail>
-  mutations={{                               // adapters; each returns a promise and throws AppError
-    patch: (id, revision, patch: TPatch) => Promise<TDetail>,
-    create: (input: TCreate) => Promise<TDetail>,
+  title={…} description={…}
+  filters={{ views, facets?, sort?: { options, default } }}   // the framework owns their URL state
+  useList={useTaskList}                      // (filters: { view, q, sort, ...facets }) => ListResult<TItem>
+  useDetail={useTaskDetail}                  // (id, trash) => DetailResult<TItem>
+  mutations={{                               // adapters; each returns a promise and throws ApiError
+    patch: (id, revision, patch: TPatch, key) => Promise<TItem>,
+    create: (input: TCreate) => Promise<TItem | null>,
     remove: (id, revision) => Promise<{ opId }>,
-    restore: (id, opId) => Promise<TDetail>,
+    restore: (id, opId) => Promise<TItem>,
   }}
-  selection="single" | "multi"               // multi enables checkboxes and a bulk action bar
-  bulkActions={[{ id, label, run: (ids) => Promise<void>, confirm?: … }]}
-  renderRow={(item, s) => …}                 // s: selected, focused, checked
-  renderCard={(item, s) => …}
-  renderDetail={(detail, api) => …}          // api: save(patch), close, next, prev, remove, restore, saveState
-  renderCreate={(api) => …}                  // api: submit(input), cancel, pending
-  groupBy={grouping}                         // optional
-  emptyState={{ title, description, action }}
-  shortcuts={extra}
+  bulkActions={[{ id, label, enabled?(items), confirm?: { title, description }, run?(items), render?(items, finish) }]}
+  emptyState={{ title?, description?, action? }}   // unfiltered empty state only
+  group={(item) => heading | null}           // suppressed while a sort is active
+  rowAction={(item) => …}                    // sibling control beside the row (completion toggle)
+  renderers={{
+    row: (item) => …,
+    detail: (item, api) => …,                // api: save(patch), close, next, prev, neighbors, remove, restore, saveState, retry
+    create: (api) => …,                      // api: submit(input), cancel, pending
+    name: (item) => string,
+  }}
 />
 ```
 
-No `unknown` or `any` in the public types.
+Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related options are grouped (`filters`, `mutations`, `renderers`). A bulk action either runs directly, after the shared confirm dialog, or renders its own dialog through `render(items, finish)`; `finish(true)` clears the selection, `finish(false)` only closes. No `unknown` or `any` in the public types.
 
 ## URL state
 
 `?view=&<facets>&q=&sort=&id=<uuid>&new=1&sel=<ids>`.
 
-- EP-B01 Precedence: `new=1` wins over `id`; opening create removes `id`; opening an item removes `new`. `sel` is cleared when `view`, facets, or `q` change.
+- EP-B01 Precedence: `new=1` wins over `id`; opening create removes `id`; opening an item removes `new`. `sel` and the open detail are cleared when `view`, facets, `sort`, or `q` change.
 - EP-B02 Push versus replace: open item → push; next/prev → replace; close → push (removes `id`); filter changes → replace. Back returns to the list state before the open.
 - EP-B03 Deep link to an `id` not in the current filtered list: the detail still opens (fetched by id) and the list shows a banner "not in current view" with "show in All".
 - EP-B04 Deep link to a deleted or missing id: detail shows an inline not-found state with Close; the URL keeps `id` until Close (so reload reproduces the state); Close removes it.
@@ -49,7 +51,7 @@ No `unknown` or `any` in the public types.
 
 ## Keyboard
 
-- EP-B06 `↑/↓` (`k/j`) move focus; `Enter` opens; `Esc` closes detail, second `Esc` clears filters, third clears selection; `n` create; `x` toggles checkbox in multi mode; `Shift+↑/↓` extends selection; `a` with selection opens bulk actions. Disabled while an input, textarea, or contenteditable has focus.
+- EP-B06 `↑/↓` (`k/j`) move focus; `Enter` opens; `Esc` closes detail, second `Esc` clears filters, third clears selection; `n` create; `x` toggles checkbox in multi mode; `Shift+↑/↓` extends selection; `a` with selection focuses the bulk action bar. Disabled while an input, textarea, contenteditable, or dialog has focus.
 
 ## Layout
 
@@ -60,7 +62,7 @@ No `unknown` or `any` in the public types.
 ## Auto-save
 
 - EP-B10 `api.save(patch)` queues per entity: one request in flight; newer patches coalesce; each request sends the latest known `revision`. State `idle → saving → saved (2 s) → idle`, or `error` with Retry (same idempotency key) and, on 409, `conflict` with "Reload and reapply" that refetches, shows the diff of the user's pending patch, and reapplies on confirm.
-- EP-B11 Navigating away (close, next, prev, view change) while a save is pending waits for it; while a save is in `error`, a dialog asks to retry or discard.
+- EP-B11 Navigating away (close, next, prev, view change, same-origin links) while a save is pending waits for it; while a save is in `error`, a dialog asks to retry or discard. Guards are registered through the framework's navigation context and scoped to the active panel, so an entity surface embedded in another module guards only itself; an invalid field inside the panel blocks navigation and reports its validity message.
 - EP-B12 Optimistic updates apply to the list row and detail; on error they roll back.
 
 ## Lists
@@ -89,6 +91,9 @@ No `unknown` or `any` in the public types.
 - `autosave.test.tsx`: B10–B12 with fake timers, overlapping saves, 409 path, navigate-while-pending.
 - `list.test.tsx`: B13–B18.
 - `multiselect.test.tsx`: selection clearing rules, bulk action confirm.
+- `bulk-actions.test.tsx`: confirm flow runs once, render escape hatch, disabled predicates.
+- `navigation-guard.test.tsx`: registered guard defers, unregistered surface navigates, guards leave with their owner.
+- `keyboard.test.ts`: `a` opens bulk actions, `x` toggles, shortcuts ignored in inputs.
 - e2e `entity-framework.spec.ts`: A02, A03, A06 in both locales.
 - Mutation targets: `resolveUrlState`, `saveQueue`, `keyboardHandler`.
 

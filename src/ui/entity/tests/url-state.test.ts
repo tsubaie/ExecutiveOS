@@ -13,6 +13,16 @@ describe('Entity URL state', () => {
     expect(result.has('id')).toBe(false);
     expect(result.get('q')).toBe('test');
   });
+  it('EP-B01 changing the sort clears selection and detail like a view change', () => {
+    const result = new URLSearchParams(
+      changeUrl(new URLSearchParams('id=old&sel=a&view=inbox'), { sort: 'title' }),
+    );
+    expect(result.get('sort')).toBe('title');
+    expect(result.has('sel')).toBe(false);
+    expect(result.has('id')).toBe(false);
+    expect(resolveUrlState(new URLSearchParams('sort=title')).sort).toBe('title');
+    expect(resolveUrlState(new URLSearchParams('')).sort).toBe('');
+  });
   it('EP-B04 a missing detail id remains addressable until close', () => {
     expect(resolveUrlState(new URLSearchParams('id=missing')).id).toBe('missing');
     expect(changeUrl(new URLSearchParams('id=missing'), { id: null })).toBe('');

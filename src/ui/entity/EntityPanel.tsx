@@ -1,14 +1,13 @@
 'use client';
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { useTranslations } from 'next-intl';
 import { ChevronUp, ChevronDown, X } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
-import { useLinkGuard } from './use-link-guard';
-import { useNavigationGuard } from './use-navigation-guard';
+import { useNavigationGuard, type NavigationGuard } from './navigation';
 import { useSaveQueue } from './use-save-queue';
 import { DeleteEntityDialog, UnsavedEntityDialog } from './EntityDialogs';
-import type { Entity, DetailApi, EntityPageProps, SaveState } from './types';
+import type { Entity, DetailApi, EntityPageProps, Neighbors, SaveState } from './types';
 type Props<T extends Entity, P extends object, C> = {
   item: T;
   mutations: EntityPageProps<T, P, C>['mutations'];
@@ -17,25 +16,26 @@ type Props<T extends Entity, P extends object, C> = {
   reload: () => Promise<T | undefined>;
   close: () => void;
   move: (direction: number) => void;
-  neighbors: { previous: boolean; next: boolean; position: number; count: number };
+  neighbors: Neighbors;
 };
 export function EntityPanel<T extends Entity, P extends object, C>(props: Props<T, P, C>) {
   const t = useTranslations('common');
-  const focusRoot = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null);
+  const c = usePanelController(props, root);
   // sync: focus the selected entity's title after the detail surface mounts.
   useEffect(() => {
-    focusRoot.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+    root.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
   }, []);
-  const c = usePanelController(props);
+  const guarded = (action: () => void) => () => void c.navigate(action);
   return (
     <>
       <PanelToolbar
         state={c.queue.state}
         neighbors={props.neighbors}
-        move={(direction) => void c.navigate(() => props.move(direction))}
-        close={() => void c.navigate(props.close)}
+        move={(direction) => guarded(() => props.move(direction))()}
+        close={guarded(props.close)}
       />
-      <div ref={focusRoot} className="p-5">
+      <div ref={root} className="p-5">
         {c.queue.error && <ErrorPanel error={c.queue.error} />}
         {c.queue.state === 'conflict' && <p className="my-3 text-sm">{t('conflictReapply')}</p>}
         {c.queue.error && (
@@ -46,11 +46,14 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
         {c.error && <ErrorPanel error={c.error} />}
         {props.render(props.item, {
           save: c.queue.save,
-          close: () => void c.navigate(props.close),
+          close: guarded(props.close),
           remove: () => c.setDeleting(true),
           restore: () => void c.restore(),
           saveState: c.queue.state,
           retry: () => void c.queue.retry(),
+          next: guarded(() => props.move(1)),
+          prev: guarded(() => props.move(-1)),
+          neighbors: props.neighbors,
         })}
       </div>
       <DeleteEntityDialog
@@ -67,43 +70,42 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
     </>
   );
 }
-function usePanelController<T extends Entity, P extends object, C>(props: Props<T, P, C>) {
+function usePanelController<T extends Entity, P extends object, C>(
+  props: Props<T, P, C>,
+  root: RefObject<HTMLDivElement | null>,
+) {
   const t = useTranslations('common');
   const queue = useSaveQueue(props.item, props.mutations.patch, props.reload);
   const [deleting, setDeleting] = useState(false);
   const [navigation, setNavigation] = useState<(() => void) | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  async function navigate(action: () => void) {
-    if (await queue.settle()) action();
-    else setNavigation(() => action);
-  }
-  useNavigationGuard(navigate, queue.state);
-  useLinkGuard(navigate);
-  async function remove() {
-    try {
-      if (!(await queue.settle())) {
-        setDeleting(false);
-        return;
-      }
-      await props.mutations.remove(
-        props.item.id,
-        Math.max(queue.latest()?.revision ?? 0, props.item.revision),
-      );
-      props.close();
-    } catch (error) {
-      setError(error instanceof Error ? error : new Error(t('error')));
+  // Blur commits a pending field, an invalid field blocks, a failed save asks first.
+  const navigate: NavigationGuard = async (proceed) => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && root.current?.contains(active)) active.blur();
+    const invalid = root.current?.querySelector<HTMLInputElement>('input:invalid,textarea:invalid');
+    if (invalid) {
+      invalid.reportValidity();
+      return;
     }
+    if (await queue.settle()) proceed();
+    else setNavigation(() => proceed);
+  };
+  useNavigationGuard(navigate);
+  useUnloadGuard(queue.state);
+  const fail = (failure: unknown) =>
+    setError(failure instanceof Error ? failure : new Error(t('error')));
+  const remove = async () => {
+    if (await queue.settle())
+      await props.mutations
+        .remove(props.item.id, Math.max(queue.latest()?.revision ?? 0, props.item.revision))
+        .then(props.close, fail);
     setDeleting(false);
-  }
-  async function restore() {
+  };
+  const restore = async () => {
     if (!props.item.deletedOpId) return;
-    try {
-      await props.mutations.restore(props.item.id, props.item.deletedOpId);
-      props.close();
-    } catch (error) {
-      setError(error instanceof Error ? error : new Error(t('error')));
-    }
-  }
+    await props.mutations.restore(props.item.id, props.item.deletedOpId).then(props.close, fail);
+  };
   return {
     queue,
     deleting,
@@ -116,6 +118,16 @@ function usePanelController<T extends Entity, P extends object, C>(props: Props<
     restore,
   };
 }
+function useUnloadGuard(state: SaveState) {
+  // sync: warn before the browser unloads while a save is unresolved.
+  useEffect(() => {
+    const unload = (event: BeforeUnloadEvent) => {
+      if (['saving', 'error', 'conflict'].includes(state)) event.preventDefault();
+    };
+    window.addEventListener('beforeunload', unload);
+    return () => window.removeEventListener('beforeunload', unload);
+  }, [state]);
+}
 function PanelToolbar({
   state,
   neighbors,
@@ -123,7 +135,7 @@ function PanelToolbar({
   close,
 }: {
   state: SaveState;
-  neighbors: { previous: boolean; next: boolean; position: number; count: number };
+  neighbors: Neighbors;
   move: (direction: number) => void;
   close: () => void;
 }) {
