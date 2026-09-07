@@ -193,3 +193,7 @@ No new permission is needed to finish the already-authorized work. The schema/AP
  ELIFECYCLE  Command failed with exit code 1.
 
 ```
+
+## Subsequent work
+
+Tasks management was added on `feat/tasks-management`. See [TASKS-HANDOFF.md](TASKS-HANDOFF.md) for its scope and verification. This does not mark the remaining WI-0001 foundation requirements complete.

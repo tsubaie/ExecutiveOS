@@ -81,3 +81,15 @@ Everything lives under `docs/`. Start with `docs/README.md`. If you are an AI ag
 ## License
 
 Apache License 2.0. See `LICENSE` and `NOTICE`.
+
+## Task management preview
+
+Open [Tasks](http://localhost:3000/tasks?view=all) after signing in. The current preview includes assignment through People, due-date views, priorities, inline editing, subtasks, grouping, completion, and trash/restore in English and Arabic. Home shows task summaries, and People detail links to assigned work.
+
+Update the local running stack without resetting its database:
+
+```bash
+docker compose up -d --build
+```
+
+Migrations apply on startup. See [TASKS-HANDOFF.md](TASKS-HANDOFF.md) for validation, screenshots, assumptions, and deferred functionality. The earlier [WI-0001 hand-off](HANDOFF.md) still records unfinished foundation work.

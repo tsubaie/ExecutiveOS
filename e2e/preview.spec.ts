@@ -126,7 +126,7 @@ test('HOME-B02 HOME-A03 disabled sections collapse and AI review section is abse
   page,
 }) => {
   await login(page, 'en');
-  await expect(page.getByText('Module not enabled', { exact: true })).toHaveCount(7);
+  await expect(page.getByText('Module not enabled', { exact: true })).toHaveCount(4);
   await expect(page.getByText('Pending AI reviews', { exact: true })).toHaveCount(0);
   await page.getByRole('link', { name: /Your people directory/ }).click();
   await expect(page).toHaveURL(/people/);

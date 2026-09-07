@@ -1,0 +1,20 @@
+{
+  "en": {
+    "prefix": "Office preview:",
+    "titles": [
+      "Office preview: Review the quarterly plan",
+      "Office preview: Prepare the leadership meeting",
+      "Office preview: Confirm the budget assumptions"
+    ],
+    "children": ["Collect the briefing materials", "Review the proposed agenda"]
+  },
+  "ar": {
+    "prefix": "معاينة المكتب:",
+    "titles": [
+      "معاينة المكتب: مراجعة الخطة الفصلية",
+      "معاينة المكتب: التحضير لاجتماع القيادة",
+      "معاينة المكتب: تأكيد افتراضات الميزانية"
+    ],
+    "children": ["جمع مواد الإحاطة", "مراجعة جدول الأعمال المقترح"]
+  }
+}

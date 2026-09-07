@@ -59,7 +59,7 @@ See `03-data-model.md` § tasks. Invariants:
 | DELETE / restore | `/tasks/:id` | |
 | POST | `/tasks/:id/complete` `reopen` `convert-to-task` `make-subtask` `breakdown` `breakdown/apply` | |
 | POST | `/tasks/group` | |
-| PATCH | `/tasks/reorder` | `{ parentId | null, orderedIds }` |
+| PATCH | `/tasks/reorder` | `{ parentId, orderedIds, revisions: { [id]: revision } }` (top-level null parent support deferred) |
 
 ## UI
 
