@@ -2,13 +2,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { navigation } from './nav';
+import { navigation } from '@/core/modules/client';
 import { cn } from '@/ui/cn';
 export function ShellLinks({ role }: { role: string }) {
   const t = useTranslations('common');
   const path = usePathname();
-  const entries = navigation.filter((item) => !item.admin || role === 'admin');
-  const links = entries.map((item) => {
+  const links = navigation(role).map((item) => {
     const Icon = item.icon;
     const key = item.key;
     return (

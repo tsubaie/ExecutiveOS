@@ -5,10 +5,13 @@ import { ArrowUpRight, Users, Minus } from 'lucide-react';
 import { useHome } from './queries';
 import Loading from '@/ui/layout/Loading';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
+import { useCount } from '@/ui/format';
+import { routes } from '@/core/routes';
 export function HomePage() {
   const t = useTranslations('home');
   const c = useTranslations('common');
   const query = useHome();
+  const count = useCount();
   if (query.isPending) return <Loading />;
   if (query.error) return <ErrorPanel error={query.error} retry={() => void query.refetch()} />;
   const data = query.data.data;
@@ -31,7 +34,10 @@ export function HomePage() {
             ))}
           </div>
         </section>
-        <Link href="/people" className="group rounded-xl border bg-surface p-6 hover:border-accent">
+        <Link
+          href={routes.people()}
+          className="group rounded-xl border bg-surface p-6 hover:border-accent"
+        >
           <div className="mb-8 flex items-start justify-between">
             <span className="rounded-lg bg-accent/10 p-3 text-accent">
               <Users className="size-6" />
@@ -43,7 +49,7 @@ export function HomePage() {
             {t('directoryDescription')}
           </p>
           <p className="mt-6 border-t pt-4 text-sm text-accent">
-            {c('count', { count: data.peopleCount })}
+            {c('count', { count: count(data.peopleCount) })}
           </p>
         </Link>
       </div>
@@ -58,18 +64,20 @@ function HomeSection({
     key: 'nextMeetings' | 'prep' | 'overdue' | 'today' | 'waiting' | 'kpis' | 'initiatives';
     enabled: boolean;
     count: number;
-    items: { id: string; title: string }[];
+    href: string | null;
+    items: { id: string; title: string; href: string }[];
   };
 }) {
   const t = useTranslations('home');
   const c = useTranslations('common');
+  const count = useCount();
   return (
     <section className="py-4">
       <div className="flex min-h-8 items-center justify-between gap-3">
         <h3 className="text-sm">{t(section.key)}</h3>
-        {section.enabled ? (
-          <Link className="text-xs text-accent" href={`/tasks?view=${section.key}`}>
-            {c('count', { count: section.count })}
+        {section.enabled && section.href ? (
+          <Link className="text-xs text-accent" href={section.href}>
+            {c('count', { count: count(section.count) })}
           </Link>
         ) : (
           <span className="flex items-center gap-2 text-xs text-text-muted">
@@ -82,10 +90,7 @@ function HomeSection({
         <ul className="mt-3 grid gap-2">
           {section.items.map((item) => (
             <li key={item.id}>
-              <Link
-                href={`/tasks?view=all&id=${item.id}`}
-                className="block truncate text-sm text-accent"
-              >
+              <Link href={item.href} className="block truncate text-sm text-accent">
                 <bdi>{item.title}</bdi>
               </Link>
             </li>

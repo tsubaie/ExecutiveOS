@@ -295,11 +295,6 @@
                   "type": "string"
                 },
                 "kind": {
-                  "enum": [
-                    "system.noop",
-                    "system.prune",
-                    "system.backup"
-                  ],
                   "type": "string"
                 },
                 "lastError": {
@@ -589,11 +584,21 @@
                     "enabled": {
                       "type": "boolean"
                     },
+                    "href": {
+                      "default": null,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "items": {
                       "default": [],
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "href": {
+                            "type": "string"
+                          },
                           "id": {
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -605,7 +610,8 @@
                         },
                         "required": [
                           "id",
-                          "title"
+                          "title",
+                          "href"
                         ],
                         "type": "object"
                       },
@@ -628,6 +634,7 @@
                     "key",
                     "enabled",
                     "count",
+                    "href",
                     "items"
                   ],
                   "type": "object"

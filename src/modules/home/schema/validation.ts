@@ -8,7 +8,8 @@ export const Home = z.object({
       key: z.enum(['nextMeetings', 'prep', 'overdue', 'today', 'waiting', 'kpis', 'initiatives']),
       enabled: z.boolean(),
       count: z.number(),
-      items: z.array(z.object({ id: z.uuid(), title: z.string() })).default([]),
+      href: z.string().nullable().default(null),
+      items: z.array(z.object({ id: z.uuid(), title: z.string(), href: z.string() })).default([]),
     }),
   ),
 });

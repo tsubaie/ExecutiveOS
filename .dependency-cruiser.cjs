@@ -1,5 +1,5 @@
 const server =
-  '(?:src/core/(?:db|auth|ai|jobs|files|backup|entity)/|src/core/config/env\\.ts$|src/modules/[^/]+/(?:service|repo)\\.ts$|src/modules/[^/]+/schema/(?:db|index)\\.ts$)';
+  '(?:src/core/(?:db|auth|ai|jobs|files|backup|entity)/|src/core/modules/(?:registry|server-manifest)\\.ts$|src/core/config/env\\.ts$|src/modules/[^/]+/(?:service|repo)\\.ts$|src/modules/[^/]+/schema/(?:db|index)\\.ts$)';
 const rule = (name, from, to) => ({ name, severity: 'error', from, to });
 const clientFiles = require('./tools/eslint/client-files.cjs');
 const clientPaths = clientFiles().map((path) => path.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'));
@@ -56,11 +56,11 @@ module.exports = {
     rule(
       'core-cannot-import-module-internals',
       { path: '^src/core/' },
-      { path: '^src/modules/[^/]+/(?!index\\.ts$)' },
+      { path: '^src/modules/[^/]+/(?!index\\.ts$|manifest\\.ts$)' },
     ),
     rule(
       'core-module-surface-exceptions-only',
-      { path: '^src/core/(?!links/|jobs/registry\\.ts$)' },
+      { path: '^src/core/(?!links/|jobs/registry\\.ts$|modules/)' },
       { path: '^src/modules/' },
     ),
     rule(
@@ -87,6 +87,16 @@ module.exports = {
       'client-validation-is-client-safe',
       { path: '^src/modules/[^/]+/schema/validation\\.ts$' },
       { path: server, reachable: true },
+    ),
+    rule(
+      'module-manifest-is-client-safe',
+      { path: '^src/modules/[^/]+/manifest\\.ts$' },
+      { path: server, reachable: true },
+    ),
+    rule(
+      'core-modules-client-imports-manifests-only',
+      { path: '^src/core/modules/(?:client|manifest)\\.ts$' },
+      { path: '^src/modules/(?!.*/manifest\\.ts$)' },
     ),
     rule(
       'entity-framework-is-module-independent',

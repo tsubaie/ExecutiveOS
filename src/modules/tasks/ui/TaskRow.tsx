@@ -1,11 +1,12 @@
 'use client';
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { usePlainDate } from '@/ui/format';
 import type { Task } from '../schema/validation';
 import { cn } from '@/ui/cn';
 export function TaskRow({ task }: { task: Task }) {
   const t = useTranslations('tasks');
-  const locale = useLocale();
-  const date = task.dueDate ? formatTaskDate(task.dueDate, locale) : null;
+  const plainDate = usePlainDate();
+  const date = task.dueDate ? plainDate(task.dueDate) : null;
   return (
     <span className="grid min-w-0 flex-1 gap-2">
       <span
@@ -38,18 +39,6 @@ export function TaskRow({ task }: { task: Task }) {
       </span>
     </span>
   );
-}
-
-function formatTaskDate(value: string, locale: string) {
-  const [year = 1970, month = 1, day = 1] = value.split('-').map(Number);
-  return new Intl.DateTimeFormat(locale, {
-    calendar: 'gregory',
-    numberingSystem: 'latn',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(Date.UTC(year, month - 1, day));
 }
 
 function TaskPriority({ priority }: { priority: Task['priority'] }) {

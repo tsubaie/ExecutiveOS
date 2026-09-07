@@ -21,7 +21,7 @@ The one screen the principal opens first. It is a set of queries over existing m
   7. **Attention KPIs** (`kpis?view=attention`)
   8. **Initiatives at risk** (`initiatives?view=at_risk`)
 - HOME-B02 Sections for disabled modules or with zero items collapse to a single line; the page never shows an empty box.
-- HOME-B03 One aggregated endpoint `GET /home` returns all sections in one round trip; each module exposes a `homeSummary(ctx)` function in its `index.ts` that runs ≤ 2 queries.
+- HOME-B03 One aggregated endpoint `GET /home` returns all sections in one round trip; each module exposes a `homeSummary(ctx)` function through its `server` manifest that runs ≤ 2 queries. Every section and item carries its own `href`; the page never composes module URLs.
 - HOME-B04 Refetch on focus and every 60 seconds.
 - HOME-B05 Greeting uses the user's name and the principal's name when they differ ("Preparing for <principal>").
 

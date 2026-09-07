@@ -1,3 +1,4 @@
+import type { ServerManifest } from '@/core/modules/server-manifest';
 export {
   createPerson,
   countPeople,
@@ -8,3 +9,4 @@ export {
   restorePerson,
   personNameSql,
 } from './service';
+export const server: ServerManifest = { id: 'people' };

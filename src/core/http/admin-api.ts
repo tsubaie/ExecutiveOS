@@ -6,7 +6,8 @@ import { listBackups } from '@/core/backup/dump';
 import { Manifest } from '@/core/backup/manifest';
 import { enqueue, listJobs } from '@/core/db/jobs-repo';
 import { auditEntries, cancelJob, readJob } from '@/core/db/admin-repo';
-import { Job, JobKind } from '@/core/jobs/types';
+import { Job } from '@/core/jobs/types';
+import { JobKind } from '@/core/jobs/registry';
 import { AppError } from './errors';
 const Empty = z.strictObject({});
 const Connection = z.object({

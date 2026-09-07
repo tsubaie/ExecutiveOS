@@ -9,6 +9,7 @@ import { LogOut, Command } from 'lucide-react';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
 import { Preferences } from './Preferences';
+import { routes } from '@/core/routes';
 import { Button } from '@/ui/primitives/button';
 type ShellUser = { id: string; name: string; role: string };
 export function AppShell({
@@ -28,7 +29,7 @@ export function AppShell({
       request('/auth/logout', z.object({ data: z.null() }), { method: 'POST', body: {} }),
     onSuccess: () => {
       client.clear();
-      router.push('/login');
+      router.push(routes.login());
       router.refresh();
     },
   });
@@ -36,7 +37,7 @@ export function AppShell({
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[208px_minmax(0,1fr)]">
       <aside className="sticky top-0 hidden h-dvh flex-col border-e bg-surface p-5 lg:flex">
-        <Link href="/home" className="mb-10 flex items-center gap-3 text-lg font-semibold">
+        <Link href={routes.home()} className="mb-10 flex items-center gap-3 text-lg font-semibold">
           <Command className="size-7 text-accent" />
           {t('brand')}
         </Link>

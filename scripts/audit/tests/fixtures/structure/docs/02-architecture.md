@@ -16,7 +16,8 @@ Every module under `src/modules/<name>/` has this shape. The structure audit rea
 | `ai/` | if the module owns capabilities | `capabilities.ts` and `prompts/<name>.v<N>.ts`. |
 | `ui/` | yes | Components, `queries.ts` (TanStack hooks), `index.ts` (components other modules may reuse). |
 | `tests/` | yes | Scenario tests named by requirement ID (see `08-testing-strategy.md`). |
-| `index.ts` | yes | Public surface: service functions and types for other modules. |
+| `index.ts` | yes | Public surface: service functions and types for other modules, plus `server`. |
+| `manifest.ts` | yes | Client-safe declaration (`id`, optional `nav` entry). `index.ts` additionally exports `server: ServerManifest` (home sections, job kinds). `core/modules` composes both; nothing else lists modules. |
 
 
 ## Repository layout

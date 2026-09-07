@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Command, ArrowRight, ShieldCheck } from 'lucide-react';
 import { request } from '@/core/http/client';
 import { Locale, defaults } from '@/core/config/defaults';
+import { routes } from '@/core/routes';
 import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { NativeSelect, NativeSelectOption } from '@/ui/primitives/native-select';
@@ -61,7 +62,7 @@ function useAuthState(mode: Mode) {
       }),
     onSuccess: () => {
       client.clear();
-      location.assign(mode === 'recovery' ? '/login' : '/home');
+      location.assign(mode === 'recovery' ? routes.login() : routes.home());
     },
   });
   return { mode, locale, form, mutation };
@@ -80,7 +81,7 @@ export function AuthForm({
   return (
     <div className="min-h-dvh">
       <header className="flex items-center justify-between px-5 py-5 sm:px-10">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
+        <Link href={routes.root()} className="flex items-center gap-2 font-semibold">
           <Command className="size-6 text-accent" />
           {c('brand')}
         </Link>
@@ -105,7 +106,10 @@ export function AuthForm({
             <ArrowRight className="ms-1 size-4 rtl:rotate-180" />
           </Button>
           {mode === 'login' && recoveryEnabled && (
-            <Link className="text-center text-sm text-text-muted underline" href="/recovery">
+            <Link
+              className="text-center text-sm text-text-muted underline"
+              href={routes.recovery()}
+            >
               {t('recoverLink')}
             </Link>
           )}

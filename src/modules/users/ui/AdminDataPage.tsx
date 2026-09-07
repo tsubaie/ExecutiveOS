@@ -6,6 +6,7 @@ import { useAdminResource, useAdminAction } from './queries';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import Loading from '@/ui/layout/Loading';
+import { useDateTime } from '@/ui/format';
 const Rows = z.array(
   z.object({
     id: z.string(),
@@ -122,6 +123,7 @@ function BackupsHeader({ action }: { action: Action }) {
   );
 }
 function AdminRow({ resource, row }: { resource: ListResource; row: Row }) {
+  const dateTime = useDateTime();
   return (
     <li className="p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -132,7 +134,7 @@ function AdminRow({ resource, row }: { resource: ListResource; row: Row }) {
         <span className="text-xs text-text-muted">{row.status ?? row.entityType}</span>
       </div>
       <p className="mt-2 text-xs text-text-muted">
-        <bdi>{row.createdAt}</bdi>
+        <bdi>{dateTime(row.createdAt)}</bdi>
       </p>
       {row.lastError && <p className="mt-2 text-sm text-danger">{row.lastError}</p>}
       {row.diff && (

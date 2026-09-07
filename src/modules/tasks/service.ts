@@ -8,6 +8,8 @@ import { getSetting } from '@/core/db/settings-repo';
 import { decodeCursor, encodeCursor, filtersHash } from '@/core/db/keyset';
 import { applyUpdate, requireRevision, type EntityOps } from '@/core/entity/service';
 import { AppError } from '@/core/http/errors';
+import { routes } from '@/core/routes';
+import type { HomeSection } from '@/core/modules/server-manifest';
 import { dayAt, addDays, bandOf } from '@/core/time/tasks';
 import { getPerson, personNameSql } from '@/modules/people';
 import {
@@ -236,13 +238,17 @@ export async function reorderTasks(ctx: Context, input: z.infer<typeof Reorder>)
   });
   return getTask(ctx, input.parentId);
 }
-export async function homeSummary(ctx: Context) {
+export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
   const timezone = await getSetting(ctx.db, 'workspace.timezone');
   const row = await repo.selectHomeSummary(ctx.db, dayAt(timezone));
   return ['overdue', 'today', 'waiting'].map((key) => ({
     key,
     enabled: true,
     count: z.number().parse(row[key + 'Count']),
-    items: z.array(z.object({ id: z.uuid(), title: z.string() })).parse(row[key + 'Items']),
+    href: routes.tasks({ view: key }),
+    items: z
+      .array(z.object({ id: z.uuid(), title: z.string() }))
+      .parse(row[key + 'Items'])
+      .map((item) => ({ ...item, href: routes.tasks({ view: 'all', id: item.id }) })),
   }));
 }

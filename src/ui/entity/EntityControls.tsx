@@ -5,6 +5,7 @@ import { Button } from '@/ui/primitives/button';
 import { EntitySearch } from './EntitySearch';
 import { NativeSelect, NativeSelectOption } from '@/ui/primitives/native-select';
 import { cn } from '@/ui/cn';
+import { useCount } from '@/ui/format';
 import type { Entity, EntityPageProps } from './types';
 import type { EntityController } from './use-entity-controller';
 export type Surface<T extends Entity, P extends object, C> = {
@@ -15,6 +16,7 @@ export function EntityViews<T extends Entity, P extends object, C>({
   config,
   controller: c,
 }: Surface<T, P, C>) {
+  const count = useCount();
   return (
     <div className="space-y-1">
       {config.views.map((view) => (
@@ -32,7 +34,7 @@ export function EntityViews<T extends Entity, P extends object, C>({
           }}
         >
           <span>{view.label}</span>
-          <span className="text-xs tabular-nums">{c.list.counts[view.id] ?? 0}</span>
+          <span className="text-xs tabular-nums">{count(c.list.counts[view.id] ?? 0)}</span>
         </Button>
       ))}
     </div>
@@ -135,6 +137,7 @@ function EntityToolbarSummary<T extends Entity, P extends object, C>({
   controller: c,
 }: Surface<T, P, C>) {
   const t = useTranslations('common');
+  const format = useCount();
   const count = Object.values(c.facets).filter(Boolean).length;
   return (
     <>
@@ -146,7 +149,7 @@ function EntityToolbarSummary<T extends Entity, P extends object, C>({
           onClick={() => c.setFiltersOpen(true)}
         >
           {config.views.find((view) => view.id === c.state.view)?.label}
-          <span className="tabular-nums">{c.list.counts[c.state.view] ?? 0}</span>
+          <span className="tabular-nums">{format(c.list.counts[c.state.view] ?? 0)}</span>
         </Button>
         {(count > 0 || c.state.q) && (
           <Button variant="ghost" className="text-xs" onClick={() => c.clearFilters()}>

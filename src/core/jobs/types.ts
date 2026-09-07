@@ -1,10 +1,11 @@
 import 'server-only';
 import { z } from 'zod';
-export const JobKind = z.enum(['system.noop', 'system.prune', 'system.backup']);
+import type { Claimed } from '@/core/db/jobs-repo';
+import type { Database } from '@/core/db/client';
 export const JobStatus = z.enum(['queued', 'running', 'succeeded', 'failed', 'cancelled']);
 export const Job = z.object({
   id: z.uuid(),
-  kind: JobKind,
+  kind: z.string(),
   status: JobStatus,
   attempt: z.number(),
   createdAt: z.string(),
@@ -13,4 +14,9 @@ export const Job = z.object({
   lastError: z.string().nullable(),
   result: z.json().nullable(),
 });
-export type Kind = z.infer<typeof JobKind>;
+export type JobHandler = {
+  concurrency: number;
+  schema: z.ZodType;
+  run: (job: Claimed, signal: AbortSignal) => Promise<z.infer<ReturnType<typeof z.json>>>;
+  publish: (database: Database) => Promise<void>;
+};

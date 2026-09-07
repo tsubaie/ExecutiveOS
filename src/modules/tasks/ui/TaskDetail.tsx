@@ -2,6 +2,8 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Button } from '@/ui/primitives/button';
+import { useDateTime } from '@/ui/format';
+import { routes } from '@/core/routes';
 import type { DetailApi } from '@/ui/entity/types';
 import type { TaskDetail as Detail, TaskPatch } from '../schema/validation';
 import { TaskFields } from './TaskFields';
@@ -16,6 +18,7 @@ export function TaskDetail({
 }) {
   const t = useTranslations('tasks');
   const c = useTranslations('common');
+  const dateTime = useDateTime();
   return (
     <div className="min-w-0">
       <div className="mb-5 flex items-start gap-3">
@@ -25,7 +28,7 @@ export function TaskDetail({
         </h2>
       </div>
       {task.ownerId && (
-        <Link href={`/people?id=${task.ownerId}`} className="mb-4 block text-sm text-accent">
+        <Link href={routes.person(task.ownerId)} className="mb-4 block text-sm text-accent">
           <bdi>{task.ownerName ?? t('owner')}</bdi>
         </Link>
       )}
@@ -48,7 +51,7 @@ export function TaskDetail({
         </div>
       )}
       <p className="mt-6 text-xs text-text-muted">
-        {t('updated', { date: task.updatedAt.slice(0, 10) })}
+        {t('updated', { date: dateTime(task.updatedAt) })}
       </p>
     </div>
   );

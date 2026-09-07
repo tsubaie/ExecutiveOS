@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { join, relative, sep } from 'node:path';
@@ -16,7 +17,7 @@ export async function walk(root: string, dir = root): Promise<string[]> {
 export function tracked(root: string) {
   return execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
     .split('\n')
-    .filter(Boolean);
+    .filter((path) => path && existsSync(join(root, path)));
 }
 export async function exists(path: string) {
   try {

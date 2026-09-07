@@ -55,7 +55,7 @@ All list + detail modules use `src/ui/entity` per `features/entity-pages.md`. Pa
 
 - `next-intl`; catalogs `en.json`, `ar.json`. Every user-visible string goes through `t()`. Translation keys are typed (generated `MessageKeys` type); dynamic keys (`t(value)` for enum labels) stay typed through `next-intl`; the i18n audit resolves literal keys and reports dynamic ones per file. ICU plurals and arguments validated by the audit.
 - Locale precedence: `user.locale` → `workspace.default_locale`. Timezone precedence: `user.timezone` → `workspace.timezone`. Both are part of `ctx` on the server and of the query keys where relevant.
-- Calendar: Gregorian only in v1. Numerals: `user.numerals` → `workspace.arabic_numerals` (Western by default). Dates parsed from `date` strings with `Temporal.PlainDate` (polyfill) and never through `new Date("YYYY-MM-DD")`.
+- Calendar: Gregorian only in v1. Numerals: `user.numerals` → `workspace.arabic_numerals` (Western by default), applied through `next-intl` named formats set in `core/i18n/request.ts`. Components render dates and counts only through `src/ui/format.ts` (`usePlainDate`, `useDateTime`, `useCount`); plain `date` strings are split into year, month and day and rendered at UTC, never parsed with `new Date("YYYY-MM-DD")`.
 - Direction-agnostic layout: logical utilities only (static lint). Directional icons flip with `rtl:rotate-180`. Slide animations and column order derive from `dir`.
 - Charts in RTL: time axes run right to left, legends and labels use logical alignment; the chart wrapper handles it and has an RTL snapshot test of the SVG structure.
 - Mixed direction: list rows and inputs use `dir="auto"`; the detail title uses `dir="auto"` and `unicode-bidi: plaintext`.

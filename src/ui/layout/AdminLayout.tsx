@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
 import { cn } from '@/ui/cn';
+import { routes } from '@/core/routes';
 const pages = z.enum(['users', 'settings', 'ai', 'backups', 'jobs', 'audit']);
 export function AdminLayout({ children }: { children: ReactNode }) {
   const t = useTranslations('admin');
@@ -21,7 +22,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         {pages.options.map((page) => (
           <Link
             key={page}
-            href={`/admin/${page}`}
+            href={routes.admin(page)}
             className={cn(
               'rounded-lg px-3 py-3 text-sm text-text-muted hover:bg-surface-raised',
               current.data === page && 'bg-surface-raised text-text',
