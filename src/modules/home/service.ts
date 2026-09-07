@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Context } from '@/core/auth/session';
 import { settingValue } from '@/core/db/settings-repo';
 import { getPerson, listPeople } from '@/modules/people';
+import { homeSummary as tasksSummary } from '@/modules/tasks';
 import { Home } from './schema/validation';
 export async function homeSummary(ctx: Context) {
   const principalId = z
@@ -19,14 +20,18 @@ export async function homeSummary(ctx: Context) {
     sort: 'name',
     limit: 1,
   });
+  const tasks = await tasksSummary(ctx);
   return Home.parse({
     name: ctx.user.name,
     principal: principal?.fullName ?? null,
     peopleCount: people.meta.total,
-    sections: Home.shape.sections.element.shape.key.options.map((key) => ({
-      key,
-      enabled: false,
-      count: 0,
-    })),
+    sections: Home.shape.sections.element.shape.key.options.map(
+      (key) =>
+        tasks.find((section) => section.key === key) ?? {
+          key,
+          enabled: false,
+          count: 0,
+        },
+    ),
   });
 }

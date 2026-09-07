@@ -35,7 +35,7 @@ export function AppShell({
   const entries = navigation.filter((item) => !item.admin || user.role === 'admin');
   const links = entries.map((item) => {
     const Icon = item.icon;
-    const key = z.enum(['home', 'people', 'admin']).parse(item.key);
+    const key = item.key;
     return (
       <Link
         key={item.href}

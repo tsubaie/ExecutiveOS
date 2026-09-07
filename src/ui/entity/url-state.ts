@@ -15,8 +15,8 @@ export function changeUrl(params: URLSearchParams, patch: Record<string, string 
   if (patch.id) result.delete('new');
   if ('view' in patch || 'q' in patch) {
     result.delete('sel');
-    result.delete('id');
-    result.delete('new');
+    if (!patch.id) result.delete('id');
+    if (!patch.new) result.delete('new');
   }
   return result.toString();
 }

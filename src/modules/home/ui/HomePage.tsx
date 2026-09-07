@@ -27,16 +27,7 @@ export function HomePage() {
           <h2 className="mb-4 text-sm font-medium">{t('overview')}</h2>
           <div className="divide-y rounded-xl border bg-surface px-5">
             {data.sections.map((section) => (
-              <div
-                key={section.key}
-                className="flex min-h-16 items-center justify-between gap-3 py-3"
-              >
-                <span className="text-sm">{t(section.key)}</span>
-                <span className="flex items-center gap-2 text-xs text-text-muted">
-                  <Minus className="size-3" />
-                  {t('disabled')}
-                </span>
-              </div>
+              <HomeSection key={section.key} section={section} />
             ))}
           </div>
         </section>
@@ -57,5 +48,50 @@ export function HomePage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+function HomeSection({
+  section,
+}: {
+  section: {
+    key: 'nextMeetings' | 'prep' | 'overdue' | 'today' | 'waiting' | 'kpis' | 'initiatives';
+    enabled: boolean;
+    count: number;
+    items: { id: string; title: string }[];
+  };
+}) {
+  const t = useTranslations('home');
+  const c = useTranslations('common');
+  return (
+    <section className="py-4">
+      <div className="flex min-h-8 items-center justify-between gap-3">
+        <h3 className="text-sm">{t(section.key)}</h3>
+        {section.enabled ? (
+          <Link className="text-xs text-accent" href={`/tasks?view=${section.key}`}>
+            {c('count', { count: section.count })}
+          </Link>
+        ) : (
+          <span className="flex items-center gap-2 text-xs text-text-muted">
+            <Minus className="size-3" />
+            {t('disabled')}
+          </span>
+        )}
+      </div>
+      {section.items.length > 0 && (
+        <ul className="mt-3 grid gap-2">
+          {section.items.map((item) => (
+            <li key={item.id}>
+              <Link
+                href={`/tasks?view=all&id=${item.id}`}
+                className="block truncate text-sm text-accent"
+              >
+                <bdi>{item.title}</bdi>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

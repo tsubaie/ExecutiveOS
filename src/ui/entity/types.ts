@@ -5,8 +5,9 @@ export type Entity = {
   deletedAt: string | null;
   deletedOpId: string | null;
 };
-export type Filters = { view: string; q: string };
+export type Filters = { view: string; q: string; [key: string]: string };
 export type ListResult<T> = {
+  defaultView?: string | undefined;
   items: T[];
   counts: Record<string, number>;
   pending: boolean;
@@ -40,6 +41,10 @@ export type EntityPageProps<T extends Entity, P, C> = {
   title: string;
   description: string;
   views: { id: string; label: string }[];
+  filters?: { key: string; label: string; options: { value: string; label: string }[] }[];
+  bulk?: (items: T[], clear: () => void) => ReactNode;
+  group?: (item: T) => string | null;
+  rowAction?: (item: T) => ReactNode;
   useList: (filters: Filters) => ListResult<T>;
   useDetail: (id: string | null, trash: boolean) => DetailResult<T>;
   mutations: {
