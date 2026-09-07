@@ -28,9 +28,10 @@
   --color-destructive: var(--danger);
   --color-popover: var(--surface);
   --color-popover-foreground: var(--text);
+  --color-scrim: var(--scrim);
   --radius-lg: 0.625rem;
   --radius-xl: 0.875rem;
-  --font-sans: var(--font-inter), sans-serif;
+  --font-sans: var(--font-inter), var(--font-arabic), sans-serif;
 }
 :root {
   --bg: #f5f5f2;
@@ -47,22 +48,26 @@
   --warning-soft: #f6eccf;
   --danger: #b63c3c;
   --danger-soft: #f6e1e1;
+  --scrim: #202a2899;
 }
 .dark {
-  --bg: #141918;
-  --surface: #1b211f;
-  --raised: #252d29;
-  --border: #323d36;
-  --text: #e8eee9;
-  --muted-text: #a0ada5;
-  --accent: #a7d4b6;
-  --accent-soft: #223129;
-  --on-accent: #163626;
-  --success: #8acba6;
-  --warning: #e4bc71;
-  --warning-soft: #33301f;
-  --danger: #ee9696;
-  --danger-soft: #3a2626;
+  /* Catppuccin Mocha: mantle ground, base surfaces, surface0/1 for raised and borders, green as
+     the accent, yellow and red for warning and danger. Soft tints are 16% of the hue over base. */
+  --bg: #181825;
+  --surface: #1e1e2e;
+  --raised: #313244;
+  --border: #45475a;
+  --text: #cdd6f4;
+  --muted-text: #a6adc8;
+  --accent: #a6e3a1;
+  --accent-soft: #343e40;
+  --on-accent: #1e1e2e;
+  --success: #a6e3a1;
+  --warning: #f9e2af;
+  --warning-soft: #413d43;
+  --danger: #f38ba8;
+  --danger-soft: #402f42;
+  --scrim: #11111bcc;
   color-scheme: dark;
 }
 @layer base {
@@ -73,13 +78,15 @@
     font-size: 14px;
     background: var(--bg);
   }
+  /* Both faces are always in the stack: an Arabic title in the English view renders in the
+     Arabic face and a Latin acronym in the Arabic view in Inter (docs/05 § Typography). */
   body {
     margin: 0;
     color: var(--text);
-    font-family: var(--font-inter), sans-serif;
+    font-family: var(--font-inter), var(--font-arabic), sans-serif;
   }
   html[dir='rtl'] body {
-    font-family: var(--font-arabic), sans-serif;
+    font-family: var(--font-arabic), var(--font-inter), sans-serif;
   }
   button:not(:disabled),
   a {
@@ -234,6 +241,62 @@
   }
   .entity-row-leaving {
     animation-duration: 1ms;
+  }
+}
+/* Popups scale in from their anchor and out again (Base UI starting and ending styles). */
+[data-slot='select-content'],
+[data-slot='popover-content'] {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+[data-slot='select-content'][data-starting-style],
+[data-slot='select-content'][data-ending-style],
+[data-slot='popover-content'][data-starting-style],
+[data-slot='popover-content'][data-ending-style] {
+  opacity: 0;
+  transform: scale(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot='select-content'],
+  [data-slot='popover-content'] {
+    transition: none;
+  }
+}
+/* Selected row: tinted ground plus a start-edge bar that reads in both directions and themes. */
+.entity-row[data-current]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--color-accent);
+}
+/* Text that may be Arabic inside an English list (or the reverse) keeps its own direction while
+   staying aligned with the row (docs/05 § Mixed direction). */
+.plaintext {
+  unicode-bidi: plaintext;
+}
+/* Popups scale in from their anchor and out again (Base UI starting and ending styles). */
+[data-slot='select-content'],
+[data-slot='popover-content'] {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+[data-slot='select-content'][data-starting-style],
+[data-slot='select-content'][data-ending-style],
+[data-slot='popover-content'][data-starting-style],
+[data-slot='popover-content'][data-ending-style] {
+  opacity: 0;
+  transform: scale(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot='select-content'],
+  [data-slot='popover-content'] {
+    transition: none;
   }
 }
 /* Selected row: tinted ground plus a start-edge bar that reads in both directions and themes. */

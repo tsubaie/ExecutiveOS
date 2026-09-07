@@ -170,7 +170,7 @@ function EntityGroupHeading<T extends Entity, P extends object, C>({
   if (!heading || (before && heading === config.group?.(before))) return null;
   const size = rows.filter((row) => !row.leaving && config.group?.(row.item) === heading).length;
   return (
-    <h2 className="flex h-7 items-baseline gap-2 border-b bg-surface-raised/60 px-4 text-[11px] font-semibold tracking-wider text-text-muted uppercase">
+    <h2 className="flex h-7 items-center gap-2 border-b bg-surface-raised/60 px-4 text-[11px] leading-none font-semibold tracking-wider text-text-muted uppercase">
       {heading}
       <span className="font-medium tracking-normal tabular-nums">{count(size)}</span>
     </h2>
