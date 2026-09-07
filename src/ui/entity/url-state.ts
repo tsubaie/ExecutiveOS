@@ -1,0 +1,22 @@
+export function resolveUrlState(params: URLSearchParams) {
+  return {
+    creating: params.get('new') === '1',
+    id: params.get('new') === '1' ? null : params.get('id'),
+    view: params.get('view') ?? 'all',
+    q: params.get('q') ?? '',
+  };
+}
+export function changeUrl(params: URLSearchParams, patch: Record<string, string | null>) {
+  const result = new URLSearchParams(params);
+  for (const [key, value] of Object.entries(patch))
+    if (value === null || value === '') result.delete(key);
+    else result.set(key, value);
+  if (patch.new === '1') result.delete('id');
+  if (patch.id) result.delete('new');
+  if ('view' in patch || 'q' in patch) {
+    result.delete('sel');
+    result.delete('id');
+    result.delete('new');
+  }
+  return result.toString();
+}
