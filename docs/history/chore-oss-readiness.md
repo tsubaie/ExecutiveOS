@@ -51,3 +51,9 @@ audit:dupes: 0 violation(s), 0 warning(s)
 ```
 
 The first pass of this gate exposed one defect from the entity-framework branch: the navigation guard checked every invalid input in the panel, and the empty required "add subtask" field blocked every navigation. The guard is now scoped to autosaved fields (`data-autosave`), the spec sentence for EP-B11 says so, and the browser stages were rerun on a fresh build.
+
+## CI follow-ups after publishing
+
+- `f598ffa`: the database-backed audits now create the `*_test` database themselves; on a fresh runner only the application database exists.
+- Node 22.12.0 segfaults when the `argon2` native binding loads (reproduced locally with mise; 22.14.0, 22.20.0 and 22.23.2 are fine). CI, `.mise.toml` and `.nvmrc` pin 22.23.2 and `engines` requires `>=22.14.0`.
+- CI caches the Playwright browsers and `.next/cache`; the measured gate was already short (install 14 s, browsers 19 s, lint through build 73 s, Docker build 68 s), so the savings are modest.
