@@ -172,7 +172,9 @@ function EntityGroupHeading<T extends Entity, P extends object, C>({
   return (
     <h2 className="flex h-7 items-center gap-2 border-b bg-surface-raised/60 px-4 text-[11px] leading-none font-semibold tracking-wider text-text-muted uppercase">
       {heading}
-      <span className="font-medium tracking-normal tabular-nums">{count(size)}</span>
+      <span className="rounded-full bg-surface-raised px-1.5 py-0.5 text-[10px] font-semibold tracking-normal text-text tabular-nums">
+        {count(size)}
+      </span>
     </h2>
   );
 }
