@@ -12,3 +12,4 @@ next-env.d.ts
 .pnpm-store/
 tmp/
 e2e/.auth/
+.claude/
