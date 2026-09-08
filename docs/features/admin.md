@@ -38,6 +38,11 @@ Everything an administrator needs to run the installation from the browser: setu
 - ADMIN-B13 Restore is a command (`pnpm backup:restore <file>`) documented on the page; it puts the app in maintenance mode, restores DB and files, verifies, and exits maintenance. Maintenance mode returns 503 for all routes except health.
 - ADMIN-B14 Export `POST /admin/export` enqueues `system.export` producing a zip: `manifest.json`, one JSON file per table (excluding sessions, login_attempts, idempotency_keys, private notes of other users), markdown renders of notes and briefs, original documents that are available. The requesting admin's own private notes are included under their user id. Download when ready.
 
+## Deployment configuration
+
+- ADMIN-B17 Startup refuses a production configuration whose `APP_URL` is not HTTPS, unless the URL points at a loopback host (the documented opt-out for smoke-testing a production image locally). The session cookie's `Secure` flag is derived from that validated deployment mode rather than from the raw URL string, so a deployment typo cannot silently emit a non-Secure bearer cookie.
+- ADMIN-B18 Log redaction is recursive: passwords, tokens, cookies, authorization headers, API keys, prompt bodies and private notes are censored at every nesting depth, in arrays as well as objects, and errors are serialized through an allowlist of type, message, stack and cause so a thrown `AppError`'s details never reach a durable log. The one-time `SETUP_TOKEN` line (ADMIN-B01) is deliberately printed in full; reading it requires privileged access to the container log.
+
 ## Jobs and audit
 
 - ADMIN-B15 Jobs page: queued, running, failed in the last 7 days; details with attempts and errors; Retry (creates a new job with the same payload), Cancel; per-kind concurrency shown.
@@ -58,7 +63,7 @@ Everything an administrator needs to run the installation from the browser: setu
 
 ## Required scenarios
 
-- service/api: B01–B16 each; setup race; last-admin; session revocation matrix; settings role allowlists; export exclusions; maintenance mode gating.
+- service/api: B01–B18 each; setup race; last-admin; session revocation matrix; settings role allowlists; export exclusions; maintenance mode gating.
 - core adversarial: backup during writes; restore drill.
 - e2e `admin.spec.ts`: A01–A06.
 - Mutation targets: `lastAdminGuard`, `activateLearnings`, `exportExclusions`.

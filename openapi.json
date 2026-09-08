@@ -1075,8 +1075,7 @@
             },
             "required": [
               "counts",
-              "nextCursor",
-              "total"
+              "nextCursor"
             ],
             "type": "object"
           }
@@ -1550,7 +1549,6 @@
             },
             "required": [
               "counts",
-              "total",
               "nextCursor",
               "today",
               "timezone",

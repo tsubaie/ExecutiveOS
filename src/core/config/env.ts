@@ -28,10 +28,36 @@ const Environment = z.object({
   NEXT_PHASE: optionalText,
 });
 
-type Environment = z.infer<typeof Environment>;
+// ADMIN-B17: a deployment typo must not silently downgrade the session cookie. Loopback is the one
+// opt-out, so a production image can still be smoke-tested on a developer machine without TLS.
+const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+function loopback(url: string) {
+  return loopbackHosts.has(new URL(url).hostname);
+}
+const Configuration = Environment.superRefine((value, ctx) => {
+  if (value.NODE_ENV !== 'production') return;
+  if (value.APP_URL.startsWith('https:') || loopback(value.APP_URL)) return;
+  ctx.addIssue({
+    code: 'custom',
+    path: ['APP_URL'],
+    message: 'APP_URL must use https in production unless it points at a loopback address',
+  });
+});
+
+export type Environment = z.infer<typeof Environment>;
+export function parseEnvironment(source: Record<string, string | undefined>) {
+  return Configuration.parse(source);
+}
+// The Secure flag follows the validated deployment mode: production is HTTPS unless it is the
+// loopback opt-out, and a development server marks the cookie only when it actually serves TLS.
+export function secureCookies(config: Environment = env()) {
+  return config.NODE_ENV === 'production'
+    ? !loopback(config.APP_URL)
+    : config.APP_URL.startsWith('https:');
+}
 let cached: Environment | undefined;
 function load(): Environment {
-  const parsed = Environment.parse(process.env);
+  const parsed = parseEnvironment(process.env);
   if (parsed.NODE_ENV === 'test')
     return { ...parsed, DATABASE_URL: z.string().url().parse(parsed.DATABASE_URL_TEST) };
   return parsed;

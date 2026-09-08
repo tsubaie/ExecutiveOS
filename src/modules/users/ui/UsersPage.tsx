@@ -24,13 +24,19 @@ function EditMember({ user }: { user: Member }) {
   return (
     <div className="grid gap-4">
       <Field label={t('name')}>
-        <Input value={name} onChange={(e) => setName(e.target.value)} />
+        {(control) => <Input {...control} value={name} onChange={(e) => setName(e.target.value)} />}
       </Field>
       <Field label={t('role')}>
-        <NativeSelect value={role} onChange={(e) => setRole(User.shape.role.parse(e.target.value))}>
-          <NativeSelectOption value="member">{t('member')}</NativeSelectOption>
-          <NativeSelectOption value="admin">{t('admin')}</NativeSelectOption>
-        </NativeSelect>
+        {(control) => (
+          <NativeSelect
+            {...control}
+            value={role}
+            onChange={(e) => setRole(User.shape.role.parse(e.target.value))}
+          >
+            <NativeSelectOption value="member">{t('member')}</NativeSelectOption>
+            <NativeSelectOption value="admin">{t('admin')}</NativeSelectOption>
+          </NativeSelect>
+        )}
       </Field>
       <Button variant="outline" onClick={() => setActive(!active)}>
         {active ? c('active') : c('inactive')}
@@ -72,16 +78,18 @@ function NewMember() {
   return (
     <form className="grid gap-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
       <Field label={t('name')}>
-        <Input required {...form.register('name')} />
+        {(control) => <Input required {...control} {...form.register('name')} />}
       </Field>
       <Field label={a('email')}>
-        <Input type="email" required {...form.register('email')} />
+        {(control) => <Input type="email" required {...control} {...form.register('email')} />}
       </Field>
       <Field label={t('role')}>
-        <NativeSelect {...form.register('role')}>
-          <NativeSelectOption value="member">{t('member')}</NativeSelectOption>
-          <NativeSelectOption value="admin">{t('admin')}</NativeSelectOption>
-        </NativeSelect>
+        {(control) => (
+          <NativeSelect {...control} {...form.register('role')}>
+            <NativeSelectOption value="member">{t('member')}</NativeSelectOption>
+            <NativeSelectOption value="admin">{t('admin')}</NativeSelectOption>
+          </NativeSelect>
+        )}
       </Field>
       {mutation.isError && <ErrorPanel error={mutation.error} />}
       <Button disabled={mutation.isPending} type="submit">

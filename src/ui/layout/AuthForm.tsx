@@ -128,21 +128,32 @@ function SetupFields({ state }: { state: AuthState }) {
   return (
     <>
       <Field label={t('token')} hint={t('tokenHelp')}>
-        <Input autoComplete="off" required {...state.form.register('setupToken')} />
+        {(control) => (
+          <Input autoComplete="off" required {...control} {...state.form.register('setupToken')} />
+        )}
       </Field>
       {setupFields.options.map((key) => (
         <Field key={key} label={t(key)}>
-          <Input required={key !== 'principalName'} dir="auto" {...state.form.register(key)} />
+          {(control) => (
+            <Input
+              required={key !== 'principalName'}
+              dir="auto"
+              {...control}
+              {...state.form.register(key)}
+            />
+          )}
         </Field>
       ))}
       <Field label={t('language')}>
-        <NativeSelect {...state.form.register('locale')}>
-          {Locale.options.map((item) => (
-            <NativeSelectOption key={item} value={item}>
-              {names.of(item)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+        {(control) => (
+          <NativeSelect {...control} {...state.form.register('locale')}>
+            {Locale.options.map((item) => (
+              <NativeSelectOption key={item} value={item}>
+                {names.of(item)}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        )}
       </Field>
     </>
   );
@@ -151,7 +162,9 @@ function RecoveryTokenField({ state }: { state: AuthState }) {
   const t = useTranslations('auth');
   return (
     <Field label={t('recoveryToken')}>
-      <Input autoComplete="off" required {...state.form.register('token')} />
+      {(control) => (
+        <Input autoComplete="off" required {...control} {...state.form.register('token')} />
+      )}
     </Field>
   );
 }
@@ -162,20 +175,31 @@ function CredentialFields({ state }: { state: AuthState }) {
   return (
     <>
       <Field label={t('email')} error={errors.email?.message}>
-        <Input type="email" autoComplete="username" required {...state.form.register('email')} />
+        {(control) => (
+          <Input
+            type="email"
+            autoComplete="username"
+            required
+            {...control}
+            {...state.form.register('email')}
+          />
+        )}
       </Field>
       <Field
         label={t('password')}
         hint={login ? undefined : t('passwordHelp')}
         error={errors.password?.message}
       >
-        <Input
-          type="password"
-          autoComplete={login ? 'current-password' : 'new-password'}
-          minLength={login ? 1 : 12}
-          required
-          {...state.form.register('password')}
-        />
+        {(control) => (
+          <Input
+            type="password"
+            autoComplete={login ? 'current-password' : 'new-password'}
+            minLength={login ? 1 : 12}
+            required
+            {...control}
+            {...state.form.register('password')}
+          />
+        )}
       </Field>
     </>
   );

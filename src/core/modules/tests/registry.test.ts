@@ -6,7 +6,9 @@ import { insertUser } from '@/core/db/auth-repo';
 import { countQueries } from '@/core/db/query-log';
 import { id } from '@/core/db/ids';
 import { User } from '@/core/http/user-schema';
-import { homeProviders, mergeJobs, serverModules } from '../registry';
+import { collectHomeSections, homeProviders, mergeJobs, serverModules } from '../registry';
+import type { Context } from '@/core/auth/session';
+import type { HomeSection, ServerManifest } from '../server-manifest';
 import { House } from 'lucide-react';
 import { navigationFor } from '../client';
 import { registry, jobKinds } from '@/core/jobs/registry';
@@ -59,6 +61,32 @@ describe('module registry', () => {
       mergeJobs({ 'system.noop': noop }, [{ id: 'm', jobs: { 'system.noop': noop } }]),
     ).toThrow(/twice/u);
     expect(registry['system.backup']?.concurrency).toBe(1);
+  });
+  it('HOME-B06 section ownership is exclusive and every provided key must be known', async () => {
+    const section = (key: string): HomeSection => ({
+      key,
+      enabled: true,
+      count: 1,
+      items: [],
+      href: '/x',
+    });
+    const provider = (...keys: string[]): ServerManifest => ({
+      id: keys.join('-'),
+      homeSummary: async () => keys.map(section),
+    });
+    const ctx = { user, db: db(), requestId: id() } satisfies Context;
+    const keys = ['today', 'overdue'];
+    const collected = await collectHomeSections(ctx, keys, [
+      provider('today'),
+      provider('overdue'),
+    ]);
+    expect([...collected.keys()]).toEqual(['today', 'overdue']);
+    await expect(
+      collectHomeSections(ctx, keys, [provider('today'), provider('today')]),
+    ).rejects.toThrow(/today is provided twice/u);
+    await expect(collectHomeSections(ctx, keys, [provider('kpis')])).rejects.toThrow(
+      /kpis is not a known section/u,
+    );
   });
   it('EP-A01 navigation comes from manifests, sorted, with admin entries hidden from members', () => {
     const nav = navigationFor(

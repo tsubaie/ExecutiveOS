@@ -10,6 +10,34 @@ import { Button } from '@/ui/primitives/button';
 import { Field } from '@/ui/layout/Field';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import Loading from '@/ui/layout/Loading';
+// A structured default gets a textarea for its JSON, everything else a single-line input.
+function SettingInput({
+  setting,
+  value,
+  setValue,
+}: {
+  setting: z.infer<typeof Setting>;
+  value: string;
+  setValue: (value: string) => void;
+}) {
+  const structured = typeof setting.default === 'object' && setting.default !== null;
+  return (
+    <Field label={setting.key}>
+      {(control) =>
+        structured ? (
+          <Textarea
+            {...control}
+            dir="auto"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+          />
+        ) : (
+          <Input {...control} dir="auto" value={value} onChange={(e) => setValue(e.target.value)} />
+        )
+      }
+    </Field>
+  );
+}
 function SettingControl({ setting }: { setting: z.infer<typeof Setting> }) {
   const t = useTranslations('admin');
   const c = useTranslations('common');
@@ -30,13 +58,7 @@ function SettingControl({ setting }: { setting: z.infer<typeof Setting> }) {
   }
   return (
     <div className="grid gap-3 border-b py-5">
-      <Field label={setting.key}>
-        {typeof setting.default === 'object' && setting.default !== null ? (
-          <Textarea dir="auto" value={value} onChange={(e) => setValue(e.target.value)} />
-        ) : (
-          <Input dir="auto" value={value} onChange={(e) => setValue(e.target.value)} />
-        )}
-      </Field>
+      <SettingInput setting={setting} value={value} setValue={setValue} />
       <div className="flex gap-2">
         <Button variant="outline" onClick={save} disabled={mutation.isPending}>
           {c('save')}

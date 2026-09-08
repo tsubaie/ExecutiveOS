@@ -36,7 +36,6 @@ export async function listTasks(ctx: Context, query: TaskListQuery) {
   const week = addDays(today, 7);
   const dates = [today, week, addDays(today, -90)];
   const { cursor, withTotal, limit, ...filters } = query;
-  void withTotal;
   const hash = filtersHash(z.json().parse({ ...filters, today, timezone }));
   const spec = repo.sortSpec(query.sort, today, week);
   const rows = await repo.selectTasks(
@@ -57,7 +56,8 @@ export async function listTasks(ctx: Context, query: TaskListQuery) {
     data: page.map((row) => TaskDetail.parse({ ...row, band: bandOf(row, today) })),
     meta: {
       counts,
-      total: counts[query.view],
+      // TASKS-B16: meta.total is opt-in (04-api-conventions.md); the view counts always ship.
+      ...(withTotal === 'true' ? { total: counts[query.view] } : {}),
       today,
       timezone,
       defaultView: z.enum(['today', 'next']).parse(counts.today > 0 ? 'today' : 'next'),

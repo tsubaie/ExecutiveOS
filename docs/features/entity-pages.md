@@ -59,6 +59,10 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - EP-B08 Mobile: views `list` → `detail` → `create`, full screen, slide from the end side (`dir`-aware); rail as a bottom sheet with active-filter count. Back gesture and browser back both go to the previous view.
 - EP-B09 Direction: all animation and column order derive from `dir`.
 
+## Forms
+
+- EP-B19 The shared `Field` owns the identifiers for one control: the label points at the control with `htmlFor`, a hint is referenced with `aria-describedby`, an error with `aria-errormessage`, and `aria-invalid` is set only while an error is shown. Children are a render prop receiving those attributes, so the consumer keeps its own control. Submitting an invalid form focuses the first invalid field (`react-hook-form` default).
+
 ## Auto-save
 
 - EP-B10 `api.save(patch)` queues per entity: one request in flight; newer patches coalesce; each request sends the latest known `revision`. State `idle → saving → saved (2 s) → idle`, or `error` with Retry (same idempotency key) and, on 409, `conflict` with "Reload and reapply" that refetches, shows the diff of the user's pending patch, and reapplies on confirm.
@@ -90,6 +94,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - `mobile.test.tsx`: B08, B09.
 - `autosave.test.tsx`: B10–B12 with fake timers, overlapping saves, 409 path, navigate-while-pending.
 - `list.test.tsx`: B13–B18.
+- `field.test.tsx`: B19 label, hint, error and invalid associations; first invalid field focused on submit.
 - `multiselect.test.tsx`: selection clearing rules, bulk action confirm.
 - `bulk-actions.test.tsx`: confirm flow runs once, render escape hatch, disabled predicates.
 - `navigation-guard.test.tsx`: registered guard defers, unregistered surface navigates, guards leave with their owner.
