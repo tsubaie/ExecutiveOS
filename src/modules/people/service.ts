@@ -26,7 +26,7 @@ const ops: EntityOps<Person, PersonRow, Parameters<typeof repo.updatePerson>[3]>
   restore: (ctx, personId, opId) => repo.restorePerson(ctx.db, personId, opId, ctx.user.id),
 };
 export async function listPeople(ctx: Context, query: PersonListQuery) {
-  const { view, q, tag, organization } = query;
+  const { view, q, tag, organization, withTotal } = query;
   const hash = filtersHash({ view, q, tag, organization });
   const rows = await repo.selectPeople(
     ctx.db,
@@ -43,7 +43,8 @@ export async function listPeople(ctx: Context, query: PersonListQuery) {
     data: items.map((row) => Person.parse(row)),
     meta: {
       counts,
-      total: counts[view],
+      // PEOPLE-B08: meta.total is opt-in (04-api-conventions.md); the view counts always ship.
+      ...(withTotal === 'true' ? { total: counts[view] } : {}),
       nextCursor:
         rows.length > query.limit && last ? encodeCursor(repo.nameSort, hash, last) : null,
     },

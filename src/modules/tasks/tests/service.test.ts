@@ -182,10 +182,26 @@ it('TASKS-B05 TASKS-B07 cursor continuation respects facets, null ordering and r
     ).rejects.toMatchObject({ code: 'validation_failed' });
   }
   const filtered = await run((ctx) =>
-    service.listTasks(ctx, TaskListQuery.parse({ priority: 'urgent', dueFrom: '2026-09-08' })),
+    service.listTasks(
+      ctx,
+      TaskListQuery.parse({ priority: 'urgent', dueFrom: '2026-09-08', withTotal: 'true' }),
+    ),
   );
   expect(filtered.data).toHaveLength(1);
   expect(filtered.meta.total).toBe(1);
+});
+
+it('TASKS-B16 meta.total is present only when the request asks for it', async () => {
+  await create('Counted');
+  const query = (withTotal?: 'true' | 'false') =>
+    run((ctx) =>
+      service.listTasks(ctx, TaskListQuery.parse({ view: 'all', ...(withTotal && { withTotal }) })),
+    );
+  const asked = await query('true');
+  expect(asked.meta.total).toBe(asked.meta.counts.all);
+  expect((await query('false')).meta).not.toHaveProperty('total');
+  expect((await query()).meta).not.toHaveProperty('total');
+  expect((await query()).meta.counts.all).toBe(1);
 });
 
 it('HOME-B01 HOME-B03 TASKS-B15 Home includes task counts and links, with five items per section', async () => {

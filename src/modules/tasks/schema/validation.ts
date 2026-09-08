@@ -90,7 +90,7 @@ export const TaskList = z.object({
   data: z.array(TaskDetail),
   meta: z.object({
     counts: z.record(View, z.number()),
-    total: z.number(),
+    total: z.number().optional(),
     nextCursor: z.string().nullable(),
     today: z.iso.date(),
     timezone: z.string(),

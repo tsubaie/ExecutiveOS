@@ -1,6 +1,6 @@
 import 'server-only';
 import { cookies } from 'next/headers';
-import { env } from '@/core/config/env';
+import { secureCookies } from '@/core/config/env';
 import { defaults, Locale } from '@/core/config/defaults';
 import { type Database } from '@/core/db/client';
 import { id } from '@/core/db/ids';
@@ -27,7 +27,7 @@ export async function setSessionCookie(raw: string) {
   (await cookies()).set(defaults.cookieName, raw, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: env().APP_URL.startsWith('https:'),
+    secure: secureCookies(),
     path: '/',
     maxAge: sessionDays * 86400,
   });

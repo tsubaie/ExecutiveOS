@@ -24,6 +24,7 @@ The one screen the principal opens first. It is a set of queries over existing m
 - HOME-B03 One aggregated endpoint `GET /home` returns all sections in one round trip; each module exposes a `homeSummary(ctx)` function through its `server` manifest that runs ≤ 2 queries. Every section and item carries its own `href`; the page never composes module URLs.
 - HOME-B04 Refetch on focus and every 60 seconds.
 - HOME-B05 Greeting uses the user's name and the principal's name when they differ ("Preparing for <principal>").
+- HOME-B06 Section ownership is exclusive and checked centrally when the providers are collected: a key claimed by two modules, or a key no section list declares, fails the request with the owning key named. Collapsing to the first match would make the page depend on module import order and let a section disappear silently.
 
 ## Acceptance criteria
 
@@ -33,7 +34,7 @@ The one screen the principal opens first. It is a set of queries over existing m
 
 ## Required scenarios
 
-- api: `/home` shape; query counter; disabled modules.
+- api: `/home` shape; query counter; disabled modules; duplicate and unknown section ownership (B06).
 - ui: collapse rules; links.
 - e2e `home.spec.ts`: A01–A03.
 - Mutation targets: `homeSummary` aggregators for tasks and meetings.

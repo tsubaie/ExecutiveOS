@@ -75,16 +75,19 @@ function PersonTextFields({ editor }: { editor: Editor }) {
     <>
       {textFields.options.map((key) => (
         <Field key={key} label={t(key)} error={form.formState.errors[key]?.message}>
-          <Input
-            dir="auto"
-            type={key === 'email' ? 'email' : 'text'}
-            required={key === 'fullName'}
-            {...form.register(key)}
-            onBlur={async (event) => {
-              await form.register(key).onBlur(event);
-              if (await form.trigger(key)) save?.({ [key]: form.getValues(key) });
-            }}
-          />
+          {(control) => (
+            <Input
+              dir="auto"
+              type={key === 'email' ? 'email' : 'text'}
+              required={key === 'fullName'}
+              {...control}
+              {...form.register(key)}
+              onBlur={async (event) => {
+                await form.register(key).onBlur(event);
+                if (await form.trigger(key)) save?.({ [key]: form.getValues(key) });
+              }}
+            />
+          )}
         </Field>
       ))}
     </>
@@ -96,20 +99,23 @@ function PersonKind({ editor }: { editor: Editor }) {
   const { form, save } = editor;
   return (
     <Field label={t('kind')}>
-      <NativeSelect
-        {...form.register('kind')}
-        onChange={(event) => {
-          const kind = Kind.parse(event.target.value);
-          form.setValue('kind', kind);
-          save?.({ kind });
-        }}
-      >
-        {Kind.options.map((kind) => (
-          <NativeSelectOption key={kind} value={kind}>
-            {c(kind)}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
+      {(control) => (
+        <NativeSelect
+          {...control}
+          {...form.register('kind')}
+          onChange={(event) => {
+            const kind = Kind.parse(event.target.value);
+            form.setValue('kind', kind);
+            save?.({ kind });
+          }}
+        >
+          {Kind.options.map((kind) => (
+            <NativeSelectOption key={kind} value={kind}>
+              {c(kind)}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      )}
     </Field>
   );
 }
@@ -135,18 +141,21 @@ function PersonTags({ editor }: { editor: Editor }) {
   const { form, save, initial } = editor;
   return (
     <Field label={t('tags')}>
-      <Input
-        dir="auto"
-        defaultValue={initial.tags.join(', ')}
-        onBlur={(event) => {
-          const tags = event.target.value
-            .split(',')
-            .map((v) => v.trim())
-            .filter(Boolean);
-          form.setValue('tags', tags);
-          if (PersonFields.shape.tags.safeParse(tags).success) save?.({ tags });
-        }}
-      />
+      {(control) => (
+        <Input
+          dir="auto"
+          defaultValue={initial.tags.join(', ')}
+          {...control}
+          onBlur={(event) => {
+            const tags = event.target.value
+              .split(',')
+              .map((v) => v.trim())
+              .filter(Boolean);
+            form.setValue('tags', tags);
+            if (PersonFields.shape.tags.safeParse(tags).success) save?.({ tags });
+          }}
+        />
+      )}
     </Field>
   );
 }
@@ -155,15 +164,18 @@ function PersonNotes({ editor }: { editor: Editor }) {
   const { form, save } = editor;
   return (
     <Field label={t('notes')} error={form.formState.errors.notes?.message}>
-      <Textarea
-        dir="auto"
-        rows={5}
-        {...form.register('notes')}
-        onBlur={async (event) => {
-          await form.register('notes').onBlur(event);
-          if (await form.trigger('notes')) save?.({ notes: form.getValues('notes') });
-        }}
-      />
+      {(control) => (
+        <Textarea
+          dir="auto"
+          rows={5}
+          {...control}
+          {...form.register('notes')}
+          onBlur={async (event) => {
+            await form.register('notes').onBlur(event);
+            if (await form.trigger('notes')) save?.({ notes: form.getValues('notes') });
+          }}
+        />
+      )}
     </Field>
   );
 }

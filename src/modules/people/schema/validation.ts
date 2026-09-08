@@ -57,7 +57,7 @@ export const PersonList = z.object({
   meta: z.object({
     counts: z.record(View, z.number()),
     nextCursor: z.string().nullable(),
-    total: z.number(),
+    total: z.number().optional(),
   }),
 });
 export const PersonCreated = z.object({

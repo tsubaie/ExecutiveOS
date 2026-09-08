@@ -83,7 +83,7 @@ State-creating requests (`POST` creates, `apply`, `merge`, `group`, action route
 - `q` searches the resource's `search_text` (normalized, trigram). The spec lists the fields.
 - `sort` is one of an allowlist; each allowed sort is an explicit ordered tuple ending in `id`, documented per resource with null placement (nulls last ascending, first descending) and the rank used for enum fields. Example tasks default: `(band_rank asc, due_date asc nulls last, priority_rank desc, created_at desc, id desc)` where `band_rank` is computed relative to `today` in `ctx.timezone` at request time.
 - Cursor: opaque base64 of `{ v: 1, sort, filtersHash, last: [tuple values] }`. A cursor whose `sort` or `filtersHash` does not match the request → 400. Cursors are valid for the request's day; the band rank can change across midnight, so the UI restarts from the first page when the day changes (it already refreshes on the day boundary, `TASKS-B03`).
-- `limit` default 50, max 200. `withTotal=true` adds `meta.total`.
+- `limit` default 50, max 200. `withTotal=true` adds `meta.total`; without it the response carries `meta.counts` only and `meta.total` is absent.
 - `includeDeleted=true` only where the spec says (trash views).
 - `linkedTo=<type>:<id>` and `relation=` are accepted by every list of a linkable entity type. Note lists match links on each individual note; linked notes are never rolled up or grouped.
 
@@ -103,7 +103,7 @@ State-creating requests (`POST` creates, `apply`, `merge`, `group`, action route
 
 - Same-origin deployment is required: `APP_URL` is the only origin. No CORS headers are emitted; credentialed cross-origin requests are impossible by default.
 - Every state-changing request must carry `X-Requested-With: ExecutiveOS` **and** an `Origin` (or `Referer`) whose origin equals `APP_URL`. Missing or mismatched → 403 `forbidden` `reason: "origin"`. This applies to login, setup, recovery, multipart uploads, and all mutations.
-- Cookie `SameSite=Lax`, `Secure` when `APP_URL` is https.
+- Cookie `SameSite=Lax`, `Secure` from the validated deployment mode: production requires an HTTPS `APP_URL` (loopback is the documented opt-out) and always marks the cookie; a development server marks it only when it serves TLS (`ADMIN-B17`).
 - `X-Forwarded-For` is trusted only from `TRUSTED_PROXY_CIDRS`.
 
 ## Files

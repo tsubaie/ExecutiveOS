@@ -79,15 +79,17 @@ export function TaskTitle({
     );
   return (
     <Field label={t('title')} error={error}>
-      <Input
-        {...field}
-        dir="auto"
-        required
-        pattern=".*\S.*"
-        maxLength={500}
-        aria-invalid={Boolean(error)}
-        onBlur={blur}
-      />
+      {(control) => (
+        <Input
+          {...field}
+          {...control}
+          dir="auto"
+          required
+          pattern=".*\S.*"
+          maxLength={500}
+          onBlur={blur}
+        />
+      )}
     </Field>
   );
 }
@@ -96,16 +98,19 @@ export function TaskDescription({ editor }: { editor: ReturnType<typeof useTaskT
   const field = editor.form.register('description');
   return (
     <Field label={t('description')} error={editor.form.formState.errors.description?.message}>
-      <Textarea
-        {...field}
-        dir="auto"
-        className="min-h-20"
-        maxLength={50000}
-        onBlur={(event) => {
-          void field.onBlur(event);
-          editor.blur('description', event.target.value);
-        }}
-      />
+      {(control) => (
+        <Textarea
+          {...field}
+          {...control}
+          dir="auto"
+          className="min-h-20"
+          maxLength={50000}
+          onBlur={(event) => {
+            void field.onBlur(event);
+            editor.blur('description', event.target.value);
+          }}
+        />
+      )}
     </Field>
   );
 }

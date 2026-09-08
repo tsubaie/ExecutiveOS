@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/ui/primitives/button';
 import {
@@ -20,16 +21,27 @@ export function DeleteEntityDialog({
   remove: () => Promise<void>;
 }) {
   const t = useTranslations('common');
+  // PEOPLE-B07: the confirm button is inert while the removal is in flight, so a double press or
+  // an impatient Enter cannot send the destructive mutation twice.
+  const [pending, setPending] = useState(false);
+  const confirm = async () => {
+    setPending(true);
+    try {
+      await remove();
+    } finally {
+      setPending(false);
+    }
+  };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogTitle>{t('delete')}</DialogTitle>
         <DialogDescription>{t('deleteDescription', { name })}</DialogDescription>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" disabled={pending} onClick={() => setOpen(false)}>
             {t('cancel')}
           </Button>
-          <Button variant="destructive" onClick={() => void remove()}>
+          <Button variant="destructive" disabled={pending} onClick={() => void confirm()}>
             {t('delete')}
           </Button>
         </DialogFooter>
