@@ -1,7 +1,6 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import { ListChecks } from 'lucide-react';
-import { Avatar } from '@/ui/layout/Avatar';
 import { cn } from '@/ui/cn';
 import type { Task } from '../schema/validation';
 import { useDueLabel } from './use-due-label';
@@ -35,7 +34,6 @@ export function TaskRow({ task }: { task: Task }) {
             {t('progressShort', { done: task.completedSubtaskCount, total: task.subtaskCount })}
           </span>
         )}
-        {task.ownerName && <Avatar name={task.ownerName} />}
         {due && task.dueDate && (
           <time
             dateTime={task.dueDate}

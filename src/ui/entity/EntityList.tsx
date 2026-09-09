@@ -118,9 +118,20 @@ function EntityListRow<T extends Entity, P extends object, C>({
         >
           {config.renderers.row(item)}
         </Button>
+        <EntityRowTrail config={config} controller={c} item={item} />
       </div>
     </li>
   );
+}
+
+// EP-B20: the trailing slot mirrors the leading one. A control belongs here rather than in
+// `renderers.row`, whose output is inside the row button and may not nest an interactive element.
+function EntityRowTrail<T extends Entity, P extends object, C>({
+  config,
+  item,
+}: Surface<T, P, C> & { item: T }) {
+  if (!config.renderers.rowTrail) return null;
+  return <div className="me-3 shrink-0">{config.renderers.rowTrail(item)}</div>;
 }
 
 // The leading control: a selection checkbox in multi-select mode, otherwise the row action.

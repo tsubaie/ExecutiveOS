@@ -30,6 +30,7 @@ One implementation of list + detail behavior for every module: selection, URL st
   rowAction={(item) => …}                    // sibling control beside the row (completion toggle)
   renderers={{
     row: (item) => …,
+    rowTrail: (item) => …,                   // sibling of the row button, so it may hold a control
     detail: (item, api) => …,                // api: save(patch), close, next, prev, neighbors, remove, restore, saveState, retry
     create: (api) => …,                      // api: submit(input), cancel, pending
     name: (item) => string,
@@ -61,6 +62,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 
 ## Forms
 
+- EP-B20 `renderers.rowTrail` renders beside the row button, after it, mirroring the leading slot that carries the checkbox and `rowAction`. The output of `renderers.row` sits inside the row button and therefore may not contain a control of its own; anything interactive on a row belongs in the leading or trailing slot. The slot is optional and adds no markup when absent.
 - EP-B19 The shared `Field` owns the identifiers for one control: the label points at the control with `htmlFor`, a hint is referenced with `aria-describedby`, an error with `aria-errormessage`, and `aria-invalid` is set only while an error is shown. Children are a render prop receiving those attributes, so the consumer keeps its own control. Submitting an invalid form focuses the first invalid field (`react-hook-form` default).
 
 ## Auto-save
@@ -94,6 +96,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - `mobile.test.tsx`: B08, B09.
 - `autosave.test.tsx`: B10–B12 with fake timers, overlapping saves, 409 path, navigate-while-pending.
 - `list.test.tsx`: B13–B18.
+- `row-trail.test.tsx`: B20 the trailing control renders outside the row button, never nested inside it.
 - `field.test.tsx`: B19 label, hint, error and invalid associations; first invalid field focused on submit.
 - `multiselect.test.tsx`: selection clearing rules, bulk action confirm.
 - `bulk-actions.test.tsx`: confirm flow runs once, render escape hatch, disabled predicates.
