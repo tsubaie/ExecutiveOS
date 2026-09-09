@@ -15,6 +15,8 @@ env:
   DATABASE_URL: postgresql://executiveos:executiveos@localhost:5432/executiveos
   DATABASE_URL_TEST: postgresql://executiveos:executiveos@localhost:5432/executiveos_test
   SESSION_SECRET: ci-only-session-secret-0123456789abcdefghij
+  # ADMIN-B22: the recovery suite needs a configured token, and it must clear the entropy floor.
+  RECOVERY_TOKEN: ci-only-recovery-token-0123456789abcdefghij
   APP_URL: http://localhost:3000
   FILES_DIR: ${{ github.workspace }}/tmp/files
   BACKUP_DIR: ${{ github.workspace }}/tmp/backups

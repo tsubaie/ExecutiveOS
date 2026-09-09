@@ -8,7 +8,7 @@ One decision per file. Format: **Status**, **Context**, **Decision**, **Conseque
 | 0002 | PostgreSQL with Drizzle ORM and generated plus custom migrations | accepted |
 | 0003 | In-process AI via the Claude API and a Postgres-backed job runner | accepted, extended by 0010 |
 | 0004 | shadcn/ui on Base UI with semantic tokens as the design system | accepted |
-| 0005 | Own multi-user auth with cookie sessions and roles | accepted |
+| 0005 | Own multi-user auth with cookie sessions and roles | accepted, login throttling refined by 0013 |
 | 0006 | Hybrid linking with mirrored structural relations | superseded by 0009 |
 | 0007 | Local file storage and native PDF input for meeting briefs | accepted |
 | 0008 | Scope of the "no CLI" rule; backups with bundled PostgreSQL client binaries | accepted |
@@ -16,5 +16,6 @@ One decision per file. Format: **Status**, **Context**, **Decision**, **Conseque
 | 0010 | Job execution contract: leases, fencing, dedup keys, all AI as jobs | accepted |
 | 0011 | People are the single identity for task owners and attendees | accepted |
 | 0012 | Notes are standalone entities and are never threaded | accepted |
+| 0013 | Trusted client addresses, independent throttling buckets, and uniform login cost | accepted |
 
 Open decisions awaiting an ADR: license (see roadmap); chart library confirmation (`recharts`); markdown editor component.

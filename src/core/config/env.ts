@@ -1,6 +1,7 @@
 import 'server-only';
 import { z } from 'zod';
 import { defaults } from './defaults';
+import { validProxyCidrs } from './cidr';
 
 const optionalText = z.preprocess((v) => (v === '' ? undefined : v), z.string().optional());
 const Environment = z.object({
@@ -8,7 +9,13 @@ const Environment = z.object({
   DATABASE_URL_TEST: optionalText,
   SESSION_SECRET: z.string().min(32),
   APP_URL: z.string().url().default(defaults.appUrl),
-  TRUSTED_PROXY_CIDRS: z.string().default(''),
+  TRUSTED_PROXY_CIDRS: z
+    .string()
+    .default('')
+    .refine(validProxyCidrs, {
+      message:
+        'TRUSTED_PROXY_CIDRS must be a comma-separated list of IP addresses or CIDR blocks, for example "10.0.0.0/8, fd00::/8"',
+    }),
   ANTHROPIC_API_KEY: optionalText,
   FILES_DIR: z.string().default(defaults.filesDir),
   BACKUP_DIR: z.string().default(defaults.backupDir),
@@ -21,7 +28,16 @@ const Environment = z.object({
   JOBS_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
   JOBS_DRAIN_SECONDS: z.coerce.number().int().min(1).max(120).default(25),
   DB_POOL_MAX: z.coerce.number().int().min(2).max(64).default(12),
-  RECOVERY_TOKEN: optionalText,
+  RECOVERY_TOKEN: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .min(
+        32,
+        'RECOVERY_TOKEN replaces an administrator password and must be at least 32 random characters; generate one with: openssl rand -hex 32',
+      )
+      .optional(),
+  ),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   NEXT_RUNTIME: optionalText,

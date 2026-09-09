@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, gt, isNull, sql, count, or } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql, or } from 'drizzle-orm';
 import { db, type Database } from './client';
 import { users, sessions, workspace, loginAttempts, recoveryTokens } from './system-schema';
 import { id } from './ids';
@@ -67,29 +67,48 @@ export async function revokeSession(hash: string, database: Database = db()) {
 export async function revokeUserSessions(database: Database, userId: string) {
   await database.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.userId, userId));
 }
-export async function loginFailures(database: Database, email: string, ip: string) {
+// ADMIN-B20: the email and the client address are independent buckets, counted in one statement so
+// the login path stays inside the per-request query budget. A null key counts nothing rather than
+// matching every row: an address the deployment cannot resolve is not a bucket anyone shares.
+export async function loginFailures(database: Database, email: string | null, address: string | null) {
+  if (email === null && address === null) return { byEmail: 0, byAddress: 0 };
   const [row] = await database
-    .select({ count: count() })
+    .select({
+      byEmail: sql<number>`count(*) filter (where ${loginAttempts.email} = ${email})`.mapWith(
+        Number,
+      ),
+      byAddress: sql<number>`count(*) filter (where ${loginAttempts.ip} = ${address})`.mapWith(
+        Number,
+      ),
+    })
     .from(loginAttempts)
     .where(
       and(
         eq(loginAttempts.succeeded, false),
         gt(loginAttempts.createdAt, new Date(Date.now() - 900000)),
-        or(eq(loginAttempts.email, email), eq(loginAttempts.ip, ip)),
+        or(
+          email === null ? undefined : eq(loginAttempts.email, email),
+          address === null ? undefined : eq(loginAttempts.ip, address),
+        ),
       ),
     );
-  return row?.count ?? 0;
+  return { byEmail: row?.byEmail ?? 0, byAddress: row?.byAddress ?? 0 };
 }
 export async function lockLogin(database: Database) {
   await database.execute(sql`select pg_advisory_xact_lock(7233)`);
 }
+// An unresolved address and the recovery route's absent email are both stored as the empty string:
+// the column is NOT NULL, and loginFailures only ever compares against a real key, so an empty
+// value can never join a bucket.
 export async function recordLogin(
   database: Database,
-  email: string,
-  ip: string,
+  email: string | null,
+  ip: string | null,
   succeeded: boolean,
 ) {
-  await database.insert(loginAttempts).values({ id: id(), email, ip, succeeded });
+  await database
+    .insert(loginAttempts)
+    .values({ id: id(), email: email ?? '', ip: ip ?? '', succeeded });
 }
 export async function usedRecovery(database: Database, hash: string) {
   const [row] = await database
