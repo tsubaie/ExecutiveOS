@@ -35,7 +35,10 @@ pnpm db:migrate          # apply migrations (also runs on container start)
 pnpm db:reset            # drop, migrate, seed (dev only)
 pnpm test                # unit + integration (needs test DB)
 pnpm test:e2e            # Playwright
-pnpm audit:all           # lint, typecheck, dependency graph, tests, build, structure audit
+pnpm audit:all           # the full gate: audit:static, then audit:data, then audit:browser
+pnpm audit:static        # lint, typecheck, dependency graph, doc/i18n/secret audits; no database
+pnpm audit:data          # schema audit and the unit and integration suites; needs the test DB
+pnpm audit:browser       # production build, browser suite, accessibility and performance
 ```
 
 ## Project layout

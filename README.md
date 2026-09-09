@@ -91,7 +91,7 @@ pnpm build && cp -r .next/static .next/standalone/.next/static && cp -r public .
 pnpm test:e2e
 ```
 
-`pnpm audit:all` is the full gate; `.github/workflows/ci.yml` runs it on every pull request. Locally it needs the `gitleaks` binary for `audit:secrets` and a production build for `audit:bundle`, `audit:openapi`, and `audit:a11y`. `pnpm audit:docs --status` regenerates `docs/STATUS.md`.
+`pnpm audit:all` is the full gate. It is composed of `audit:static`, `audit:data` and `audit:browser`, grouped by what each step needs — nothing, a database, or a database plus a browser and a production build. `.github/workflows/ci.yml` runs the three groups as parallel jobs on every pull request, so a lint error is reported in about a minute instead of behind the browser suite; the `gate` job is the single status to require on the branch. Locally it needs the `gitleaks` binary for `audit:secrets` and a production build for `audit:bundle`, `audit:openapi`, and `audit:a11y`. `pnpm audit:docs --status` regenerates `docs/STATUS.md`.
 
 ## Documentation
 

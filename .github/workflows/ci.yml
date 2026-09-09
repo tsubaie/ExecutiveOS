@@ -6,10 +6,42 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+# `pnpm audit:all` is `audit:static && audit:data && audit:browser`, so the three jobs below
+# cover exactly what a developer runs locally, split by what each group actually needs: nothing,
+# a database, or a database plus a browser and a production build. They run in parallel, so the
+# wall clock is the slowest group rather than the sum of all nineteen steps.
+env:
+  DATABASE_URL: postgresql://executiveos:executiveos@localhost:5432/executiveos
+  DATABASE_URL_TEST: postgresql://executiveos:executiveos@localhost:5432/executiveos_test
+  SESSION_SECRET: ci-only-session-secret-0123456789abcdefghij
+  APP_URL: http://localhost:3000
+  FILES_DIR: ${{ github.workspace }}/tmp/files
+  BACKUP_DIR: ${{ github.workspace }}/tmp/backups
+  NEXT_TELEMETRY_DISABLED: '1'
+
 jobs:
-  gate:
+  static:
+    name: Static checks
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 15
+    steps:
+      # audit:docs reads ADR history, audit:secrets scans every commit, and audit:dupes diffs
+      # against main, so this job is the one that needs the full history.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - name: Install gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+      - run: pnpm audit:static
+
+  test:
+    name: Unit and integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16
@@ -23,27 +55,31 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-    env:
-      DATABASE_URL: postgresql://executiveos:executiveos@localhost:5432/executiveos
-      DATABASE_URL_TEST: postgresql://executiveos:executiveos@localhost:5432/executiveos_test
-      SESSION_SECRET: ci-only-session-secret-0123456789abcdefghij
-      APP_URL: http://localhost:3000
-      FILES_DIR: ${{ github.workspace }}/tmp/files
-      BACKUP_DIR: ${{ github.workspace }}/tmp/backups
-      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.3
-      - uses: actions/setup-node@v4
-        with:
-          # 22.12.0 segfaults when the argon2 binding loads; 22.14+ is fine (see docs/history).
-          node-version: 22.23.2
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
+      - run: pnpm audit:data
+
+  browser:
+    name: Build, browser and performance
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: executiveos
+          POSTGRES_PASSWORD: executiveos
+          POSTGRES_DB: executiveos
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U executiveos"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
@@ -61,22 +97,37 @@ jobs:
           key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts', 'tsconfig.json') }}
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-      - name: Install PostgreSQL 16 client tools (pg_dump for the backup job)
+      # ADMIN-B12 runs a real backup through the e2e suite, which shells out to pg_dump.
+      - name: Install PostgreSQL 16 client tools
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-16
-      - name: Install gitleaks
-        run: |
-          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
-            | sudo tar -xz -C /usr/local/bin gitleaks
-      - run: pnpm audit:all
+      - run: pnpm audit:browser
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report
           path: playwright-report
           retention-days: 7
+
   docker:
+    name: Container image
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - run: docker build --target runtime .
+
+  # One status to require on the branch: it fails if any group above failed or was skipped.
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    needs: [static, test, browser, docker]
+    if: always()
+    steps:
+      - name: Check the groups
+        run: |
+          echo "static=${{ needs.static.result }} test=${{ needs.test.result }}"
+          echo "browser=${{ needs.browser.result }} docker=${{ needs.docker.result }}"
+          [ "${{ needs.static.result }}" = success ] \
+            && [ "${{ needs.test.result }}" = success ] \
+            && [ "${{ needs.browser.result }}" = success ] \
+            && [ "${{ needs.docker.result }}" = success ]
