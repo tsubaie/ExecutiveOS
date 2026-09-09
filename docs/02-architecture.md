@@ -23,7 +23,7 @@
 - Exactly one application instance and one PostgreSQL database. The spec does not support horizontal scaling in v1; the queue is still crash-safe so a restart never loses or duplicates completed work.
 - Local file storage on a volume (`FILES_DIR`). Files are immutable and content-addressed.
 - Migrations run on container start under a Postgres advisory lock before the HTTP server accepts requests.
-- The reverse proxy terminates TLS; the app trusts `X-Forwarded-*` only from `TRUSTED_PROXY_CIDRS`.
+- The reverse proxy terminates TLS; the app trusts `X-Forwarded-*` only from `TRUSTED_PROXY_CIDRS`, taking the first hop outside that list (`ADMIN-B20`).
 
 ## Repository layout
 
@@ -163,7 +163,7 @@ Overload responses are 429 with `retryAfterSeconds`. Interactive requests never 
 
 ## Configuration
 
-1. **Environment (`core/config/env.ts`)**, zod-validated at boot (production additionally requires an HTTPS `APP_URL` unless it is loopback, `ADMIN-B17`): `DATABASE_URL`, `SESSION_SECRET` (≥ 32 chars), `APP_URL`, `TRUSTED_PROXY_CIDRS`, `ANTHROPIC_API_KEY` (optional), `FILES_DIR`, `FILES_QUOTA_GB`, `MAX_UPLOAD_MB`, `BACKUP_DIR`, `JOBS_ENABLED`, `JOBS_CONCURRENCY`, `JOBS_DRAIN_SECONDS`, `DB_POOL_MAX`, `RECOVERY_TOKEN` (optional), `LOG_LEVEL`.
+1. **Environment (`core/config/env.ts`)**, zod-validated at boot (production additionally requires an HTTPS `APP_URL` unless it is loopback, `ADMIN-B17`): `DATABASE_URL`, `SESSION_SECRET` (≥ 32 chars), `APP_URL`, `TRUSTED_PROXY_CIDRS` (validated; empty means forwarded client addresses are untrusted and no per-address control applies, `ADMIN-B20`), `ANTHROPIC_API_KEY` (optional), `FILES_DIR`, `FILES_QUOTA_GB`, `MAX_UPLOAD_MB`, `BACKUP_DIR`, `JOBS_ENABLED`, `JOBS_CONCURRENCY`, `JOBS_DRAIN_SECONDS`, `DB_POOL_MAX`, `RECOVERY_TOKEN` (optional; at least 32 characters when set, `ADMIN-B22`), `LOG_LEVEL`.
 2. **Settings (`core/config/settings.ts`)**: a typed registry keyed by literal setting names, each `{ schema, default, readRoles, writeRoles, scope: "workspace" | "user" }`; services read through `getSetting(db, key, userId?)`, which applies the schema and default, and write through `writeSetting`. Workspace keys: `workspace.name`, `workspace.principal_person_id`, `workspace.default_locale`, `workspace.timezone`, `workspace.arabic_numerals`, `retention.trash_days`, `retention.meeting_files_days`, `ai.model.default`, `ai.model.fast`, `ai.enabled_capabilities`, `ai.monthly_token_budget`, `notes.types`, `notes.default_type`, `kpis.status_thresholds`, `tasks.default_view`. User keys: `user.locale`, `user.timezone`, `user.theme`, `user.numerals`. Keys whose name or schema suggests a secret are rejected by the registry's own test.
 
 Nothing else may read `process.env` (static lint).

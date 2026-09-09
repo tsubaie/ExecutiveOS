@@ -45,6 +45,9 @@ Everything an administrator needs to run the installation from the browser: setu
 ## Deployment configuration
 
 - ADMIN-B17 Startup refuses a production configuration whose `APP_URL` is not HTTPS, unless the URL points at a loopback host (the documented opt-out for smoke-testing a production image locally). The session cookie's `Secure` flag is derived from that validated deployment mode rather than from the raw URL string, so a deployment typo cannot silently emit a non-Secure bearer cookie.
+- ADMIN-B20 The client address is resolved from `X-Forwarded-For` by walking the chain right to left and taking the first hop outside `TRUSTED_PROXY_CIDRS`; a prepended address is therefore inert. With no proxy configured, an absent header, or an all-proxy chain, the address is unknown and no per-address control applies rather than every request sharing one placeholder. Login throttling counts the email and the client address as independent buckets, five failures each per 15 minutes: neither their union nor an unknown address can lock an account or an installation that neither key reached (ADR 0013).
+- ADMIN-B21 Every login path performs exactly one argon2 verification. Unknown, deleted and deactivated accounts verify a process-lifetime placeholder hash generated with identical parameters, so response time cannot distinguish a registered address from an unregistered one.
+- ADMIN-B22 `/recovery` is throttled on the client address alone and records its attempts without an email, because the secret being guessed is the installation-wide `RECOVERY_TOKEN` and an email bucket would let recovery traffic lock a named administrator out of login. A configured `RECOVERY_TOKEN` must be at least 32 characters and `TRUSTED_PROXY_CIDRS` must parse, both refused at startup with an actionable message.
 - ADMIN-B18 Log redaction is recursive: passwords, tokens, cookies, authorization headers, API keys, prompt bodies and private notes are censored at every nesting depth, in arrays as well as objects, and errors are serialized through an allowlist of type, message, stack and cause so a thrown `AppError`'s details never reach a durable log. The one-time `SETUP_TOKEN` line (ADMIN-B01) is deliberately printed in full; reading it requires privileged access to the container log.
 
 ## Jobs and audit
@@ -67,7 +70,7 @@ Everything an administrator needs to run the installation from the browser: setu
 
 ## Required scenarios
 
-- service/api: B01–B19 each; setup race; last-admin; session revocation matrix; settings role allowlists; export exclusions; maintenance mode gating.
+- service/api: B01–B22 each; setup race; login throttling buckets; forwarded-address spoofing; last-admin; session revocation matrix; settings role allowlists; export exclusions; maintenance mode gating.
 - core adversarial: backup during writes; restore drill.
 - e2e `admin.spec.ts`: A01–A06.
-- Mutation targets: `lastAdminGuard`, `activateLearnings`, `exportExclusions`.
+- Mutation targets: `lastAdminGuard`, `activateLearnings`, `exportExclusions`, `clientIp`, `throttle`.

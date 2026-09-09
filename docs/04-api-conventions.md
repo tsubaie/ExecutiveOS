@@ -104,7 +104,8 @@ State-creating requests (`POST` creates, `apply`, `merge`, `group`, action route
 - Same-origin deployment is required: `APP_URL` is the only origin. No CORS headers are emitted; credentialed cross-origin requests are impossible by default.
 - Every state-changing request must carry `X-Requested-With: ExecutiveOS` **and** an `Origin` (or `Referer`) whose origin equals `APP_URL`. Missing or mismatched → 403 `forbidden` `reason: "origin"`. This applies to login, setup, recovery, multipart uploads, and all mutations.
 - Cookie `SameSite=Lax`, `Secure` from the validated deployment mode: production requires an HTTPS `APP_URL` (loopback is the documented opt-out) and always marks the cookie; a development server marks it only when it serves TLS (`ADMIN-B17`).
-- `X-Forwarded-For` is trusted only from `TRUSTED_PROXY_CIDRS`.
+- `X-Forwarded-For` is trusted only from `TRUSTED_PROXY_CIDRS`: the chain is walked right to left and the first hop outside the list is the client address, so a prepended entry is inert. Unset, absent or all-proxy resolves to no address, and no per-address throttling applies (`ADMIN-B20`).
+- Login throttling uses independent per-email and per-address buckets, five failures each per 15 minutes → 429 `rate_limited` `scope: "login"`. `/recovery` is throttled per address only (`ADMIN-B22`).
 
 ## Files
 

@@ -8,12 +8,13 @@ import { setSessionCookie } from './session';
 import { revokeSession } from '@/core/db/auth-repo';
 import { digest } from './password';
 import { defaults } from '@/core/config/defaults';
+import { clientIp } from '@/core/http/client-ip';
 export const loginApi = defineHandler({
   guard: 'public',
   input: Login,
   response: z.object({ data: User }),
-  handler: async (input) => {
-    const result = await login(input, 'local');
+  handler: async (input, _context, _params, request) => {
+    const result = await login(input, clientIp(request));
     await setSessionCookie(result.token);
     return { data: result.user };
   },
@@ -22,8 +23,8 @@ export const recoveryApi = defineHandler({
   guard: 'public',
   input: Recovery,
   response: z.object({ data: z.null() }),
-  handler: async (input) => {
-    await recover(input);
+  handler: async (input, _context, _params, request) => {
+    await recover(input, clientIp(request));
     return { data: null };
   },
 });
