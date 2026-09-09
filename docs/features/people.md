@@ -27,6 +27,7 @@ See `03-data-model.md` § people. Invariants:
 - PEOPLE-B04 **Merge** `POST /people/merge { sourceId, targetId }`, admin only, in one transaction: attendee rows moved (a duplicate `(meeting, person)` is dropped, target's role kept); `tasks.owner_id` rewritten to target; contextual links rewritten (duplicates dropped); `user_id`: if both set and differ → 409 `conflict reason: "state"` (unlink one first); if only source set, moved. Source soft-deleted with the op id; the audit entry records the rewritten ids so the merge can be reversed by an admin within retention (`POST /people/:id/unmerge { opId }`).
 - PEOPLE-B05 **Stats** for list and detail come from `entity_edges` in one aggregated query.
 - PEOPLE-B07 **Delete**: deletion is confirmed through the shared entity dialog, which names the person and states that trash is reversible; the confirm control is inert while the removal is in flight so one confirmation sends one mutation. Cancel, `Esc` and the backdrop leave the person untouched.
+- PEOPLE-B09 **Identity chip**: an initials avatar shown without the name beside it is a button whose accessible name is the person's full name; pressing or tapping it reveals that name in a popover, dismissed by `Esc`, by activating it again, or by pointing outside. Initials alone identify nobody — an Arabic given name reduces to a single letter — and a title tooltip never appears on touch. Where the name is already visible beside the avatar (pickers, the directory row, the person header) the avatar stays inert.
 - PEOPLE-B08 **Totals**: `meta.counts` always ships; `meta.total` is present only when the request asks for it with `withTotal=true` (`04-api-conventions.md` § Lists).
 - PEOPLE-B06 Invalidation: person list, detail, links of the person; on merge additionally tasks lists and meetings details touched.
 
@@ -52,7 +53,7 @@ See `03-data-model.md` § people. Invariants:
 - service: I01–I05, B04 (six cases: plain, duplicate attendee, both users, only source user, principal as source, unmerge), B05.
 - repo: stats in one query (query counter), views, search normalization.
 - api: all endpoints, admin gating on merge and user linking.
-- ui: avatar initials en/ar, duplicate confirmation, tabs, delete confirmation and cancel (B07).
+- ui: avatar initials en/ar, duplicate confirmation, tabs, delete confirmation and cancel (B07), avatar name reveal by pointer and keyboard (B09).
 - Mutation targets: `mergePeople`, `initials`, `possibleDuplicates`.
 
 ## Audit items

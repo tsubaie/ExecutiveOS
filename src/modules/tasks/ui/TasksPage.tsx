@@ -16,6 +16,7 @@ import type { View as ViewDef } from '@/ui/entity/types';
 import { EntityPage } from '@/ui/entity/EntityPage';
 import { View, Priority, Sort } from '../schema/validation';
 import { useTasks, useTask, useTaskMutations, useOwners } from './queries';
+import { PersonAvatar } from '@/ui/layout/PersonAvatar';
 import { TaskRow } from './TaskRow';
 import { TaskDetail } from './TaskDetail';
 import { TaskToggle } from './TaskToggle';
@@ -98,6 +99,7 @@ export function TasksPage() {
       renderers={{
         name: (task) => task.title,
         row: (task) => <TaskRow task={task} />,
+        rowTrail: (task) => task.ownerName && <PersonAvatar name={task.ownerName} />,
         detail: (task, api) => <TaskDetail task={task} api={api} />,
         create: (api) => <CreateTask api={api} />,
       }}

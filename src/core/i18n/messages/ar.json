@@ -96,7 +96,8 @@
     "createAnyway": "إنشاء شخص آخر",
     "noOrganization": "لم تُحدّد جهة",
     "deleted": "هذا الشخص في المحذوفات. استعده للتعديل.",
-    "directoryDescription": "الأشخاص المرتبطون بمكتبك."
+    "directoryDescription": "الأشخاص المرتبطون بمكتبك.",
+    "showName": "عرض {name}"
   },
   "auth": {
     "setupTitle": "إعداد مساحة العمل",

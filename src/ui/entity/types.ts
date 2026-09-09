@@ -94,6 +94,8 @@ export type EntityPageProps<T extends Entity, P, C> = {
   };
   renderers: {
     row: (item: T) => ReactNode;
+    // Rendered beside the row button rather than inside it, so it may hold its own control.
+    rowTrail?: (item: T) => ReactNode;
     detail: (item: T, api: DetailApi<P>) => ReactNode;
     create: (api: CreateApi<C, T>) => ReactNode;
     name: (item: T) => string;

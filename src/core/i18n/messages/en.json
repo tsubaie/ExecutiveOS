@@ -96,7 +96,8 @@
     "createAnyway": "Create another person",
     "noOrganization": "No organization",
     "deleted": "This person is in trash. Restore to edit.",
-    "directoryDescription": "The people connected to your office."
+    "directoryDescription": "The people connected to your office.",
+    "showName": "Show {name}"
   },
   "auth": {
     "setupTitle": "Set up your workspace",
