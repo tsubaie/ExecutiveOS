@@ -46,6 +46,7 @@ See `03-data-model.md` § tasks. Invariants:
 - TASKS-B12 **Concurrency**: PATCH and actions carry `revision`.
 - TASKS-B13 **AI breakdown** `POST /tasks/:id/breakdown { revision }` enqueues `ai.tasks.breakdown` (dedup per task). Allowed only when the task is top-level, not completed, and has no subtasks; otherwise 422 `TASKS-B13`. The job result is up to 8 suggestions; `POST /tasks/:id/breakdown/apply { jobId, indexes[] }` (idempotent, requires the task revision recorded in the job payload; stale → 409) creates the selected subtasks once; a second apply with the same job returns the existing subtasks.
 - TASKS-B14 **Linked section** on detail; `linkedTo` and `relation` on lists.
+- TASKS-B17 **Shell count**: the tasks entry in the sidebar trails a pill with the number of open top-level tasks, the same figure the rail shows for All tasks. It is absent at zero and while the figure is loading. The shell learns it through the module manifest, so no shell file names a module; the pill shares the `tasks.counts` query key, so every task mutation refreshes it.
 - TASKS-B16 **Totals**: `meta.counts` always ships; `meta.total` is present only when the request asks for it with `withTotal=true` (`04-api-conventions.md` § Lists).
 - TASKS-B15 **Invalidation**: any task mutation invalidates `tasks.list*`, `tasks.counts`, `tasks.detail(id)` and the parent's detail; changes to `committee_id`, `initiative_id`, or `owner_id` also invalidate the old and new target's `detail`; link changes invalidate both `links` keys.
 

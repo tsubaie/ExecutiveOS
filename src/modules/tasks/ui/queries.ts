@@ -34,6 +34,16 @@ export function useTasks(filters: Filters) {
     },
   };
 }
+// TASKS-B17: the shell badge needs the view counts, not the rows, so it asks for one row and
+// reads `meta.counts`. It shares the documented counts key, so any task mutation refreshes it.
+export function useTaskCount() {
+  const query = useQuery({
+    queryKey: ['tasks', 'counts', {}],
+    queryFn: () => request('/tasks?view=all&limit=1', TaskList),
+    refetchInterval: 60000,
+  });
+  return query.data?.meta.counts.all ?? null;
+}
 export function useTask(id: string | null, trash: boolean) {
   const query = useQuery({
     queryKey: ['tasks', 'detail', id, trash],

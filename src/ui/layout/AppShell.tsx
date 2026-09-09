@@ -36,17 +36,7 @@ export function AppShell({
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[208px_minmax(0,1fr)]">
-      <aside className="app-sidebar sticky top-0 hidden h-dvh flex-col border-e bg-surface p-5 lg:flex">
-        <Link href={routes.home()} className="mb-10 flex items-center gap-3 text-lg font-semibold">
-          <Command className="size-7 text-accent" />
-          {t('brand')}
-        </Link>
-        <p className="mb-3 px-3 text-xs text-text-muted">{t('workspace')}</p>
-        <nav className="space-y-1">
-          <ShellLinks role={user.role} />
-        </nav>
-        <WorkspaceIdentity workspace={workspace} user={user} />
-      </aside>
+      <Sidebar workspace={workspace} user={user} />
       <div className="min-w-0">
         <header className="flex min-h-18 items-center justify-between gap-2 border-b px-4 lg:px-8">
           <span className="truncate text-sm text-text-muted">
@@ -70,9 +60,32 @@ export function AppShell({
   );
 }
 
+function Sidebar({ workspace, user }: { workspace: string; user: ShellUser }) {
+  const t = useTranslations('common');
+  return (
+    <aside className="app-sidebar sticky top-0 hidden h-dvh flex-col border-e bg-surface p-5 lg:flex">
+      <Link href={routes.home()} className="mb-10 flex items-center gap-3 text-lg font-semibold">
+        <Command className="size-7 text-accent" />
+        {t('brand')}
+      </Link>
+      <p className="mb-3 px-3 text-xs text-text-muted">{t('workspace')}</p>
+      <nav className="space-y-1">
+        <ShellLinks role={user.role} scope="primary" />
+      </nav>
+      {/* ADMIN-B19: administration is an occasional destination, so it sits with the workspace
+          identity at the foot of the rail rather than among the everyday modules. */}
+      <div className="mt-auto space-y-1">
+        <nav className="space-y-1">
+          <ShellLinks role={user.role} scope="admin" />
+        </nav>
+        <WorkspaceIdentity workspace={workspace} user={user} />
+      </div>
+    </aside>
+  );
+}
 function WorkspaceIdentity({ workspace, user }: { workspace: string; user: ShellUser }) {
   return (
-    <div className="mt-auto border-t pt-5">
+    <div className="border-t pt-5">
       <p className="truncate font-medium">
         <bdi>{workspace}</bdi>
       </p>

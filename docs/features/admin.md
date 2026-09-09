@@ -38,6 +38,10 @@ Everything an administrator needs to run the installation from the browser: setu
 - ADMIN-B13 Restore is a command (`pnpm backup:restore <file>`) documented on the page; it puts the app in maintenance mode, restores DB and files, verifies, and exits maintenance. Maintenance mode returns 503 for all routes except health.
 - ADMIN-B14 Export `POST /admin/export` enqueues `system.export` producing a zip: `manifest.json`, one JSON file per table (excluding sessions, login_attempts, idempotency_keys, private notes of other users), markdown renders of notes and briefs, original documents that are available. The requesting admin's own private notes are included under their user id. Download when ready.
 
+## Shell placement
+
+- ADMIN-B19 The administration entry sits at the foot of the sidebar, above the workspace identity, not among the everyday modules; it is an occasional destination and the rail reads top-down by frequency of use. It stays absent for members (ADMIN-B03) and keeps its place in the mobile bar, where there is no top and bottom to separate.
+
 ## Deployment configuration
 
 - ADMIN-B17 Startup refuses a production configuration whose `APP_URL` is not HTTPS, unless the URL points at a loopback host (the documented opt-out for smoke-testing a production image locally). The session cookie's `Secure` flag is derived from that validated deployment mode rather than from the raw URL string, so a deployment typo cannot silently emit a non-Secure bearer cookie.
@@ -63,7 +67,7 @@ Everything an administrator needs to run the installation from the browser: setu
 
 ## Required scenarios
 
-- service/api: B01–B18 each; setup race; last-admin; session revocation matrix; settings role allowlists; export exclusions; maintenance mode gating.
+- service/api: B01–B19 each; setup race; last-admin; session revocation matrix; settings role allowlists; export exclusions; maintenance mode gating.
 - core adversarial: backup during writes; restore drill.
 - e2e `admin.spec.ts`: A01–A06.
 - Mutation targets: `lastAdminGuard`, `activateLearnings`, `exportExclusions`.
