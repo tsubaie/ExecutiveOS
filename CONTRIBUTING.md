@@ -23,7 +23,7 @@ See the Development section of `README.md` for the browser suite and the full ga
 
 ## The gate
 
-`pnpm audit:all` must pass before a pull request is opened. It runs lint, types, the dependency graph, thirteen audit scripts, the unit and integration suites, the production build, the browser suite, and the accessibility and performance checks. Locally it needs the `gitleaks` binary and a production build; CI installs both.
+`pnpm audit:all` must pass before a pull request is opened. It runs lint, types, the dependency graph, thirteen audit scripts, the unit and integration suites, the production build, the browser suite, and the accessibility and performance checks. Locally it needs the `gitleaks` binary and a production build; CI installs both. The gate is grouped into `audit:static`, `audit:data` and `audit:browser`, which CI runs as parallel jobs; run a single group while iterating and `audit:all` before you open the pull request.
 
 If an audit fails on something the docs did not anticipate, fix the code or fix the document in the same pull request. Never weaken a rule to get green.
 
