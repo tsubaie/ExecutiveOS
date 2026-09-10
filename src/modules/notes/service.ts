@@ -210,6 +210,10 @@ export function bulkTag(ctx: Context, input: BulkTag) {
     'tag',
   );
 }
+export async function listTypes(ctx: Context) {
+  const types = await noteTypes(ctx);
+  return { data: types, meta: { defaultType: await defaultType(ctx, types) } };
+}
 export async function listTags(ctx: Context) {
   return { data: await repo.selectTags(ctx.db) };
 }

@@ -84,6 +84,11 @@ module.exports = {
       { path: '(?:^|/)recharts(?:/|$)' },
     ),
     rule(
+      'markdown-renderer-only-in-ui-markdown',
+      { path: '^src/(?!ui/markdown/)' },
+      { path: '(?:^|/)(?:react-markdown|remark-gfm|rehype-sanitize)(?:/|$)' },
+    ),
+    rule(
       'client-validation-is-client-safe',
       { path: '^src/modules/[^/]+/schema/validation\\.ts$' },
       { path: server, reachable: true },

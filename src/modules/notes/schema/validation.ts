@@ -95,6 +95,10 @@ export const NoteType = z.object({
   enabled: z.boolean(),
 });
 export type NoteType = z.infer<typeof NoteType>;
+export const NoteTypes = z.object({
+  data: z.array(NoteType),
+  meta: z.object({ defaultType: z.string() }),
+});
 export const NoteListQuery = z.strictObject({
   view: z.string().max(120).default('all'),
   q: z.string().max(500).default(''),
@@ -110,7 +114,7 @@ export const NoteListQuery = z.strictObject({
 export type NoteListQuery = z.infer<typeof NoteListQuery>;
 export const Counts = z.record(z.string(), z.number());
 export const NoteList = z.object({
-  data: z.array(Note),
+  data: z.array(NoteDetail),
   meta: z.object({
     counts: Counts,
     total: z.number(),

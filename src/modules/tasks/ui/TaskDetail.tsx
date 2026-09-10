@@ -1,7 +1,7 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { Trash2 } from 'lucide-react';
+import { Trash2, NotebookPen } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { useDateTime, useRelativeTime } from '@/ui/format';
 import { routes } from '@/core/routes';
@@ -63,6 +63,20 @@ function TaskFooter({ task, remove }: { task: Detail; remove: () => void }) {
         {task.ownerId && (
           <Link href={routes.person(task.ownerId)} className="text-accent">
             <bdi>{task.ownerName ?? t('owner')}</bdi>
+          </Link>
+        )}
+        {task.sourceNote && (
+          <Link
+            href={routes.notes({
+              view: task.sourceNote.deletedAt ? 'trash' : 'all',
+              id: task.sourceNote.id,
+            })}
+            className="inline-flex min-w-0 items-center gap-1 text-accent"
+          >
+            <NotebookPen className="size-3.5 shrink-0" aria-hidden />
+            <span className="truncate">
+              {task.sourceNote.deletedAt ? t('noteTrashed') : task.sourceNote.title}
+            </span>
           </Link>
         )}
         <span title={dateTime(task.updatedAt)}>

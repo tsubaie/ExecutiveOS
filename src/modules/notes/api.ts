@@ -12,6 +12,7 @@ import {
   BulkTag,
   BulkResult,
   TagList,
+  NoteTypes,
 } from './schema/validation';
 import * as service from './service';
 const noteId = (params: Record<string, string>) => z.uuid().parse(params.id);
@@ -99,6 +100,12 @@ export const bulkTag = defineHandler({
   response: BulkResult,
   idempotent: true,
   handler: (input, ctx) => service.bulkTag(authenticated(ctx), input),
+});
+export const types = defineHandler({
+  guard: 'session',
+  input: z.strictObject({}),
+  response: NoteTypes,
+  handler: (_input, ctx) => service.listTypes(authenticated(ctx)),
 });
 export const tags = defineHandler({
   guard: 'session',

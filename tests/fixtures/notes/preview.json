@@ -1,0 +1,28 @@
+{
+  "en": {
+    "prefix": "Office preview:",
+    "titles": [
+      "Office preview: Board meeting on the quarterly plan",
+      "Office preview: One-on-one with the operations director",
+      "Office preview: Sector meeting on regional expansion"
+    ],
+    "types": ["board_meeting", "one_on_one", "sector_meeting"],
+    "tags": ["Budget", "Q3"],
+    "content": "# Decisions\n\n- Approve the revised budget\n- Move the launch to October\n\n## Follow-ups\n\nCirculate the updated plan before the next meeting.",
+    "tasks": ["Circulate the updated plan", "Draft the launch timeline"],
+    "people": ["Office preview: Leila Haddad", "Office preview: Omar Nasser"]
+  },
+  "ar": {
+    "prefix": "معاينة المكتب:",
+    "titles": [
+      "معاينة المكتب: اجتماع المجلس حول الخطة الفصلية",
+      "معاينة المكتب: لقاء ثنائي مع مدير العمليات",
+      "معاينة المكتب: اجتماع القطاع حول التوسع الإقليمي"
+    ],
+    "types": ["board_meeting", "one_on_one", "sector_meeting"],
+    "tags": ["الميزانية", "الربع الثالث"],
+    "content": "# القرارات\n\n- اعتماد الميزانية المعدّلة\n- تأجيل الإطلاق إلى أكتوبر\n\n## المتابعات\n\nتعميم الخطة المحدّثة قبل الاجتماع القادم.",
+    "tasks": ["تعميم الخطة المحدّثة", "إعداد جدول الإطلاق"],
+    "people": ["معاينة المكتب: ليلى حداد", "معاينة المكتب: عمر ناصر"]
+  }
+}
