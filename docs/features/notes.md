@@ -11,7 +11,7 @@ Capture meeting and personal notes fast, record who was involved, turn what was 
 
 ## Vocabulary
 
-Note (title, markdown content, type, date, tags, participants, tasks), Type (configurable identifiers; defaults `board_meeting`, `executive_meeting`, `sector_meeting`, `one_on_one`, `personal`, `other`), Participant (a person involved in the note, stored in `note_people`, ADR 0014), Linked task (a task whose `source_note_id` is the note), Refinement (AI proposal awaiting review; Phase 3b).
+Note (title, markdown content, type, date, tags, participants, tasks), Type (configurable identifiers; defaults `board_meeting`, `executive_meeting`, `sector_meeting`, `one_on_one`, `personal`, `other`), Participant (a person mentioned in the note's content, stored in `note_people`, ADR 0014), Mention (`@Name` in the content), Linked task (a task whose `source_note_id` is the note), Refinement (AI proposal awaiting review; Phase 3b).
 
 ## Data model
 
@@ -33,8 +33,8 @@ See `03-data-model.md` § notes, note_people, note_refinements. Invariants:
 - NOTES-B04 **Search** `q` over title and content through `search_text`, and over tags and participant names by normalized match; Arabic normalization applies to all.
 - NOTES-B05 **Sort**: `note_date desc, created_at desc, id desc` (default), `title`, `created_at`; each with `id` tiebreak; keyset cursors.
 - NOTES-B06 **Bands** for grouping, computed by one function `bandOf(noteDate, today)`: `upcoming` (`note_date > today`), `today`, `week` (within the previous six days), `month` (within the previous thirty days), `earlier`. No grouping in `trash`.
-- NOTES-B07 **Detail** returns the note with `participants[]` (id, name, kind, deleted flag) and `tasks[]` (open first by due date then title, then completed by `completed_at` desc; each with id, title, status, priority, due date, owner name). PATCH carries `revision` and may change title, content, type, date, tags and `participantIds` (replaces the set).
-- NOTES-B08 **Participants**: any non-deleted person, internal or external, assignable or not. The picker offers "Add <name>" for an unknown name, which creates an external, non-assignable person through `POST /people` and adds them. Typing `@` anywhere in the content opens a list of people filtered by the text after it; picking one inserts `@Name` at the caret and adds that person to the participants if not already there. Mentions are plain text in the stored markdown.
+- NOTES-B07 **Detail** returns the note with `participants[]` (id, name, kind) and `tasks[]` (open first by due date then title, then completed by `completed_at` desc; each with id, title, status, priority, due date, owner name). PATCH carries `revision` and may change title, content, type, date, tags and `participantIds` (replaces the set). The content commits when the editor is left; the same patch carries the participants derived from its mentions (B08).
+- NOTES-B08 **Participants are the people mentioned in the content.** Typing `@` anywhere in the content opens a list of people filtered by the text after it; arrows move through the whole list and wrap, Enter or Tab inserts `@Name` at the caret, Escape closes, and the list stays closed for a name just picked until a new `@` is typed. An unknown name offers "Add <name>", which creates an external, non-assignable person through `POST /people` and inserts the mention. When the content is committed, `participantIds` is recomputed as the people (from the workspace directory plus the note's current participants) whose `@Name` appears in the content, so removing a mention removes the participant. There is no separate participants editor; mentions are plain text in the stored markdown.
 - NOTES-B09 **Tasks panel**: "+ Task" creates a task with `sourceNoteId` set from a title-only inline row (`POST /tasks`). "Attach task" lists open top-level unlinked tasks (`GET /tasks?view=all&hasSourceNote=false&hasSubtasks=false`) and sets `sourceNoteId` by PATCH. Detach patches `sourceNoteId` to null. The complete toggle calls `POST /tasks/:id/complete`. Row counts `openTaskCount` and `doneTaskCount` come from the same statement as the list.
 - NOTES-B10 **Archive** `POST /notes/:id/archive { revision }` sets `archived_at`; `unarchive` clears it. Archived notes keep every relationship.
 - NOTES-B11 **Trash** soft-deletes with an op id; `restore { opId }` restores exactly that row; purge after `retention.trash_days`.
@@ -43,6 +43,7 @@ See `03-data-model.md` § notes, note_people, note_refinements. Invariants:
 - NOTES-B14 **Home**: `homeSummary` contributes one section "Recent notes": non-archived notes with `note_date` within the last seven days, count and up to five items newest first, `href` to `notes?view=this_week`.
 - NOTES-B15 **Person page**: the person detail shows a Notes section with the latest five notes where the person is a participant and a link to `notes?personId=<id>`; the notes module exposes `listNotes` for it.
 - NOTES-B16 **Invalidation**: any note mutation invalidates `notes.list*`, `notes.counts`, `notes.detail(id)`, `notes.tags`, `home`, and the details of the people whose participation changed; task mutations invalidate `notes` (counts and panels).
+- NOTES-B20 **Types are administered**: the note types (identifier, label per locale, enabled) and the default type are edited on the Administration → Note types page, which writes `notes.types` and `notes.default_type` (`ADMIN-B08`). Disabling a type keeps it on existing notes (I02); `GET /notes/types` returns the enabled types with labels and the resolved default.
 - NOTES-B17 **AI**: Refine and Suggest tags are absent from the UI and their routes return 503 `ai_unavailable` until the capabilities exist (Phase 3b). The contract below is binding for that work.
 
 ## API
@@ -59,9 +60,9 @@ See `03-data-model.md` § notes, note_people, note_refinements. Invariants:
 
 ## UI
 
-List on the entity framework. Row: title (`unicode-bidi: plaintext`), date label (relative within six days, otherwise the date), type chip, participant avatars (up to three, then "+n"), open/done task count, tags trailing on wide lists and hidden on a phone; an archived note in search results carries an "Archived" chip. Rail: All, This week, one entry per enabled type, then Archived and Trash under a divider. Grouped by band (B06). Facets: type, tag, person. Bulk bar: Archive (confirm) and Add tag (dialog with autocomplete).
+List on the entity framework. Row: title (`unicode-bidi: plaintext`), date label (relative within six days, otherwise the date), type chip when the note has a type, open/done task count, tags trailing on wide lists and hidden on a phone; an archived note in search results carries an "Archived" chip. Participants render beside the row through `renderers.rowTrail` as initials avatars (`PersonAvatar`, up to three then "+n"), so pressing one reveals the full name exactly as the owner avatar does on Tasks (`PEOPLE-B09`, `EP-B20`) instead of opening the note. Rail: All, This week, one entry per enabled type, then Archived and Trash under a divider. Grouped by band (B06). Facets: type, tag, person. Bulk bar: Archive (confirm) and Add tag (dialog with autocomplete).
 
-Detail: the title is the editable heading (labelled "Note title"), then type and date as label/value rows, participants as avatar chips with a searchable picker and quick-create, tags as chips with an autocomplete input (overflow beyond ten is blocked with a count), content shown as the rendered markdown (`src/ui/markdown`, ADR 0015) that turns into a textarea when entered and back into the preview when left, with `@` mentions, the tasks panel (B09) with completed tasks collapsed under a count, footer with relative "Updated", Archive and Move to trash. Autosave through the framework save queue; `revision` conflicts keep the draft.
+Detail: the title is the editable heading (labelled "Note title"), then type and date as label/value rows, participants as a read-only row of avatar chips that link to the person's page (like the owner link on a task), tags as chips with an autocomplete input (overflow beyond ten is blocked with a count), content shown as the rendered markdown (`src/ui/markdown`, ADR 0015) that turns into a textarea when entered and back into the preview when left, with `@` mentions, the tasks panel (B09) with completed tasks collapsed under a count, footer with relative "Updated", Archive and Move to trash. Autosave through the framework save queue; `revision` conflicts keep the draft.
 
 Create: title, type ("No type" unless `notes.default_type` is set), date (today). Mobile: the panel bar reads Back · save state; tags below the title.
 
@@ -87,7 +88,7 @@ Type labels come from `notes.types` per locale; the six defaults have catalog en
 ## Acceptance criteria
 
 - NOTES-A01 Creating a note with a title, type and date shows it under Today in All; opening it shows the fields empty of participants and tasks. (en, ar)
-- NOTES-A02 Adding two participants, one of them quick-created by name, shows both on the row; the created person's page lists the note. (en)
+- NOTES-A02 Mentioning a known person in the content adds them as a participant; "Add <name>" for an unknown name creates the person and adds them; both appear beside the row and the created person's page lists the note. (en)
 - NOTES-A03 "+ Task" with a title creates a linked task in the panel; completing it from the panel moves it under Completed and the row count reads one done. (en, ar)
 - NOTES-A04 "Attach task" offers an open unlinked task and not one already linked to another note; attaching shows it in the panel and on the task as a source note chip. (en)
 - NOTES-A05 Archiving hides the note from All and shows it under Archived; searching its title from All finds it with an Archived chip. (en)
@@ -97,6 +98,7 @@ Type labels come from `notes.types` per locale; the six defaults have catalog en
 - NOTES-A09 Preview renders headings and lists, strips a script tag and a remote image, and lays Arabic content out right-to-left. (ar)
 - NOTES-A10 With AI disabled, Refine and Suggest tags are absent and their routes return 503. (en)
 - NOTES-A11 Home shows Recent notes with the note created today; with no recent notes the section collapses. (en)
+- NOTES-A12 An administrator adds a note type with English and Arabic labels and sets it as the default; the new type appears in the rail and the create form. (en)
 
 ## Required scenarios
 
@@ -105,8 +107,8 @@ Type labels come from `notes.types` per locale; the six defaults have catalog en
 - constraints: title CHECK, tags cardinality CHECK, participant uniqueness, `tasks.source_note_id` set null on purge.
 - repo: each view equals its count under facets; archived-in-search rule; participant name search; sort tuples; cursor continuation; one statement for the list with counts.
 - api: all endpoints per `08` item 4; bulk 409 and 422 leave nothing changed; refine and suggest-tags 503.
-- ui: row, bands, detail edits, participant picker with quick-create, tag overflow block, tasks panel create/attach/detach/complete, preview toggle.
-- e2e `notes.spec.ts`: A01–A11 in the listed locales.
+- ui: row, bands, detail edits, mention menu (filter, arrows, insert, dismissal, quick-create), derived participants, tag overflow block, tasks panel create/attach/detach/complete, editor enter and leave, note types editor.
+- e2e `notes.spec.ts`: A01–A12 in the listed locales.
 - Mutation targets: `bandOf`, `bulkArchive`, `attachTask` (in tasks: `TASKS-B16` rule).
 
 ## Audit items

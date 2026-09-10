@@ -9,13 +9,10 @@ const Environment = z.object({
   DATABASE_URL_TEST: optionalText,
   SESSION_SECRET: z.string().min(32),
   APP_URL: z.string().url().default(defaults.appUrl),
-  TRUSTED_PROXY_CIDRS: z
-    .string()
-    .default('')
-    .refine(validProxyCidrs, {
-      message:
-        'TRUSTED_PROXY_CIDRS must be a comma-separated list of IP addresses or CIDR blocks, for example "10.0.0.0/8, fd00::/8"',
-    }),
+  TRUSTED_PROXY_CIDRS: z.string().default('').refine(validProxyCidrs, {
+    message:
+      'TRUSTED_PROXY_CIDRS must be a comma-separated list of IP addresses or CIDR blocks, for example "10.0.0.0/8, fd00::/8"',
+  }),
   ANTHROPIC_API_KEY: optionalText,
   FILES_DIR: z.string().default(defaults.filesDir),
   BACKUP_DIR: z.string().default(defaults.backupDir),

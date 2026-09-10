@@ -4,7 +4,7 @@ import { insertUser } from '@/core/db/auth-repo';
 import { User } from '@/core/http/user-schema';
 import { id } from '@/core/db/ids';
 import { createPerson } from '@/modules/people';
-import { PersonCreate } from '@/modules/people/schema/validation';
+import { PersonCreate, personDraft } from '@/modules/people/schema/validation';
 import { createTask } from '@/modules/tasks/service';
 import { TaskCreate } from '@/modules/tasks/schema/validation';
 import { NoteCreate } from '../schema/validation';
@@ -38,25 +38,7 @@ export const harness = {
   },
   async person(fullName: string, fields: Partial<PersonCreate> = {}) {
     const created = await harness.run((ctx) =>
-      createPerson(
-        ctx,
-        PersonCreate.parse({
-          fullName,
-          kind: 'external',
-          isAssignable: false,
-          tags: [],
-          email: null,
-          phone: null,
-          notes: null,
-          displayName: null,
-          honorific: null,
-          organization: null,
-          roleTitle: null,
-          userId: null,
-          confirmDuplicate: true,
-          ...fields,
-        }),
-      ),
+      createPerson(ctx, PersonCreate.parse({ ...personDraft(fullName), ...fields })),
     );
     if (!created.data) throw new Error('person not created');
     return created.data;

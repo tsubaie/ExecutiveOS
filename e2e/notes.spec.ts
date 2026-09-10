@@ -3,6 +3,7 @@ import { loginAs } from './fixtures/auth';
 import { selectView } from './fixtures/views';
 import en from '../src/core/i18n/messages/en.json' with { type: 'json' };
 import ar from '../src/core/i18n/messages/ar.json' with { type: 'json' };
+import { personDraft } from '../src/modules/people/schema/validation';
 type Body = { data?: { id: string; revision: number } };
 const created = new WeakMap<Page, { resource: string; id: string }[]>();
 test.beforeEach(({ page }) => {
@@ -90,28 +91,13 @@ for (const locale of ['en', 'ar']) {
     await expect(rows(page).first().getByText('0/1')).toBeVisible();
   });
 }
-test('NOTES-A02 NOTES-B08 a mention adds a participant, quick-create adds another, both reach the row and the person page', async ({
+test('NOTES-A02 NOTES-B08 a mention adds a participant, "Add name" creates another, both reach the row and the person page', async ({
   page,
 }) => {
   await loginAs(page, 'en');
   const title = `Participants ${crypto.randomUUID()}`;
-  const known = (
-    await api(page, 'people', '', 'POST', {
-      fullName: `Known ${crypto.randomUUID()}`,
-      kind: 'external',
-      isAssignable: false,
-      tags: [],
-      email: null,
-      phone: null,
-      notes: null,
-      displayName: null,
-      honorific: null,
-      organization: null,
-      roleTitle: null,
-      userId: null,
-      confirmDuplicate: true,
-    })
-  ).body.data;
+  const known = (await api(page, 'people', '', 'POST', personDraft(`Known ${crypto.randomUUID()}`)))
+    .body.data;
   const created = await note(page, title);
   await page.goto(`/notes?view=all&q=${encodeURIComponent(title)}&id=${created.id}`);
   const content = detail(page).getByLabel(en.notes.content, { exact: true });
@@ -119,26 +105,25 @@ test('NOTES-A02 NOTES-B08 a mention adds a participant, quick-create adds anothe
   await content.press('End');
   await page.getByRole('option', { name: known.fullName }).click();
   await expect(content).toHaveValue(`Met @${known.fullName} `);
-  await expect(
-    detail(page).getByRole('button', {
-      name: en.notes.removeParticipant.replace('{name}', known.fullName),
-    }),
-  ).toBeVisible();
+  const fresh = `New Person ${crypto.randomUUID().slice(0, 8)}`;
+  await content.press('End');
+  await content.pressSequentially(`and @${fresh}`);
+  await page
+    .getByRole('option', { name: en.common.mentionCreate.replace('{name}', fresh) })
+    .click();
+  await expect(content).toHaveValue(`Met @${known.fullName} and @${fresh} `);
   await detail(page).getByLabel(en.notes.title, { exact: true }).click();
   await expect
-    .poll(async () => (await api(page, 'notes', `/${created.id}`)).body.data.content)
-    .toBe(`Met @${known.fullName} `);
+    .poll(async () => (await api(page, 'notes', `/${created.id}`)).body.data.participants.length)
+    .toBe(2);
+  await expect(detail(page).getByRole('link', { name: known.fullName })).toBeVisible();
+  await expect(detail(page).getByRole('link', { name: fresh })).toBeVisible();
   await expect(
     detail(page).getByRole('button', { name: en.notes.content, exact: true }),
   ).toBeVisible();
-  const fresh = `New Person ${crypto.randomUUID().slice(0, 8)}`;
-  await detail(page).getByRole('combobox', { name: en.notes.addParticipant }).click();
-  await page.getByLabel(en.notes.participantSearch).fill(fresh);
-  await page.getByRole('option', { name: en.notes.addPerson.replace('{name}', fresh) }).click();
-  await expect(
-    detail(page).getByRole('button', { name: en.notes.removeParticipant.replace('{name}', fresh) }),
-  ).toBeVisible();
-  await expect(rows(page).first().getByText(fresh)).toBeAttached();
+  await page.goto(`/notes?view=all&q=${encodeURIComponent(title)}`);
+  await expect(rows(page)).toHaveCount(1);
+  await expect(page.getByRole('button', { name: `Show ${fresh}` })).toBeVisible();
   const person = (await api(page, 'people', `?view=all&q=${encodeURIComponent(fresh)}`)).body
     .data[0];
   expect(person.isAssignable).toBe(false);
@@ -243,23 +228,7 @@ test('NOTES-A08 NOTES-A09 Arabic search finds normalized content, a tag and a pa
 }) => {
   await loginAs(page, 'ar');
   const marker = crypto.randomUUID().slice(0, 8);
-  const person = (
-    await api(page, 'people', '', 'POST', {
-      fullName: `سامر ${marker}`,
-      kind: 'external',
-      isAssignable: false,
-      tags: [],
-      email: null,
-      phone: null,
-      notes: null,
-      displayName: null,
-      honorific: null,
-      organization: null,
-      roleTitle: null,
-      userId: null,
-      confirmDuplicate: true,
-    })
-  ).body.data;
+  const person = (await api(page, 'people', '', 'POST', personDraft(`سامر ${marker}`))).body.data;
   const created = await note(page, `إِعداد الميزانية ${marker}`, {
     content: '# جدول الأعمال\n\nنقاط النقاش',
     tags: [`مُتابعة${marker}`],
@@ -286,4 +255,43 @@ test('NOTES-A11 HOME-B01 home lists recent notes and collapses the section when 
   await page.goto('/home');
   await expect(page.getByRole('link', { name: title })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: en.home.notes })).toBeVisible();
+});
+test('NOTES-A12 NOTES-B20 ADMIN-B08 an administrator adds a note type and makes it the default', async ({
+  page,
+}) => {
+  await loginAs(page, 'en');
+  const id = `sync_${crypto.randomUUID().slice(0, 6)}`;
+  await page.goto('/admin/notes');
+  await page.getByLabel(en.admin.typeId, { exact: true }).fill(id);
+  await page.getByLabel(en.admin.labelEn, { exact: true }).fill('Sync meeting');
+  await page.getByLabel(en.admin.labelAr, { exact: true }).fill('اجتماع تزامن');
+  await page.getByRole('button', { name: en.admin.addType, exact: true }).click();
+  await page.getByRole('radio', { name: `${en.admin.defaultType} ${id}` }).check();
+  await page.getByRole('button', { name: en.common.save, exact: true }).click();
+  await expect(page.getByRole('status')).toContainText(en.common.saved);
+  try {
+    await page.goto('/notes?view=all');
+    await selectView(page, 'en', /Sync meeting/);
+    await expect(page).toHaveURL(new RegExp(`view=type%3A${id}`));
+    await page.getByRole('button', { name: en.common.create, exact: true }).click();
+    await expect(page.getByLabel(en.notes.type, { exact: true })).toContainText('Sync meeting');
+  } finally {
+    await page.evaluate(async () => {
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'ExecutiveOS',
+        'Idempotency-Key': crypto.randomUUID(),
+      };
+      await fetch('/api/v1/admin/settings', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ key: 'notes.default_type', value: null }),
+      });
+      await fetch('/api/v1/admin/settings', {
+        method: 'PATCH',
+        headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({ key: 'notes.types', value: [] }),
+      });
+    });
+  }
 });

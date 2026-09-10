@@ -3,7 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MarkdownField } from '@/ui/markdown/MarkdownField';
 import { Markdown } from '@/ui/markdown/Markdown';
-import { insertMention, matchMentions, mentionAt } from '@/ui/markdown/mentions';
+import {
+  derivedParticipants,
+  insertMention,
+  matchMentions,
+  mentionAt,
+} from '@/ui/markdown/mentions';
 import { mount } from './harness';
 const content = [
   '# Agenda',
@@ -83,6 +88,23 @@ describe('markdown field', () => {
     fireEvent.keyUp(area, { key: '@' });
     expect(screen.getAllByRole('option')).toHaveLength(3);
   });
+  it('NOTES-B08 a multi-word unknown name still offers "Add" when creation is allowed', async () => {
+    const onPick = vi.fn();
+    mount(
+      <MarkdownField
+        label="Content"
+        value=""
+        mentions={{ items: people, onPick, allowCreate: true }}
+      />,
+    );
+    const area = (await screen.findByRole('textbox', { name: 'Content' })) as HTMLTextAreaElement;
+    fireEvent.change(area, { target: { value: 'with @Nadia Q' } });
+    fireEvent.keyUp(area, { key: 'Q' });
+    const option = screen.getByRole('option', { name: 'Add “Nadia Q”' });
+    fireEvent.mouseDown(option);
+    expect(onPick).toHaveBeenCalledWith({ id: 'new:Nadia Q', name: 'Nadia Q', create: true });
+    expect(area.value).toBe('with @Nadia Q ');
+  });
   it('NOTES-B08 arrow keys move through the whole list and wrap', async () => {
     mount(<MarkdownField label="Content" value="" mentions={{ items: people, onPick: vi.fn() }} />);
     const area = (await screen.findByRole('textbox', { name: 'Content' })) as HTMLTextAreaElement;
@@ -117,5 +139,19 @@ describe('mention helpers', () => {
       text: 'hello @Omar Nasser  there',
       caret: 19,
     });
+  });
+  it('NOTES-B08 offers to add an unknown name and derives participants from the content', () => {
+    expect(matchMentions(people, 'Nadia', true).map((p) => p.id)).toEqual(['new:Nadia']);
+    expect(matchMentions(people, 'Leila Haddad', true).map((p) => p.id)).toEqual(['a']);
+    expect(matchMentions(people, '', true).map((p) => p.create ?? false)).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(derivedParticipants('Met @Omar Nasser and @سامر منصور today', people)).toEqual([
+      'b',
+      'c',
+    ]);
+    expect(derivedParticipants('nobody here', people)).toEqual([]);
   });
 });

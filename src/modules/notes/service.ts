@@ -12,6 +12,8 @@ import { routes } from '@/core/routes';
 import type { HomeSection } from '@/core/modules/server-manifest';
 import { dayAt, addDays, bandOf } from '@/core/time/notes';
 import { getPerson } from '@/modules/people';
+import en from '@/core/i18n/messages/en.json';
+import ar from '@/core/i18n/messages/ar.json';
 import {
   Note,
   NoteDetail,
@@ -38,7 +40,11 @@ const ops: EntityOps<NoteDetail, NoteRow, Patch> = {
 export async function noteTypes(ctx: Context): Promise<NoteType[]> {
   const configured = await getSetting(ctx.db, 'notes.types');
   if (configured.length) return configured;
-  return defaultTypes.map((typeId) => ({ id: typeId, labels: null, enabled: true }));
+  return defaultTypes.map((typeId) => ({
+    id: typeId,
+    labels: { en: en.notes[typeId], ar: ar.notes[typeId] },
+    enabled: true,
+  }));
 }
 const enabledIds = (types: NoteType[]) =>
   types.filter((type) => type.enabled).map((type) => type.id);

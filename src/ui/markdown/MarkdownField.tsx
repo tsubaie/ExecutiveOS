@@ -16,7 +16,7 @@ type Props = {
   className?: string;
   mentions?: Mentions;
 };
-// Markdown editing (ADR 0013): the field shows the rendered preview and becomes a textarea when
+// Markdown editing (ADR 0015): the field shows the rendered preview and becomes a textarea when
 // entered; leaving it commits a changed draft and shows the preview again. Empty content stays a
 // textarea, since there is nothing to preview. With `mentions`, typing "@" opens a list of people
 // and picking one inserts "@Name" and reports the pick. The draft re-bases on the saved value when

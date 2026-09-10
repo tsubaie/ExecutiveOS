@@ -22,7 +22,9 @@ describe('trusted client address', () => {
     expect(clientIp(requestFrom('203.0.113.9, 10.0.0.7'), trusted)).toBe('203.0.113.9');
     // An attacker controls only what it prepends; the proxy appends the address it actually saw.
     expect(clientIp(requestFrom('1.1.1.1, 203.0.113.9, 10.0.0.7'), trusted)).toBe('203.0.113.9');
-    expect(clientIp(requestFrom('203.0.113.9, 192.168.1.4, 10.0.0.7'), trusted)).toBe('203.0.113.9');
+    expect(clientIp(requestFrom('203.0.113.9, 192.168.1.4, 10.0.0.7'), trusted)).toBe(
+      '203.0.113.9',
+    );
   });
   it('ADMIN-B20 an absent header or an all-proxy chain resolves to no client address', () => {
     const trusted = config('10.0.0.0/8');

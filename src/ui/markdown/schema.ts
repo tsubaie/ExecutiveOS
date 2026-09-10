@@ -1,5 +1,5 @@
 import { defaultSchema, type Options } from 'rehype-sanitize';
-// ADR 0013: the library default minus images, with links limited to http(s) and mailto and no
+// ADR 0015: the library default minus images, with links limited to http(s) and mailto and no
 // author-controlled ids, classes or styles. Code blocks keep their language class for styling.
 const stripped = new Set(['id', 'className', 'style']);
 const global = (defaultSchema.attributes?.['*'] ?? []).filter(

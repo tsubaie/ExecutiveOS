@@ -7,7 +7,7 @@ function withQuery(path: string, query: Query = {}) {
   const encoded = params.toString();
   return encoded ? `${path}?${encoded}` : path;
 }
-export type AdminPage = 'users' | 'settings' | 'ai' | 'backups' | 'jobs' | 'audit';
+export type AdminPage = 'users' | 'settings' | 'notes' | 'ai' | 'backups' | 'jobs' | 'audit';
 export const routes = {
   root: () => '/',
   home: () => '/home',

@@ -4,7 +4,7 @@ Status: complete
 
 ## Summary
 
-Notes ship as standalone entities on the entity framework: title, markdown content with a sanitized preview, type, date, tags, participants, and linked tasks. The thread model in the original spec was replaced after the maintainer's planning review on 2026-09-10 (ADR 0012); the markdown renderer decision is ADR 0013. Bulk archive and bulk tag replace merge as the framework's multiselect validation. Tasks gained the `source_note_id` column with the `TASKS-B16` attach rule and source-note facets, the person page gained a Notes section, and Home gained a Recent notes section. Refine and Suggest tags stay absent and their routes answer 503 until the AI foundation (Phase 3b).
+Notes ship as standalone entities on the entity framework: title, markdown content with a sanitized preview, type, date, tags, participants, and linked tasks. The thread model in the original spec was replaced after the maintainer's planning review on 2026-09-10 (ADR 0012 on main records the no-threading decision; ADR 0014 records participants and linked tasks); the markdown renderer decision is ADR 0015. Bulk archive and bulk tag replace merge as the framework's multiselect validation. Tasks gained the `source_note_id` column with the `TASKS-B16` attach rule and source-note facets, the person page gained a Notes section, and Home gained a Recent notes section. Refine and Suggest tags stay absent and their routes answer 503 until the AI foundation (Phase 3b).
 
 ## Follow-up after the maintainer's first test (2026-09-10)
 
@@ -14,7 +14,14 @@ Three product changes requested on the running branch and shipped in the same PR
 2. **One editor surface**: the content shows the rendered markdown; entering it (click, Enter or Space on the preview button) opens the textarea, leaving it commits and shows the preview again; empty content stays a textarea. The Write / Preview switch is gone. Links inside the editable preview render as text because a control cannot contain another control; the standalone renderer keeps links. The editor half loads lazily so the Tasks route stays under the bundle budget (notes.md § UI, NOTES-B07).
 3. **`@` mentions**: typing `@` in the content lists people filtered by the text after it; arrows move and wrap, Enter or Tab inserts `@Name` at the caret, Escape closes; the picked person is added to the participants (NOTES-B08). After the maintainer's second test, two bugs were fixed: the highlight reset on every key-up, and a picked name (which contains a space) kept reopening the menu; the menu now stays closed for the picked token and treats a multi-word query that matches nobody as prose. Covered by `tests/ui/markdown.test.tsx` and the NOTES-A02 scenario.
 
-ADR 0013 still describes the original "textarea with a preview toggle" in its context paragraph; the accepted decision (the renderer and sanitizer) is unchanged and the spec now governs the editor behavior.
+After the maintainer's third test, three more changes, plus a rebase:
+
+4. **Participants come from mentions only.** The participants editor and picker are gone; `@` mentions (with "Add <name>" for an unknown name, which creates the person) are the way to involve people, and the participants saved with the content are the people whose `@Name` appears in it, so removing a mention removes the participant. The detail shows participants as chips linking to their pages, like the owner link on a task (NOTES-B07, B08).
+5. **Row avatars behave like Tasks.** Participants render beside the row through the framework's `renderers.rowTrail` with `PersonAvatar`, so pressing one reveals the name instead of opening the note (EP-B20, PEOPLE-B09), reusing what main added for task owners.
+6. **Note types are administered** on the new Administration → Note types page (`/admin/notes`): identifiers, English and Arabic labels, enabled, and the default, written to `notes.types` and `notes.default_type` (ADMIN-B08, NOTES-B20, NOTES-A12). `GET /notes/types` now returns catalog labels for the six defaults so the page and the rail share one source.
+7. **Rebased onto `origin/main` (6d548ba).** Main had meanwhile accepted its own ADR 0012 (notes are never threaded) and ADR 0013 (trusted client addresses) and rewritten the notes-related docs; per the maintainer, our notes spec is the final one and was kept, with only the ADR numbers reconciled: our decisions are now ADR 0014 (participants and linked tasks) and ADR 0015 (markdown rendering), and the spec cites main's 0012 for the no-threading rule. Conflicts in `TaskRow`, `TaskTextFields` (the render-prop `Field`), the create form and the data-model doc were resolved by hand. Two small fixes rode along: the duplicate sort-option block on the Tasks and Notes pages became `src/ui/entity/filters.ts`, and the audit log's scrollable diff block gained `tabIndex` for the axe `scrollable-region-focusable` rule. Running the auth suite locally needs `RECOVERY_TOKEN` in `.env.test` as in `.env.test.example`.
+
+ADR 0015 still describes the original "textarea with a preview toggle" in its context paragraph; the accepted decision (the renderer and sanitizer) is unchanged and the spec now governs the editor behavior.
 
 ## Requirement → scenario
 
@@ -32,7 +39,8 @@ ADR 0013 still describes the original "textarea with a preview toggle" in its co
 | NOTES-B12, A06 | `service.test.ts`, `e2e/notes.spec.ts` | bulk archive and tag are all-or-nothing; bulk bar flow |
 | NOTES-B13 | `service.test.ts` | distinct tags with counts |
 | NOTES-B14, A11, HOME-B01 | `service.test.ts`, `e2e/notes.spec.ts` | recent notes section, collapse when empty |
-| NOTES-B15, A02 | `e2e/notes.spec.ts` | mention adds a participant, quick-created participant, person page Notes section |
+| NOTES-B15, A02 | `e2e/notes.spec.ts` | mention adds a participant, "Add name" creates one, person page Notes section |
+| NOTES-B20, A12, ADMIN-B08 | `e2e/notes.spec.ts` | administrator adds a note type and makes it the default |
 | NOTES-A03 | `e2e/notes.spec.ts` | "+ Task" creates a linked task; completing it moves it under Completed |
 | NOTES-A04 | `e2e/notes.spec.ts` | attach an existing unlinked task; a linked one is not offered |
 | NOTES-A05 | `e2e/notes.spec.ts`, `tests/ui/note-row.test.tsx` | archive hides from All, shows under Archived, found by search with the chip |
@@ -43,8 +51,8 @@ ADR 0013 still describes the original "textarea with a preview toggle" in its co
 
 ## Files changed
 
-- `src/modules/notes`: schema (db, validation), repo, service, api, index, manifest, ui (page, row, detail, fields, participants, tags, tasks panel, add-tag dialog, person section, queries, labels), tests (schema, service, repo, constraints, ui).
-- `src/app/(app)/notes`, `src/app/api/v1/notes/**`: page and route files.
+- `src/modules/notes`: schema (db, validation), repo, service, api, index, manifest, ui (page, row, detail, fields, tags, tasks panel, add-tag dialog, person section, note types admin page, queries, labels), tests (schema, service, repo, constraints, ui).
+- `src/app/(app)/notes`, `src/app/(app)/admin/notes`, `src/app/api/v1/notes/**`: page and route files; `AdminLayout` and `routes.admin` gain the `notes` page; `src/modules/settings/ui` exports its settings hooks.
 - `src/ui/markdown`: sanitize schema, `Markdown`, `MarkdownField` with the lazily loaded `MarkdownEditor`, `MentionMenu` and `mentions.ts` helpers (ADR 0013); `.dependency-cruiser.cjs` rule confining the renderer packages.
 - `src/modules/tasks`: `source_note_id` column and index, `sourceNote` on rows, `sourceNoteId` and `hasSourceNote` facets, `TASKS-B16` rule, source note chip and link, markdown description field, exported `useTaskMutations` and `useTasks`, `notes` in the invalidation list.
 - `src/modules/people/ui/PersonDetail.tsx`: Notes section. `src/modules/home`: `notes` section key.

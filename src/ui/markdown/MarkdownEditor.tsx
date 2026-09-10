@@ -75,7 +75,8 @@ function useMentionMenu(
   // The token start that was picked or dismissed: the menu stays closed for it until the caret
   // leaves it, because a picked name keeps looking like a token being typed (mentions.ts).
   const [dismissed, setDismissed] = useState<number | null>(null);
-  const items = token && mentions ? matchMentions(mentions.items, token.query) : [];
+  const items =
+    token && mentions ? matchMentions(mentions.items, token.query, mentions.allowCreate) : [];
   const id = (fieldId: string) => `${fieldId}-mentions`;
   const close = (start: number | null) => {
     setToken(null);
@@ -83,7 +84,13 @@ function useMentionMenu(
   };
   const track = (element: HTMLTextAreaElement) => {
     if (!mentions) return;
-    const next = activeMention(element.value, element.selectionStart, mentions.items, dismissed);
+    const next = activeMention(
+      element.value,
+      element.selectionStart,
+      mentions.items,
+      dismissed,
+      mentions.allowCreate,
+    );
     if (!next) return close(null);
     if (next === 'dismissed') return setToken(null);
     if (token?.start !== next.start || token.query !== next.query) setActive(0);

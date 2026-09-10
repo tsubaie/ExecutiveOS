@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { View as ViewDef } from '@/ui/entity/types';
 import { EntityPage } from '@/ui/entity/EntityPage';
+import { sortOptions } from '@/ui/entity/filters';
 import { View, Priority, Sort } from '../schema/validation';
 import { useTasks, useTask, useTaskMutations, useOwners } from './queries';
 import { PersonAvatar } from '@/ui/layout/PersonAvatar';
@@ -41,13 +42,7 @@ function useTaskFilters() {
   const owners = useOwners();
   return {
     views: View.options.map((view) => ({ id: view, label: t(view), ...presentation[view] })),
-    sort: {
-      default: '',
-      options: Sort.options.map((value) => ({
-        id: value === 'default' ? '' : value,
-        label: t(value),
-      })),
-    },
+    sort: sortOptions(Sort.options, t),
     facets: [
       {
         key: 'ownerId',

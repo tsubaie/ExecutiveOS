@@ -78,7 +78,8 @@
     "saveFailed": "Not saved",
     "notes": "Notes",
     "mentionPeople": "Mention someone",
-    "clickToWrite": "Click to write…"
+    "clickToWrite": "Click to write…",
+    "mentionCreate": "Add “{name}”"
   },
   "people": {
     "fullName": "Full name",
@@ -177,7 +178,16 @@
     "created": "Created",
     "download": "Download",
     "verify": "Verify",
-    "restoreHelp": "Restore: docker compose exec app pnpm backup:restore <directory> --confirm"
+    "restoreHelp": "Restore: docker compose exec app pnpm backup:restore <directory> --confirm",
+    "notes": "Note types",
+    "noteTypesDescription": "The types a note can carry. Disabling a type keeps it on existing notes; the default applies to new notes.",
+    "typeId": "Identifier",
+    "labelEn": "English label",
+    "labelAr": "Arabic label",
+    "enabled": "Enabled",
+    "defaultType": "Default",
+    "addType": "Add type",
+    "noDefault": "No default type"
   },
   "errors": {
     "validation_failed": "Check the entered values.",

@@ -1,13 +1,14 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import { ListChecks } from 'lucide-react';
-import { Avatar } from '@/ui/layout/Avatar';
+import { PersonAvatar } from '@/ui/layout/PersonAvatar';
 import { cn } from '@/ui/cn';
 import type { Note, Participant } from '../schema/validation';
 import { useNoteTypes } from './queries';
 import { useNoteDateLabel, useTypeLabel } from './use-note-labels';
-// One line on a wide list: title, type and tags lead; task counts, participants and the date
-// trail. On a phone the trailing group wraps under a two-line title and tags are hidden.
+// One line on a wide list: title, type and tags lead; task counts and the date trail. Participants
+// sit beside the row (ParticipantsTrail). On a phone the trailing group wraps under a two-line
+// title and tags are hidden.
 export function NoteRow({ note }: { note: Note }) {
   const t = useTranslations('notes');
   const types = useNoteTypes();
@@ -43,7 +44,6 @@ export function NoteRow({ note }: { note: Note }) {
             {t('taskCountsShort', { open: note.openTaskCount, done: note.doneTaskCount })}
           </span>
         )}
-        <Participants participants={note.participants} />
         <time
           dateTime={note.noteDate}
           title={date.absolute}
@@ -75,18 +75,19 @@ export function Chip({
     </span>
   );
 }
-// Up to three initials avatars, then a "+n" count; every name stays readable by assistive tech.
-export function Participants({ participants }: { participants: Participant[] }) {
+// Beside the row (EP-B20): up to three initials avatars that reveal the full name when pressed,
+// exactly as the owner avatar on a task row, then a "+n" count.
+export function ParticipantsTrail({ participants }: { participants: Participant[] }) {
   const t = useTranslations('notes');
   if (!participants.length) return null;
   const shown = participants.slice(0, 3);
   return (
     <span className="flex items-center -space-x-1 rtl:space-x-reverse">
       {shown.map((person) => (
-        <Avatar key={person.id} name={person.name} className="ring-2 ring-surface" />
+        <PersonAvatar key={person.id} name={person.name} className="ring-2 ring-surface" />
       ))}
       {participants.length > shown.length && (
-        <span className="ps-2 text-[10px]">
+        <span className="ps-2 text-[10px] text-text-muted">
           {t('more', { count: participants.length - shown.length })}
         </span>
       )}

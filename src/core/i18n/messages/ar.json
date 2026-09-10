@@ -78,7 +78,8 @@
     "saveFailed": "لم يُحفظ",
     "notes": "الملاحظات",
     "mentionPeople": "الإشارة إلى شخص",
-    "clickToWrite": "انقر للكتابة…"
+    "clickToWrite": "انقر للكتابة…",
+    "mentionCreate": "إضافة \"{name}\""
   },
   "people": {
     "fullName": "الاسم الكامل",
@@ -177,7 +178,16 @@
     "created": "أُنشئت",
     "download": "تنزيل",
     "verify": "تحقق",
-    "restoreHelp": "الاستعادة: docker compose exec app pnpm backup:restore <directory> --confirm"
+    "restoreHelp": "الاستعادة: docker compose exec app pnpm backup:restore <directory> --confirm",
+    "notes": "أنواع الملاحظات",
+    "noteTypesDescription": "الأنواع التي يمكن أن تحملها الملاحظة. تعطيل نوع يبقيه على الملاحظات الحالية؛ ويُطبَّق الافتراضي على الملاحظات الجديدة.",
+    "typeId": "المعرّف",
+    "labelEn": "التسمية بالإنجليزية",
+    "labelAr": "التسمية بالعربية",
+    "enabled": "مفعّل",
+    "defaultType": "الافتراضي",
+    "addType": "إضافة نوع",
+    "noDefault": "بدون نوع افتراضي"
   },
   "errors": {
     "validation_failed": "تحقّق من القيم المدخلة.",

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { View as ViewDef } from '@/ui/entity/types';
 import { EntityPage } from '@/ui/entity/EntityPage';
+import { sortOptions } from '@/ui/entity/filters';
 import { Sort, type Note } from '../schema/validation';
 import {
   useNotes,
@@ -26,7 +27,7 @@ import {
   useAllPeople,
 } from './queries';
 import { useTypeLabel } from './use-note-labels';
-import { NoteRow } from './NoteRow';
+import { NoteRow, ParticipantsTrail } from './NoteRow';
 import { NoteDetail } from './NoteDetail';
 import { CreateNote } from './CreateNote';
 import { AddTagDialog } from './AddTagDialog';
@@ -66,13 +67,7 @@ function useNoteFilters() {
       { id: 'archived', label: t('archived'), ...presentation.archived },
       { id: 'trash', label: t('trash'), ...presentation.trash },
     ],
-    sort: {
-      default: '',
-      options: Sort.options.map((value) => ({
-        id: value === 'default' ? '' : value,
-        label: t(value),
-      })),
-    },
+    sort: sortOptions(Sort.options, t),
     facets: [
       {
         key: 'type',
@@ -138,6 +133,7 @@ export function NotesPage() {
       renderers={{
         name: (note) => note.title,
         row: (note) => <NoteRow note={note} />,
+        rowTrail: (note) => <ParticipantsTrail participants={note.participants} />,
         detail: (note, api) => <NoteDetail note={note} api={api} />,
         create: (api) => <CreateNote api={api} />,
       }}

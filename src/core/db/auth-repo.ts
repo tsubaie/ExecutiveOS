@@ -70,7 +70,11 @@ export async function revokeUserSessions(database: Database, userId: string) {
 // ADMIN-B20: the email and the client address are independent buckets, counted in one statement so
 // the login path stays inside the per-request query budget. A null key counts nothing rather than
 // matching every row: an address the deployment cannot resolve is not a bucket anyone shares.
-export async function loginFailures(database: Database, email: string | null, address: string | null) {
+export async function loginFailures(
+  database: Database,
+  email: string | null,
+  address: string | null,
+) {
   if (email === null && address === null) return { byEmail: 0, byAddress: 0 };
   const [row] = await database
     .select({

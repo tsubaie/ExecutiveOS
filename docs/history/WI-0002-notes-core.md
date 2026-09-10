@@ -20,7 +20,7 @@ Ship standalone notes with participants, tags and linked tasks on the entity fra
 2. NOTES-B01–B16 as specified. B17: the refine and suggest-tags routes exist and return 503 `ai_unavailable`.
 3. TASKS-B16: `sourceNoteId` on create and PATCH with the attach rule; `hasSourceNote` and `sourceNoteId` list facets; `sourceNote` on task detail.
 4. EP-A05 (bulk archive and bulk tag through the framework bulk bar), HOME-B01 item 9, PEOPLE-B03 Notes section.
-5. ADR 0013 markdown component under `src/ui/markdown` used for note preview and task description preview.
+5. ADR 0015 markdown component under `src/ui/markdown` used for note preview and task description preview.
 
 ## Acceptance criteria
 
@@ -29,7 +29,7 @@ NOTES-A01–A11 in the listed locales; EP-A05.
 ## Constraints
 
 - Migration: allowed (`0004_notes.sql`: `notes`, `note_people`, `tasks.source_note_id`, indexes, checks).
-- New dependencies: allowed only `react-markdown`, `remark-gfm`, `rehype-sanitize` (ADR 0013).
+- New dependencies: allowed only `react-markdown`, `remark-gfm`, `rehype-sanitize` (ADR 0015).
 - Escalation triggers expected: none beyond the above, which the maintainer approved in the planning session of 2026-09-10.
 
 ## Hand-off expectations

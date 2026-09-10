@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { cn } from '@/ui/cn';
 import { schema } from './schema';
-// The only markdown renderer (ADR 0013). Output is React elements: raw HTML is skipped, the
+// The only markdown renderer (ADR 0015). Output is React elements: raw HTML is skipped, the
 // sanitize schema drops images and unsafe links, and every block carries dir="auto" so mixed
 // Arabic and English content lays out per paragraph.
 type Extra = { node?: object | undefined };

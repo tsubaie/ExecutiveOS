@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import ar from '@/core/i18n/messages/ar.json';
 import { NoteDetail } from '../../schema/validation';
-import { NoteRow } from '../../ui/NoteRow';
+import { NoteRow, ParticipantsTrail } from '../../ui/NoteRow';
 import { mount } from './harness';
 const note = NoteDetail.parse({
   id: '01a08a9f-1991-760a-b73a-568f6f86653b',
@@ -35,13 +35,18 @@ describe('note row', () => {
     mount(<NoteRow note={note} />);
     expect(screen.getByText('Board meeting')).toBeTruthy();
     expect(screen.getByText('Archived')).toBeTruthy();
-    expect(screen.getAllByText('+1')).toHaveLength(2);
+    expect(screen.getAllByText('+1')).toHaveLength(1);
     expect(screen.queryByText('Extra', { exact: true })).toBeNull();
     expect(screen.getByText('Q3')).toBeTruthy();
     expect(screen.getByText('2/1')).toBeTruthy();
     expect(screen.getByTitle('2 open, 1 done')).toBeTruthy();
-    expect(screen.getByText('Leila Haddad')).toBeTruthy();
     expect(screen.getByText('Today')).toBeTruthy();
+  });
+  it('NOTES-B08 EP-B20 participants render beside the row as name-revealing avatars, three then a count', () => {
+    mount(<ParticipantsTrail participants={note.participants} />);
+    expect(screen.getAllByRole('button', { name: /^Show / })).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Show Leila Haddad' })).toBeTruthy();
+    expect(screen.getByText('+1')).toBeTruthy();
   });
   it('NOTES-A01 renders the Arabic labels in the Arabic view', () => {
     mount(<NoteRow note={note} />, 'ar');

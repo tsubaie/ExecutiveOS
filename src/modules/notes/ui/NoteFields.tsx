@@ -1,35 +1,29 @@
 'use client';
 import { useState, type FocusEvent } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Textarea } from '@/ui/primitives/textarea';
 import { Property } from '@/ui/layout/Property';
 import { ChoiceSelect, type Choice } from '@/ui/layout/ChoiceSelect';
 import { DatePicker } from '@/ui/layout/DatePicker';
+import { Avatar } from '@/ui/layout/Avatar';
+import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { MarkdownField } from '@/ui/markdown/MarkdownField';
-import type { NoteDetail, NotePatch } from '../schema/validation';
-import { useAllPeople, useNoteTypes } from './queries';
+import { NEW_MENTION, derivedParticipants, type MentionItem } from '@/ui/markdown/mentions';
+import { routes } from '@/core/routes';
+import type { NoteDetail, NotePatch, Participant } from '../schema/validation';
+import { useAllPeople, useNoteMutations, useNoteTypes } from './queries';
 import { useTypeLabel } from './use-note-labels';
-import { ParticipantsEditor } from './ParticipantsEditor';
 import { TagsEditor } from './TagsEditor';
 export type Patch = Omit<NotePatch, 'revision'>;
 type Save = (patch: Patch) => void;
-// The detail panel: the title is the heading, then type and date rows, participants, tags and the
-// markdown content. Every field commits on leave through the framework save queue.
+// The detail panel: the title is the heading, then type and date rows, the participants (people
+// mentioned in the content, linking to their pages), tags and the markdown content. Every field
+// commits on leave through the framework save queue.
 export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
   const t = useTranslations('notes');
   const { draft, change } = useDraftProperties(note, save);
-  const people = useAllPeople();
-  const current = note.participants.map((person) => person.id);
-  // NOTES-B08: a mention inside the content also adds the person to the participants.
-  const mentions = {
-    items: (people.data?.data ?? []).map((person) => ({
-      id: person.id,
-      name: person.displayName ?? person.fullName,
-    })),
-    onPick: (item: { id: string }) => {
-      if (!current.includes(item.id)) save({ participantIds: [...current, item.id] });
-    },
-  };
+  const mentions = useMentions(note, save);
   return (
     <fieldset data-autosave className="grid min-w-0 gap-4">
       <NoteTitle title={note.title} save={save} />
@@ -49,18 +43,77 @@ export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
           />
         </Property>
       </div>
-      <ParticipantsEditor
-        participants={note.participants}
-        save={(participantIds) => save({ participantIds })}
-      />
+      <ParticipantLinks participants={note.participants} />
       <TagsEditor tags={note.tags} save={(tags) => save({ tags })} />
+      {mentions.error && <ErrorPanel error={mentions.error} />}
       <MarkdownField
         label={t('content')}
         value={note.content}
-        mentions={mentions}
-        onCommit={(content) => save({ content })}
+        mentions={mentions.mentions}
+        onCommit={mentions.commit}
       />
     </fieldset>
+  );
+}
+// NOTES-B08: "@" lists the workspace's people and offers to add an unknown name; the participants
+// saved with the content are the candidates whose mention appears in it. People picked in this
+// session stay candidates even before the directory query refreshes.
+function useMentions(note: NoteDetail, save: Save) {
+  const c = useTranslations('common');
+  const people = useAllPeople();
+  const mutations = useNoteMutations();
+  const [picked, setPicked] = useState<MentionItem[]>([]);
+  const [error, setError] = useState<Error | null>(null);
+  const directory: MentionItem[] = (people.data?.data ?? []).map((person) => ({
+    id: person.id,
+    name: person.displayName ?? person.fullName,
+  }));
+  const candidates = [
+    ...directory,
+    ...note.participants.map((person) => ({ id: person.id, name: person.name })),
+    ...picked,
+  ].filter((item, index, all) => all.findIndex((other) => other.id === item.id) === index);
+  const onPick = (item: MentionItem) => {
+    if (!item.create) return;
+    void mutations
+      .createPerson(item.id.slice(NEW_MENTION.length))
+      .then((person) => {
+        if (person) setPicked((current) => [...current, { id: person.id, name: item.name }]);
+      })
+      .catch((failure: unknown) =>
+        setError(failure instanceof Error ? failure : new Error(c('error'))),
+      );
+  };
+  const commit = (content: string) => {
+    const participantIds = derivedParticipants(content, candidates);
+    const current = note.participants.map((person) => person.id);
+    const same =
+      participantIds.length === current.length &&
+      participantIds.every((id) => current.includes(id));
+    save(same ? { content } : { content, participantIds });
+  };
+  return { mentions: { items: directory, onPick, allowCreate: true }, commit, error };
+}
+// Read-only: each participant links to their page, like the owner link on a task.
+function ParticipantLinks({ participants }: { participants: Participant[] }) {
+  const t = useTranslations('notes');
+  if (!participants.length) return null;
+  return (
+    <div className="grid gap-2">
+      <span className="text-sm font-medium">{t('participants')}</span>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {participants.map((person) => (
+          <Link
+            key={person.id}
+            href={routes.person(person.id)}
+            className="inline-flex items-center gap-1 rounded-full bg-surface-raised py-0.5 ps-0.5 pe-2 text-xs text-accent hover:bg-accent-soft"
+          >
+            <Avatar name={person.name} className="size-5 text-[9px]" />
+            <bdi>{person.name}</bdi>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
 type Properties = { type: string; noteDate: string | null };

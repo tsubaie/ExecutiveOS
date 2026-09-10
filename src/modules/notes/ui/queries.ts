@@ -2,7 +2,7 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
-import { PersonList, PersonCreated } from '@/modules/people/schema/validation';
+import { PersonList, PersonCreated, personDraft } from '@/modules/people/schema/validation';
 import type { Filters } from '@/ui/entity/types';
 import {
   NoteDetail,
@@ -107,21 +107,7 @@ export function useNoteMutations() {
       write('/notes/bulk/tag', BulkResult, { items, tag }),
     // NOTES-B08: quick-create makes an external, non-assignable person from a name.
     createPerson: async (fullName: string) => {
-      const created = await write('/people', PersonCreated, {
-        fullName,
-        kind: 'external',
-        isAssignable: false,
-        tags: [],
-        email: null,
-        phone: null,
-        notes: null,
-        displayName: null,
-        honorific: null,
-        organization: null,
-        roleTitle: null,
-        userId: null,
-        confirmDuplicate: true,
-      });
+      const created = await write('/people', PersonCreated, personDraft(fullName));
       return created.data;
     },
   };

@@ -1,5 +1,6 @@
 'use client';
 import { useTranslations } from 'next-intl';
+import { Plus } from 'lucide-react';
 import { cn } from '@/ui/cn';
 import type { MentionItem } from './mentions';
 // The list under the textarea while an "@" token is being typed. Items select on mouse down so
@@ -39,7 +40,14 @@ export function MentionMenu({
             onPick(item);
           }}
         >
-          <bdi>{item.name}</bdi>
+          {item.create ? (
+            <span className="flex items-center gap-2 text-accent">
+              <Plus className="size-4" aria-hidden />
+              {t('mentionCreate', { name: item.name })}
+            </span>
+          ) : (
+            <bdi>{item.name}</bdi>
+          )}
         </li>
       ))}
     </ul>
