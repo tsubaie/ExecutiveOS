@@ -8,7 +8,7 @@ Source of truth for schema is `src/modules/*/schema/db.ts` (Drizzle) plus custom
 |---|---|---|
 | **Entity** | tasks, notes, committees, objectives, kpis, initiatives, meetings, people, users | `id uuid pk`, `revision int not null default 1`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_op_id` |
 | **Child** (owned rows edited by users) | kpi_readings, kpi_targets, initiative_deliverables, initiative_updates, initiative_progress, meeting_agenda_items, meeting_documents, meeting_briefs, note_refinements, brief_feedback, comments, meeting_private_notes | `id`, `created_at`, `updated_at`, `created_by`, `deleted_at`, `deleted_op_id`; `revision` only where the spec says the row is inline-editable |
-| **Junction** | meeting_attendees, entity_links | `created_at`, `created_by`, `deleted_at`, `deleted_op_id` |
+| **Junction** | meeting_attendees, note_people, entity_links | `created_at`, `created_by`, `deleted_at`, `deleted_op_id` |
 | **History / system** | sessions, login_attempts, jobs, job_attempts, schedules, ai_invocations, audit_log, files, prep_learnings, idempotency_keys, settings, workspace | as specified per table |
 
 Global rules:
@@ -105,7 +105,12 @@ Constraints: trigger `tasks_depth_check` rejects a `parent_id` whose parent has 
 Indexes: `(status, due_date) where deleted_at is null`, `(owner_id)`, `(parent_id)`, `(committee_id)`, `(initiative_id)`, `(source_note_id)`, `(due_date, priority, created_at)`.
 
 ### notes
-`title, content, type, note_date date, tags, committee_id set null, initiative_id set null, archived_at, search_text` + entity columns. Every row is a standalone note and list item. There is no thread foreign key, grouping container, merge provenance, or structural meeting foreign key in v1.
+`title, content, type null, note_date date, tags, committee_id set null, initiative_id set null, archived_at, search_text` + entity columns. Every row is a standalone note and list item (ADR 0012). There is no thread foreign key, grouping container, merge provenance, or structural meeting foreign key in v1; `committee_id` and `initiative_id` are added by the migrations of those modules.
+Constraints: `CHECK (length(trim(title)) between 1 and 500)`; `CHECK (cardinality(tags) <= 10)`. `search_text` from title and content.
+Indexes: `(note_date, created_at, id) where deleted_at is null`, `(type)`, `(archived_at)`, gin on `tags`, trigram gin on `search_text`.
+
+### note_people
+`id uuid pk, note_id fk notes cascade, person_id fk people restrict` + junction columns. Unique `(note_id, person_id) where deleted_at is null`. Indexes on both FKs. Participants are the people mentioned in the note's content (ADR 0014); they carry no role.
 
 ### note_refinements
 `note_id fk, job_id fk, note_revision int (revision of the note when generated), content_hash text, capability_version int, refined_content, suggested_tasks jsonb, suggested_tags text[], summary_of_changes, status (pending|applied|discarded|stale), applied_task_ids uuid[], reviewed_at, reviewed_by` + child columns. Unique `(note_id) where status = 'pending'`.
@@ -173,6 +178,7 @@ Indexes: `(status, due_date) where deleted_at is null`, `(owner_id)`, `(parent_i
 | task → owner person | `tasks.owner_id` | N:1 | `owner` |
 | task → parent task | `tasks.parent_id` | N:1, depth 1 | not projected |
 | task → source note | `tasks.source_note_id` | N:1 | `source` |
+| person ↔ note | `note_people` | N:M | `participant` |
 | note → committee / initiative | `notes.*_id` | N:1 | `about` |
 | meeting → committee | `meetings.committee_id` | N:1 | `belongs_to` |
 | meeting ↔ person | `meeting_attendees` | N:M with role | `attendee` |

@@ -17,5 +17,7 @@ One decision per file. Format: **Status**, **Context**, **Decision**, **Conseque
 | 0011 | People are the single identity for task owners and attendees | accepted |
 | 0012 | Notes are standalone entities and are never threaded | accepted |
 | 0013 | Trusted client addresses, independent throttling buckets, and uniform login cost | accepted |
+| 0014 | Notes carry participants from mentions and link tasks by source note | accepted |
+| 0015 | Markdown rendering with react-markdown and a sanitizing schema | accepted |
 
-Open decisions awaiting an ADR: license (see roadmap); chart library confirmation (`recharts`); markdown editor component.
+Open decisions awaiting an ADR: license (see roadmap); chart library confirmation (`recharts`).

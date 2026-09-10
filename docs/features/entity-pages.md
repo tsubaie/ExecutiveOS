@@ -86,7 +86,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - EP-A02 `/tasks?view=overdue&id=<uuid>` opens the view and item on desktop and mobile; back returns to the list. (en, ar)
 - EP-A03 Keyboard-only walkthrough: list → open → edit title → save → close, with visible focus at each step. (en, ar)
 - EP-A04 Two rapid edits produce one or two requests, never out of order; a 409 keeps the draft and offers reapply. (en)
-- EP-A05 In Notes, selecting three notes with `x` exposes only note-safe bulk actions; no thread, merge, unmerge, stack, or grouping action exists. (en, ar)
+- EP-A05 In Notes, selecting three notes with `x` exposes only note-safe bulk actions (Archive and Add tag); running Archive archives them and Add tag applies one tag to each; no thread, merge, unmerge, stack, or grouping action exists. (en, ar)
 - EP-A06 RTL: detail panel on the left, mobile detail slides from the left, arrows move in list order. (ar)
 
 ## Required scenarios
