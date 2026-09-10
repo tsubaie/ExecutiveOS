@@ -61,6 +61,11 @@ function Anchor({ node, href, children }: ComponentProps<'a'> & Extra) {
     </a>
   );
 }
+// Inside a control (the editable preview) a link cannot be a link; it keeps its look as text.
+function StaticAnchor({ node, children }: ComponentProps<'a'> & Extra) {
+  void node;
+  return <span className="text-accent underline">{children}</span>;
+}
 const components: Components = {
   a: Anchor,
   p: Paragraph,
@@ -75,7 +80,15 @@ const components: Components = {
   td: Cell,
   th: HeaderCell,
 };
-export function Markdown({ content, className }: { content: string; className?: string }) {
+export function Markdown({
+  content,
+  className,
+  interactive = true,
+}: {
+  content: string;
+  className?: string;
+  interactive?: boolean;
+}) {
   return (
     <div
       className={cn(
@@ -86,7 +99,7 @@ export function Markdown({ content, className }: { content: string; className?: 
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeSanitize, schema]]}
-        components={components}
+        components={interactive ? components : { ...components, a: StaticAnchor }}
         skipHtml
       >
         {content}

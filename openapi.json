@@ -876,9 +876,16 @@
                   "type": "string"
                 },
                 "type": {
-                  "maxLength": 100,
-                  "minLength": 1,
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "maxLength": 100,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "updatedAt": {
                   "$ref": "#/$defs/__schema0"
@@ -1077,7 +1084,10 @@
             "additionalProperties": false,
             "properties": {
               "defaultType": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "required": [
@@ -2361,9 +2371,16 @@
             "type": "string"
           },
           "type": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -3533,9 +3550,16 @@
                 "type": "string"
               },
               "type": {
-                "maxLength": 100,
-                "minLength": 1,
-                "type": "string"
+                "anyOf": [
+                  {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "updatedAt": {
                 "$ref": "#/$defs/__schema0"

@@ -38,7 +38,7 @@ export type NoteCreate = z.infer<typeof NoteCreate>;
 export const NotePatch = z.strictObject({
   title: Title.optional(),
   content: Content.optional(),
-  type: Type.optional(),
+  type: Type.nullable().optional(),
   noteDate: z.iso.date().optional(),
   tags: Tags.optional(),
   participantIds: Ids.optional(),
@@ -71,7 +71,7 @@ export const Note = z.object({
   revision: z.number().int(),
   title: Title,
   content: Content,
-  type: Type,
+  type: Type.nullable(),
   noteDate: z.iso.date(),
   tags: z.array(z.string()),
   archivedAt: timestamp.nullable(),
@@ -97,7 +97,7 @@ export const NoteType = z.object({
 export type NoteType = z.infer<typeof NoteType>;
 export const NoteTypes = z.object({
   data: z.array(NoteType),
-  meta: z.object({ defaultType: z.string() }),
+  meta: z.object({ defaultType: z.string().nullable() }),
 });
 export const NoteListQuery = z.strictObject({
   view: z.string().max(120).default('all'),

@@ -7,7 +7,7 @@ import { ChoiceSelect, type Choice } from '@/ui/layout/ChoiceSelect';
 import { DatePicker } from '@/ui/layout/DatePicker';
 import { MarkdownField } from '@/ui/markdown/MarkdownField';
 import type { NoteDetail, NotePatch } from '../schema/validation';
-import { useNoteTypes } from './queries';
+import { useAllPeople, useNoteTypes } from './queries';
 import { useTypeLabel } from './use-note-labels';
 import { ParticipantsEditor } from './ParticipantsEditor';
 import { TagsEditor } from './TagsEditor';
@@ -18,6 +18,18 @@ type Save = (patch: Patch) => void;
 export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
   const t = useTranslations('notes');
   const { draft, change } = useDraftProperties(note, save);
+  const people = useAllPeople();
+  const current = note.participants.map((person) => person.id);
+  // NOTES-B08: a mention inside the content also adds the person to the participants.
+  const mentions = {
+    items: (people.data?.data ?? []).map((person) => ({
+      id: person.id,
+      name: person.displayName ?? person.fullName,
+    })),
+    onPick: (item: { id: string }) => {
+      if (!current.includes(item.id)) save({ participantIds: [...current, item.id] });
+    },
+  };
   return (
     <fieldset data-autosave className="grid min-w-0 gap-4">
       <NoteTitle title={note.title} save={save} />
@@ -25,7 +37,7 @@ export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
         <Property label={t('type')}>
           <TypeSelect
             value={draft.type}
-            current={note.type}
+            current={note.type ?? ''}
             onChange={(next) => change({ type: next })}
           />
         </Property>
@@ -45,6 +57,7 @@ export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
       <MarkdownField
         label={t('content')}
         value={note.content}
+        mentions={mentions}
         onCommit={(content) => save({ content })}
       />
     </fieldset>
@@ -55,7 +68,7 @@ type Properties = { type: string; noteDate: string | null };
 // remounting, so a picker keeps focus after its own save. A picker reporting the value it already
 // shows is not an edit and never writes.
 function useDraftProperties(note: NoteDetail, save: Save) {
-  const base: Properties = { type: note.type, noteDate: note.noteDate };
+  const base: Properties = { type: note.type ?? '', noteDate: note.noteDate };
   const [draft, setDraft] = useState(base);
   const [seen, setSeen] = useState(base);
   if (seen.type !== base.type || seen.noteDate !== base.noteDate) {
@@ -70,13 +83,14 @@ function useDraftProperties(note: NoteDetail, save: Save) {
       return;
     setDraft((current) => ({ ...current, ...patch }));
     save({
-      ...(patch.type !== undefined ? { type: patch.type } : {}),
+      ...(patch.type !== undefined ? { type: patch.type || null } : {}),
       ...(patch.noteDate ? { noteDate: patch.noteDate } : {}),
     });
   };
   return { draft, change };
 }
-// Enabled types, plus the note's current type when it has since been disabled (NOTES-I02).
+// "No type" first, then the enabled types, plus the note's current type when it has since been
+// disabled (NOTES-I02).
 export function TypeSelect({
   value,
   current,
@@ -94,8 +108,10 @@ export function TypeSelect({
   const ids = (types.data?.data ?? []).filter((type) => type.enabled).map((type) => type.id);
   if (current && !ids.includes(current)) ids.unshift(current);
   if (value && !ids.includes(value)) ids.unshift(value);
-  const items: Choice[] = ids.map((id) => ({ value: id, text: label(id), label: label(id) }));
-  if (!items.length) items.push({ value: '', text: t('type'), label: t('type') });
+  const items: Choice[] = [
+    { value: '', text: t('noType'), label: t('noType') },
+    ...ids.map((id) => ({ value: id, text: label(id), label: label(id) })),
+  ];
   return (
     <ChoiceSelect
       items={items}

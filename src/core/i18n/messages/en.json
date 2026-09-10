@@ -77,10 +77,8 @@
     "pickDate": "Choose a date",
     "saveFailed": "Not saved",
     "notes": "Notes",
-    "write": "Write",
-    "preview": "Preview",
-    "nothingToPreview": "Nothing to preview yet.",
-    "editorMode": "Editor mode"
+    "mentionPeople": "Mention someone",
+    "clickToWrite": "Click to write…"
   },
   "people": {
     "fullName": "Full name",
@@ -310,6 +308,7 @@
     "more": "+{count}",
     "updated": "Updated {date}",
     "personNotes": "Notes",
-    "viewNotes": "View notes ({count})"
+    "viewNotes": "View notes ({count})",
+    "noType": "No type"
   }
 }

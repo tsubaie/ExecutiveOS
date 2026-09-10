@@ -21,7 +21,7 @@ export const notes = pgTable(
     revision: integer().notNull().default(1),
     title: text().notNull(),
     content: text().notNull().default(''),
-    type: text().notNull(),
+    type: text(),
     noteDate: date('note_date').notNull(),
     tags: text().array().notNull().default([]),
     archivedAt: time('archived_at'),

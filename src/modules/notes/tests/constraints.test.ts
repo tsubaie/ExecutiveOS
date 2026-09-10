@@ -10,7 +10,7 @@ beforeEach(() => harness.reset());
 afterAll(() => pool().end());
 const insert = (title: string, tags: string) =>
   db().execute(
-    sql`insert into notes (id, title, type, note_date, tags) values (gen_random_uuid(), ${title}, 'other', '2026-09-10', ${tags}::text[])`,
+    sql`insert into notes (id, title, type, note_date, tags) values (gen_random_uuid(), ${title}, null, '2026-09-10', ${tags}::text[])`,
   );
 it('NOTES-I01 NOTES-I03 the database rejects blank titles and more than ten tags', async () => {
   await expect(insert('   ', '{}')).rejects.toMatchObject({

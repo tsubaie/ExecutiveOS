@@ -77,10 +77,8 @@
     "pickDate": "اختر تاريخًا",
     "saveFailed": "لم يُحفظ",
     "notes": "الملاحظات",
-    "write": "كتابة",
-    "preview": "معاينة",
-    "nothingToPreview": "لا يوجد ما يُعاين بعد.",
-    "editorMode": "وضع المحرر"
+    "mentionPeople": "الإشارة إلى شخص",
+    "clickToWrite": "انقر للكتابة…"
   },
   "people": {
     "fullName": "الاسم الكامل",
@@ -310,6 +308,7 @@
     "more": "+{count}",
     "updated": "آخر تحديث {date}",
     "personNotes": "الملاحظات",
-    "viewNotes": "عرض الملاحظات ({count})"
+    "viewNotes": "عرض الملاحظات ({count})",
+    "noType": "بدون نوع"
   }
 }

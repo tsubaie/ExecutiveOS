@@ -45,14 +45,14 @@ const enabledIds = (types: NoteType[]) =>
 export function viewsFor(typeIds: string[]): string[] {
   return ['all', 'this_week', ...typeIds.map((typeId) => `type:${typeId}`), 'archived', 'trash'];
 }
-function requireType(types: NoteType[], type: string) {
-  if (!enabledIds(types).includes(type))
+// NOTES-I02: null is always allowed; a type must be enabled.
+function requireType(types: NoteType[], type: string | null) {
+  if (type !== null && !enabledIds(types).includes(type))
     throw new AppError('rule_violation', { rule: 'NOTES-I02' });
 }
 async function defaultType(ctx: Context, types: NoteType[]) {
   const configured = await getSetting(ctx.db, 'notes.default_type');
-  const enabled = enabledIds(types);
-  return configured && enabled.includes(configured) ? configured : (enabled[0] ?? 'other');
+  return configured && enabledIds(types).includes(configured) ? configured : null;
 }
 async function requirePeople(ctx: Context, personIds: string[]) {
   for (const personId of personIds) await getPerson(ctx, personId);
@@ -130,7 +130,7 @@ async function setParticipants(ctx: Context, noteId: string, personIds: string[]
 }
 export async function patchNote(ctx: Context, noteId: string, input: NotePatch) {
   const note = await requireRevision(ctx, ops, noteId, input.revision);
-  if (input.type) requireType(await noteTypes(ctx), input.type);
+  if (input.type !== undefined) requireType(await noteTypes(ctx), input.type);
   const { revision, participantIds, ...fields } = input;
   void revision;
   if (participantIds) await setParticipants(ctx, noteId, participantIds);

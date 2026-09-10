@@ -6,6 +6,16 @@ Status: complete
 
 Notes ship as standalone entities on the entity framework: title, markdown content with a sanitized preview, type, date, tags, participants, and linked tasks. The thread model in the original spec was replaced after the maintainer's planning review on 2026-09-10 (ADR 0012); the markdown renderer decision is ADR 0013. Bulk archive and bulk tag replace merge as the framework's multiselect validation. Tasks gained the `source_note_id` column with the `TASKS-B16` attach rule and source-note facets, the person page gained a Notes section, and Home gained a Recent notes section. Refine and Suggest tags stay absent and their routes answer 503 until the AI foundation (Phase 3b).
 
+## Follow-up after the maintainer's first test (2026-09-10)
+
+Three product changes requested on the running branch and shipped in the same PR:
+
+1. **Type is optional** and empty by default: `notes.type` is nullable (`drizzle/0005_notes-optional-type.sql`), "No type" leads the type picker, the row shows no type chip, and `notes.default_type` applies only when it names an enabled type (NOTES-I02, B01 updated).
+2. **One editor surface**: the content shows the rendered markdown; entering it (click, Enter or Space on the preview button) opens the textarea, leaving it commits and shows the preview again; empty content stays a textarea. The Write / Preview switch is gone. Links inside the editable preview render as text because a control cannot contain another control; the standalone renderer keeps links. The editor half loads lazily so the Tasks route stays under the bundle budget (notes.md § UI, NOTES-B07).
+3. **`@` mentions**: typing `@` in the content lists people filtered by the text after it; arrows move and wrap, Enter or Tab inserts `@Name` at the caret, Escape closes; the picked person is added to the participants (NOTES-B08). After the maintainer's second test, two bugs were fixed: the highlight reset on every key-up, and a picked name (which contains a space) kept reopening the menu; the menu now stays closed for the picked token and treats a multi-word query that matches nobody as prose. Covered by `tests/ui/markdown.test.tsx` and the NOTES-A02 scenario.
+
+ADR 0013 still describes the original "textarea with a preview toggle" in its context paragraph; the accepted decision (the renderer and sanitizer) is unchanged and the spec now governs the editor behavior.
+
 ## Requirement → scenario
 
 | ID | Test file | Scenario name |
@@ -22,7 +32,7 @@ Notes ship as standalone entities on the entity framework: title, markdown conte
 | NOTES-B12, A06 | `service.test.ts`, `e2e/notes.spec.ts` | bulk archive and tag are all-or-nothing; bulk bar flow |
 | NOTES-B13 | `service.test.ts` | distinct tags with counts |
 | NOTES-B14, A11, HOME-B01 | `service.test.ts`, `e2e/notes.spec.ts` | recent notes section, collapse when empty |
-| NOTES-B15, A02 | `e2e/notes.spec.ts` | quick-created participant and the person page Notes section |
+| NOTES-B15, A02 | `e2e/notes.spec.ts` | mention adds a participant, quick-created participant, person page Notes section |
 | NOTES-A03 | `e2e/notes.spec.ts` | "+ Task" creates a linked task; completing it moves it under Completed |
 | NOTES-A04 | `e2e/notes.spec.ts` | attach an existing unlinked task; a linked one is not offered |
 | NOTES-A05 | `e2e/notes.spec.ts`, `tests/ui/note-row.test.tsx` | archive hides from All, shows under Archived, found by search with the chip |
@@ -35,7 +45,7 @@ Notes ship as standalone entities on the entity framework: title, markdown conte
 
 - `src/modules/notes`: schema (db, validation), repo, service, api, index, manifest, ui (page, row, detail, fields, participants, tags, tasks panel, add-tag dialog, person section, queries, labels), tests (schema, service, repo, constraints, ui).
 - `src/app/(app)/notes`, `src/app/api/v1/notes/**`: page and route files.
-- `src/ui/markdown`: sanitize schema, `Markdown`, `MarkdownField` (ADR 0013); `.dependency-cruiser.cjs` rule confining the renderer packages.
+- `src/ui/markdown`: sanitize schema, `Markdown`, `MarkdownField` with the lazily loaded `MarkdownEditor`, `MentionMenu` and `mentions.ts` helpers (ADR 0013); `.dependency-cruiser.cjs` rule confining the renderer packages.
 - `src/modules/tasks`: `source_note_id` column and index, `sourceNote` on rows, `sourceNoteId` and `hasSourceNote` facets, `TASKS-B16` rule, source note chip and link, markdown description field, exported `useTaskMutations` and `useTasks`, `notes` in the invalidation list.
 - `src/modules/people/ui/PersonDetail.tsx`: Notes section. `src/modules/home`: `notes` section key.
 - `src/core/routes.ts`, `src/core/modules/{registry,client}.ts`, `src/core/time/notes.ts`, `src/core/i18n/messages/{en,ar}.json` (`notes` namespace, `common.notes`, editor mode strings, `tasks.noteTrashed`, `home.notes`).
@@ -44,7 +54,7 @@ Notes ship as standalone entities on the entity framework: title, markdown conte
 
 ## Migrations
 
-`drizzle/0004_notes.sql`: `notes` (checks on title and tag cardinality, generated `search_text`, partial date index, gin indexes on tags and search), `note_people` (partial unique index on active rows), `tasks.source_note_id` with set-null FK and index. Applied to the empty `executiveos_test` and the seeded `executiveos_e2e_test` databases; the migration-lock scenario now expects five records.
+`drizzle/0004_notes.sql`: `notes` (checks on title and tag cardinality, generated `search_text`, partial date index, gin indexes on tags and search), `note_people` (partial unique index on active rows), `tasks.source_note_id` with set-null FK and index. Applied to the empty `executiveos_test` and the seeded `executiveos_e2e_test` databases; `drizzle/0005_notes-optional-type.sql` drops the not-null constraint on `notes.type`. Applied to the empty `executiveos_test`, the seeded `executiveos_e2e_test` and the maintainer's preview database; the migration-lock scenario now expects six records.
 
 ## Audits
 

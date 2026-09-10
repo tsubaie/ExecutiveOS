@@ -70,7 +70,9 @@ for (const locale of ['en', 'ar']) {
     await page.getByRole('button', { name: m.common.create, exact: true }).last().click();
     await expect(page).toHaveURL(/id=/);
     await expect(detail(page).getByLabel(m.notes.title, { exact: true })).toHaveValue(title);
-    await expect(detail(page).getByText(m.notes.board_meeting)).toBeVisible();
+    await expect(detail(page).getByLabel(m.notes.type, { exact: true })).toContainText(
+      m.notes.noType,
+    );
     const taskTitle = `Task ${crypto.randomUUID()}`;
     await detail(page).getByLabel(m.notes.taskTitle, { exact: true }).fill(taskTitle);
     await detail(page).getByLabel(m.notes.taskTitle, { exact: true }).press('Enter');
@@ -88,7 +90,7 @@ for (const locale of ['en', 'ar']) {
     await expect(rows(page).first().getByText('0/1')).toBeVisible();
   });
 }
-test('NOTES-A02 NOTES-B08 participants with quick-create appear on the row and on the person page', async ({
+test('NOTES-A02 NOTES-B08 a mention adds a participant, quick-create adds another, both reach the row and the person page', async ({
   page,
 }) => {
   await loginAs(page, 'en');
@@ -112,13 +114,22 @@ test('NOTES-A02 NOTES-B08 participants with quick-create appear on the row and o
   ).body.data;
   const created = await note(page, title);
   await page.goto(`/notes?view=all&q=${encodeURIComponent(title)}&id=${created.id}`);
-  await detail(page).getByRole('combobox', { name: en.notes.addParticipant }).click();
-  await page.getByLabel(en.notes.participantSearch).fill(known.fullName);
+  const content = detail(page).getByLabel(en.notes.content, { exact: true });
+  await content.fill(`Met @${known.fullName.slice(0, 9)}`);
+  await content.press('End');
   await page.getByRole('option', { name: known.fullName }).click();
+  await expect(content).toHaveValue(`Met @${known.fullName} `);
   await expect(
     detail(page).getByRole('button', {
       name: en.notes.removeParticipant.replace('{name}', known.fullName),
     }),
+  ).toBeVisible();
+  await detail(page).getByLabel(en.notes.title, { exact: true }).click();
+  await expect
+    .poll(async () => (await api(page, 'notes', `/${created.id}`)).body.data.content)
+    .toBe(`Met @${known.fullName} `);
+  await expect(
+    detail(page).getByRole('button', { name: en.notes.content, exact: true }),
   ).toBeVisible();
   const fresh = `New Person ${crypto.randomUUID().slice(0, 8)}`;
   await detail(page).getByRole('combobox', { name: en.notes.addParticipant }).click();
@@ -259,7 +270,6 @@ test('NOTES-A08 NOTES-A09 Arabic search finds normalized content, a tag and a pa
     await expect(rows(page)).toHaveCount(1);
   }
   await page.goto(`/notes?view=all&id=${created.id}`);
-  await detail(page).getByRole('button', { name: ar.common.preview, exact: true }).click();
   const heading = detail(page).getByRole('heading', { name: 'جدول الأعمال' });
   await expect(heading).toBeVisible();
   expect(await heading.evaluate((element) => getComputedStyle(element).direction)).toBe('rtl');

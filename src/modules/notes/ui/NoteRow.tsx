@@ -20,7 +20,7 @@ export function NoteRow({ note }: { note: Note }) {
         <span className="plaintext line-clamp-2 min-w-0 text-sm font-medium whitespace-normal sm:line-clamp-none sm:truncate sm:whitespace-nowrap">
           {note.title}
         </span>
-        <Chip>{typeLabel(note.type)}</Chip>
+        {note.type && <Chip>{typeLabel(note.type)}</Chip>}
         {note.archivedAt && <Chip tone="warning">{t('archivedChip')}</Chip>}
         {note.tags.length > 0 && (
           <span className="hidden shrink-0 gap-1 lg:flex">

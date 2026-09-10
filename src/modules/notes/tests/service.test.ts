@@ -22,10 +22,10 @@ beforeAll(async () => {
 });
 beforeEach(() => harness.reset());
 afterAll(() => pool().end());
-it('NOTES-B01 NOTES-A01 creates a note with the default type, today in the workspace timezone, no participants and no tasks', async () => {
+it('NOTES-B01 NOTES-A01 creates a note with no type, today in the workspace timezone, no participants and no tasks', async () => {
   const created = await note('Board pre-read');
   const timezone = await getSetting(db(), 'workspace.timezone');
-  expect(created.type).toBe('board_meeting');
+  expect(created.type).toBeNull();
   expect(created.noteDate).toBe(dayAt(timezone));
   expect(created.participants).toEqual([]);
   expect(created.tasks).toEqual([]);
@@ -35,6 +35,9 @@ it('NOTES-B01 NOTES-A01 creates a note with the default type, today in the works
   expect(listed.data.map((row) => row.id)).toEqual([created.id]);
   expect(listed.data[0]?.band).toBe('today');
   expect(listed.meta.types.map((type) => type.id)).toContain('one_on_one');
+  await writeSetting(db(), 'notes.default_type', 'personal', actorId());
+  expect((await note('Diary')).type).toBe('personal');
+  expect((await patch(created.id, { revision: 1, type: null })).type).toBeNull();
 });
 it('NOTES-I02 refuses a disabled type on create and on change while existing notes keep it', async () => {
   const configured = [
@@ -42,6 +45,7 @@ it('NOTES-I02 refuses a disabled type on create and on change while existing not
     { id: 'other', labels: { en: 'Other', ar: 'أخرى' }, enabled: false },
   ];
   await writeSetting(db(), 'notes.types', configured, actorId());
+  await writeSetting(db(), 'notes.default_type', 'personal', actorId());
   await expect(note('Misc', { type: 'other' })).rejects.toMatchObject({
     code: 'rule_violation',
     details: { rule: 'NOTES-I02' },
@@ -158,7 +162,11 @@ it('NOTES-B02 NOTES-B03 NOTES-B05 views equal their counts under facets and arch
   const timezone = await getSetting(db(), 'workspace.timezone');
   const today = dayAt(timezone);
   const who = await person('Daniel Rowan');
-  const recent = await note('Budget review', { tags: ['Budget'], participantIds: [who.id] });
+  const recent = await note('Budget review', {
+    type: 'board_meeting',
+    tags: ['Budget'],
+    participantIds: [who.id],
+  });
   const older = await note('Site visit', { type: 'other', noteDate: addDays(today, -10) });
   const parked = await note('Old budget idea', { tags: ['budget'] });
   await run((ctx) => service.archiveNote(ctx, parked.id, 1));
