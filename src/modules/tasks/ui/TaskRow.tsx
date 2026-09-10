@@ -1,6 +1,6 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { ListChecks } from 'lucide-react';
+import { ListChecks, NotebookPen } from 'lucide-react';
 import { cn } from '@/ui/cn';
 import type { Task } from '../schema/validation';
 import { useDueLabel } from './use-due-label';
@@ -34,6 +34,7 @@ export function TaskRow({ task }: { task: Task }) {
             {t('progressShort', { done: task.completedSubtaskCount, total: task.subtaskCount })}
           </span>
         )}
+        {task.sourceNote && <SourceNoteChip note={task.sourceNote} />}
         {due && task.dueDate && (
           <time
             dateTime={task.dueDate}
@@ -66,6 +67,17 @@ function TaskPriority({ priority }: { priority: Task['priority'] }) {
       )}
     >
       {t(priority)}
+    </span>
+  );
+}
+// The source note, reading "Note in trash" while that note is trashed (TASKS-B16).
+function SourceNoteChip({ note }: { note: NonNullable<Task['sourceNote']> }) {
+  const t = useTranslations('tasks');
+  const label = note.deletedAt ? t('noteTrashed') : note.title;
+  return (
+    <span className="inline-flex max-w-28 items-center gap-1" title={label}>
+      <NotebookPen className="size-3.5 shrink-0" aria-hidden />
+      <span className="truncate">{label}</span>
     </span>
   );
 }

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { z } from 'zod';
 import { cn } from '@/ui/cn';
 import { routes } from '@/core/routes';
-const pages = z.enum(['users', 'settings', 'ai', 'backups', 'jobs', 'audit']);
+const pages = z.enum(['users', 'settings', 'notes', 'ai', 'backups', 'jobs', 'audit']);
 export function AdminLayout({ children }: { children: ReactNode }) {
   const t = useTranslations('admin');
   const c = useTranslations('common');

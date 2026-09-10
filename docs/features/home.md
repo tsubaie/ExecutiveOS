@@ -20,6 +20,7 @@ The one screen the principal opens first. It is a set of queries over existing m
   6. **Pending AI reviews** (pending note refinements, ready briefs without feedback from me, learnings proposals if admin)
   7. **Attention KPIs** (`kpis?view=attention`)
   8. **Initiatives at risk** (`initiatives?view=at_risk`)
+  9. **Recent notes** (non-archived notes dated within the last seven days, `notes?view=this_week`; NOTES-B14)
 - HOME-B02 Sections for disabled modules or with zero items collapse to a single line; the page never shows an empty box.
 - HOME-B03 One aggregated endpoint `GET /home` returns all sections in one round trip; each module exposes a `homeSummary(ctx)` function through its `server` manifest that runs ≤ 2 queries. Every section and item carries its own `href`; the page never composes module URLs.
 - HOME-B04 Refetch on focus and every 60 seconds.

@@ -61,7 +61,8 @@ function HomeSection({
   section,
 }: {
   section: {
-    key: 'nextMeetings' | 'prep' | 'overdue' | 'today' | 'waiting' | 'kpis' | 'initiatives';
+    key:
+      'nextMeetings' | 'prep' | 'overdue' | 'today' | 'waiting' | 'kpis' | 'initiatives' | 'notes';
     enabled: boolean;
     count: number;
     href: string | null;

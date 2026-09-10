@@ -36,7 +36,7 @@ See `03-data-model.md` § tasks. Invariants:
 - TASKS-B02 **Status transitions** are allowed between any two statuses except into `completed`, which requires `POST /tasks/:id/complete`; PATCH with `status: completed` → 422 `TASKS-B02`. `complete { revision, force? }`: if the task has non-completed subtasks and `force` is false → 409 `conflict reason: "state"` with `details.openSubtasks`; with `force` the subtasks are completed too. `reopen { revision }` sets `next_action` and clears `completed_at`; it does not reopen subtasks.
 - TASKS-B03 **Bands** computed by one function `bandOf(task, today)` where `today` is the date in `ctx.timezone`: completed → none; `due < today` overdue; `= today` today; `today < due ≤ today + 7 days` week (rolling); `> today + 7` later; null → nodate. The UI recomputes bands at the next local midnight without reload (a timer keyed on the day) and refetches counts.
 - TASKS-B04 **Views**: `inbox`, `next`, `today` (band today or overdue, not completed), `upcoming` (band week), `overdue` (overdue band only, from Mission Control’s dedicated overdue view), `waiting`, `someday`, `completed` (completed within 90 days), `trash`, `all` (not completed). Default: `today` if its count > 0 else `next`. Subtasks appear in lists only when `parentId` is set or `includeSubtasks=true`; counts exclude subtasks.
-- TASKS-B05 **Facets**: owner, priority, committee, initiative, hasSubtasks, dueFrom/dueTo, `linkedTo`, `relation`. AND semantics.
+- TASKS-B05 **Facets**: owner, priority, committee, initiative, hasSubtasks, dueFrom/dueTo, `sourceNoteId`, `hasSourceNote`, `linkedTo`, `relation`. AND semantics.
 - TASKS-B06 **Search** on title and description via `search_text`.
 - TASKS-B07 **Sort** default `(band_rank, due_date asc nulls last, priority_rank desc, created_at desc, id desc)`; allowed: `due_date`, `priority`, `created_at`, `updated_at`, `title` each with `id` tiebreak.
 - TASKS-B08 **Subtasks**: created from detail; checklist with complete toggle (goes through `complete`), owner, due date; reorder by drag with keyboard alternative. `POST /tasks/:id/convert-to-task { revision }` clears `parent_id` and appends to the top-level order. `POST /tasks/:id/make-subtask { revision, parentId }` requires the task to have no children and the parent to be top-level (I01).
@@ -48,13 +48,14 @@ See `03-data-model.md` § tasks. Invariants:
 - TASKS-B14 **Linked section** on detail; `linkedTo` and `relation` on lists.
 - TASKS-B17 **Shell count**: the tasks entry in the sidebar trails a pill with the number of open top-level tasks, the same figure the rail shows for All tasks. It is absent at zero and while the figure is loading. The shell learns it through the module manifest, so no shell file names a module; the pill shares the `tasks.counts` query key, so every task mutation refreshes it.
 - TASKS-B16 **Totals**: `meta.counts` always ships; `meta.total` is present only when the request asks for it with `withTotal=true` (`04-api-conventions.md` § Lists).
-- TASKS-B15 **Invalidation**: any task mutation invalidates `tasks.list*`, `tasks.counts`, `tasks.detail(id)` and the parent's detail; changes to `committee_id`, `initiative_id`, or `owner_id` also invalidate the old and new target's `detail`; link changes invalidate both `links` keys.
+- TASKS-B15 **Invalidation**: any task mutation invalidates `tasks.list*`, `tasks.counts`, `tasks.detail(id)` and the parent's detail; changes to `committee_id`, `initiative_id`, or `owner_id` also invalidate the old and new target's `detail`; changes to `source_note_id` invalidate the old and new note's detail; link changes invalidate both `links` keys.
+- TASKS-B16 **Source note**: `sourceNoteId` is set on create or by PATCH. Setting it to a note by PATCH requires the task to be open, top-level and not linked to a different note; otherwise 422 `TASKS-B16`. Setting it to null detaches. The note must exist and not be deleted (404). The task detail carries `sourceNote` (id, title, `deletedAt`, `archivedAt`) and the row shows a source note chip that reads "trashed" while the note is in Trash.
 
 ## API
 
 | Verb | Path | Body / query |
 |---|---|---|
-| GET | `/tasks` | `view, q, ownerId, priority, committeeId, initiativeId, parentId, includeSubtasks, hasSubtasks, dueFrom, dueTo, linkedTo, relation, sort, limit, cursor, withTotal` |
+| GET | `/tasks` | `view, q, ownerId, priority, committeeId, initiativeId, parentId, includeSubtasks, hasSubtasks, dueFrom, dueTo, sourceNoteId, hasSourceNote, linkedTo, relation, sort, limit, cursor, withTotal` |
 | POST | `/tasks` | `TaskCreate` (+ `links`) |
 | GET | `/tasks/:id` | includes `subtasks[]`, `owner`, `committee`, `initiative`, `sourceNote`, `pendingBreakdownJobId` |
 | PATCH | `/tasks/:id` | `TaskUpdate` + `revision` |
@@ -86,7 +87,7 @@ Row: checkbox (complete; shows the checked state as soon as it is pressed and po
 ## Required scenarios
 
 - schema: enums, caps, `links` shape, reorder payload.
-- service: I01–I06; B02 matrix (every from/to pair, force, reopen); B03 at 23:59:59 and 00:00:00 in two timezones and around DST; B08 conversions; B09 six failure cases; B13 apply idempotency and stale revision.
+- service: I01–I06; B16 (attach rules: subtask, completed, already linked, deleted note, detach); B02 matrix (every from/to pair, force, reopen); B03 at 23:59:59 and 00:00:00 in two timezones and around DST; B08 conversions; B09 six failure cases; B13 apply idempotency and stale revision.
 - constraints: raw SQL for depth trigger, completed CHECK, sort_order uniqueness.
 - repo: each view equals count under facets; sort tuples with nulls; cursor continuation; `linkedTo`; search Arabic normalization.
 - api: all endpoints per `08` item 4.

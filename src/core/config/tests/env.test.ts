@@ -36,7 +36,9 @@ describe('environment', () => {
     const attempt = (TRUSTED_PROXY_CIDRS: string) =>
       parseEnvironment({ ...base, TRUSTED_PROXY_CIDRS });
     expect(attempt('').TRUSTED_PROXY_CIDRS).toBe('');
-    expect(attempt('10.0.0.0/8, 192.168.0.0/16, fd00::/8').TRUSTED_PROXY_CIDRS).toContain('10.0.0.0/8');
+    expect(attempt('10.0.0.0/8, 192.168.0.0/16, fd00::/8').TRUSTED_PROXY_CIDRS).toContain(
+      '10.0.0.0/8',
+    );
     expect(attempt('172.18.0.5').TRUSTED_PROXY_CIDRS).toBe('172.18.0.5');
     expect(() => attempt('10.0.0.0/33')).toThrow(z.ZodError);
     expect(() => attempt('not-an-address')).toThrow(z.ZodError);

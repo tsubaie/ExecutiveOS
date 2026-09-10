@@ -25,6 +25,22 @@ export const PersonCreate = PersonFields.extend({
   confirmDuplicate: z.boolean().default(false),
 }).strict();
 export type PersonCreate = z.infer<typeof PersonCreate>;
+// A person known only by name (quick-create from a note mention): external, not assignable.
+export const personDraft = (fullName: string): PersonCreate => ({
+  fullName,
+  displayName: null,
+  honorific: null,
+  organization: null,
+  roleTitle: null,
+  kind: 'external',
+  email: null,
+  phone: null,
+  notes: null,
+  tags: [],
+  isAssignable: false,
+  userId: null,
+  confirmDuplicate: true,
+});
 export const PersonPatch = PersonFields.partial()
   .extend({ revision: z.number().int().positive() })
   .strict();

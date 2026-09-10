@@ -1,0 +1,1 @@
+ALTER TABLE "notes" ALTER COLUMN "type" DROP NOT NULL;

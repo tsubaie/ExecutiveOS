@@ -347,9 +347,9 @@
   .entity-page {
     height: calc(100dvh - 63px);
   }
-  /* An open panel pulls focus: the shell sidebar and the views rail soften, and while a task is
-     being created the list softens too. Hover or focus brings an element back; colours are not
-     changed, so text contrast holds. */
+  /* An open panel pulls focus: the shell sidebar, the views rail and the list soften so only the
+     open record reads sharp. Hover or focus brings an element back; colours are not changed, so
+     text contrast holds. */
   .app-sidebar,
   .entity-rail,
   [data-entity-list] {
@@ -357,6 +357,7 @@
   }
   body:has(.entity-page-open) .app-sidebar:not(:hover):not(:focus-within),
   .entity-page-open .entity-rail:not(:hover):not(:focus-within),
+  .entity-page-open [data-entity-list]:not(:hover):not(:focus-within),
   .entity-page-creating [data-entity-list]:not(:hover):not(:focus-within) {
     filter: blur(1.5px) saturate(0.7);
   }

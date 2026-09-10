@@ -6,6 +6,7 @@ import type { DetailApi } from '@/ui/entity/types';
 import { Button } from '@/ui/primitives/button';
 import { PersonForm, type Patch } from './PersonForm';
 import { OwnerTasks } from '@/modules/tasks/ui';
+import { PersonNotes } from '@/modules/notes/ui';
 import { initials } from '@/ui/format';
 export function PersonDetail({ person, api }: { person: Person; api: DetailApi<Patch> }) {
   const t = useTranslations('people');
@@ -35,6 +36,7 @@ export function PersonDetail({ person, api }: { person: Person; api: DetailApi<P
         <>
           <PersonForm initial={person} save={api.save} />
           <OwnerTasks personId={person.id} />
+          <PersonNotes personId={person.id} />
           <div className="mt-8 border-t pt-5">
             <Button variant="destructive" onClick={api.remove}>
               <Trash2 className="size-4" />

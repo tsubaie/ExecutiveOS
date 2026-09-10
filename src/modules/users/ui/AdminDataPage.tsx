@@ -138,7 +138,7 @@ function AdminRow({ resource, row }: { resource: ListResource; row: Row }) {
       </p>
       {row.lastError && <p className="mt-2 text-sm text-danger">{row.lastError}</p>}
       {row.diff && (
-        <pre className="mt-3 overflow-auto rounded-lg bg-surface-raised p-3 text-xs">
+        <pre tabIndex={0} className="mt-3 overflow-auto rounded-lg bg-surface-raised p-3 text-xs">
           {JSON.stringify(row.diff, null, 2)}
         </pre>
       )}

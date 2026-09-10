@@ -47,7 +47,13 @@ describe('module registry', () => {
         true,
       );
     }
-    expect(serverModules.map((item) => item.id)).toEqual(['tasks', 'people', 'users', 'settings']);
+    expect(serverModules.map((item) => item.id)).toEqual([
+      'tasks',
+      'notes',
+      'people',
+      'users',
+      'settings',
+    ]);
   });
   it('ADMIN-B15 the job registry has the system kinds and refuses a kind registered twice', () => {
     expect(jobKinds).toEqual(

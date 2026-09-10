@@ -1,5 +1,5 @@
 'use client';
-import type { FocusEvent } from 'react';
+import { Suspense, lazy, type FocusEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,6 +7,10 @@ import { z } from 'zod';
 import { Input } from '@/ui/primitives/input';
 import { Textarea } from '@/ui/primitives/textarea';
 import { Field } from '@/ui/layout/Field';
+// The markdown field loads on demand so the Tasks route stays under its bundle budget.
+const MarkdownField = lazy(() =>
+  import('@/ui/markdown/MarkdownField').then((m) => ({ default: m.MarkdownField })),
+);
 import type { TaskPatch } from '../schema/validation';
 type TextValues = { title: string; description: string };
 export function useTaskText(
@@ -25,6 +29,7 @@ export function useTaskText(
   });
   return {
     form,
+    initial,
     blur: (field: keyof TextValues, value: string) => {
       const parsed = schema.shape[field].safeParse(value);
       if (!parsed.success || parsed.data === (initial?.[field] ?? '')) return;
@@ -93,24 +98,17 @@ export function TaskTitle({
     </Field>
   );
 }
+// Markdown with a preview (ADR 0015); `name` keeps the value in the create form's post.
 export function TaskDescription({ editor }: { editor: ReturnType<typeof useTaskText> }) {
   const t = useTranslations('tasks');
-  const field = editor.form.register('description');
   return (
-    <Field label={t('description')} error={editor.form.formState.errors.description?.message}>
-      {(control) => (
-        <Textarea
-          {...field}
-          {...control}
-          dir="auto"
-          className="min-h-20"
-          maxLength={50000}
-          onBlur={(event) => {
-            void field.onBlur(event);
-            editor.blur('description', event.target.value);
-          }}
-        />
-      )}
-    </Field>
+    <Suspense fallback={<div className="min-h-40 rounded-lg border" aria-busy />}>
+      <MarkdownField
+        name="description"
+        label={t('description')}
+        value={editor.initial?.description ?? ''}
+        onCommit={(value) => editor.blur('description', value)}
+      />
+    </Suspense>
   );
 }

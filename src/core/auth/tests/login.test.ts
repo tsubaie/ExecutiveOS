@@ -58,9 +58,10 @@ it('ADMIN-B20 an unresolved client address never shares one throttling bucket ac
   await addUser('locked@example.test');
   await addUser('bystander@example.test');
   for (let attempt = 0; attempt < 5; attempt++) await fail('locked@example.test', null);
-  await expect(
-    login({ email: 'locked@example.test', password }, null),
-  ).rejects.toMatchObject({ code: 'rate_limited', details: { scope: 'login' } });
+  await expect(login({ email: 'locked@example.test', password }, null)).rejects.toMatchObject({
+    code: 'rate_limited',
+    details: { scope: 'login' },
+  });
   // Without a trusted proxy the address is unknown, so it must not become a shared bucket that
   // five failures anywhere can exhaust for the whole installation.
   const session = await login({ email: 'bystander@example.test', password }, null);
@@ -80,7 +81,8 @@ it('ADMIN-B20 per-email and per-address failures are counted as independent buck
 it('ADMIN-B20 five failures from one address throttle that address independently of the email', async () => {
   await addUser('first@example.test');
   await addUser('second@example.test');
-  for (let attempt = 0; attempt < 5; attempt++) await fail(`spray${attempt}@example.test`, '203.0.113.9');
+  for (let attempt = 0; attempt < 5; attempt++)
+    await fail(`spray${attempt}@example.test`, '203.0.113.9');
   await expect(
     login({ email: 'first@example.test', password }, '203.0.113.9'),
   ).rejects.toMatchObject({ code: 'rate_limited', details: { scope: 'login' } });
@@ -109,7 +111,9 @@ it('ADMIN-B22 recovery attempts are throttled by client address and stay single-
   const attempt = (token: string, ip: string | null) =>
     recover({ email: admin.email, password: 'a-brand-new-password-1', token }, ip);
   for (let index = 0; index < 5; index++)
-    await expect(attempt('wrong-token', '203.0.113.9')).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(attempt('wrong-token', '203.0.113.9')).rejects.toMatchObject({
+      code: 'forbidden',
+    });
   await expect(attempt(recoveryToken, '203.0.113.9')).rejects.toMatchObject({
     code: 'rate_limited',
     details: { scope: 'login' },

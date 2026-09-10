@@ -22,6 +22,7 @@ Things connect: a person to the tasks they asked for, a task to the meeting wher
 | `belongs_to` | task \| note \| meeting \| kpi \| initiative → committee \| objective \| initiative | structural columns | no | "belongs to" / "contains" |
 | `owner` | task → person | `tasks.owner_id` | no | "owned by" / "owns" |
 | `source` | task → note | `tasks.source_note_id` | no | "extracted from" / "produced" |
+| `participant` | person → note | `note_people` | no | "participant in" / "has participant" |
 | `attendee` | person → meeting | `meeting_attendees` (with role) | no | "attends" / "attended by" |
 | `discussed_in` | kpi \| initiative \| task \| note → meeting | `meeting_agenda_items.linked_*` | no | "on the agenda of" / "discusses" |
 | `related` | any → any (different ids) | `entity_links` | yes | "related to" / "related to" |
@@ -49,6 +50,7 @@ union all … tasks.committee_id, tasks.initiative_id, tasks.source_note_id
 union all … notes.committee_id, notes.initiative_id
 union all … meetings.committee_id
 union all … meeting_attendees (person → meeting)
+union all … note_people (person → note)
 union all select distinct … meeting_agenda_items (linked → meeting, deduplicated per meeting)
 union all … kpis.objective_id, initiatives.objective_id
 ```

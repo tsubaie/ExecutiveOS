@@ -29,6 +29,20 @@
       "when": 1788774245848,
       "tag": "0003_task-invariants",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789031758104,
+      "tag": "0004_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789035077887,
+      "tag": "0005_notes-optional-type",
+      "breakpoints": true
     }
   ]
 }

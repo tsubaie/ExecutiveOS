@@ -1,4 +1,4 @@
-/** TASKS-I01–I06, B01–B12: bounded hierarchy, completion, deletion provenance and fenced edits. */
+/** TASKS-I01–I06, B01–B12, B16: bounded hierarchy, completion, provenance, fenced edits, source note. */
 import 'server-only';
 import { z } from 'zod';
 import type { Context } from '@/core/auth/session';
@@ -12,6 +12,7 @@ import { routes } from '@/core/routes';
 import type { HomeSection } from '@/core/modules/server-manifest';
 import { dayAt, addDays, bandOf } from '@/core/time/tasks';
 import { getPerson, personNameSql } from '@/modules/people';
+import { getNote } from '@/modules/notes';
 import {
   TaskDetail,
   View,
@@ -80,6 +81,22 @@ async function owner(ctx: Context, ownerId: string | null | undefined) {
   const person = await getPerson(ctx, ownerId);
   if (!person.isAssignable) throw new AppError('rule_violation', { rule: 'TASKS-B10' });
 }
+// TASKS-B16: a source note must exist; attaching by PATCH needs an open, top-level, unlinked task.
+async function sourceNote(
+  ctx: Context,
+  noteId: string | null | undefined,
+  task?: { status: string; parentId: string | null; sourceNoteId: string | null },
+) {
+  if (!noteId) return;
+  if (
+    task &&
+    (task.status === 'completed' ||
+      task.parentId ||
+      (task.sourceNoteId && task.sourceNoteId !== noteId))
+  )
+    throw new AppError('rule_violation', { rule: 'TASKS-B16' });
+  await getNote(ctx, noteId);
+}
 async function current(ctx: Context, taskId: string, revision: number, deleted = false) {
   await repo.lockTasks(ctx.db);
   return requireRevision(ctx, ops, taskId, revision, deleted);
@@ -100,6 +117,7 @@ function update(
 export async function createTask(ctx: Context, input: TaskCreate) {
   await repo.lockTasks(ctx.db);
   await owner(ctx, input.ownerId);
+  await sourceNote(ctx, input.sourceNoteId);
   if (input.parentId) {
     const parent = await getTask(ctx, input.parentId);
     if (parent.parentId) throw new AppError('rule_violation', { rule: 'TASKS-I01' });
@@ -118,6 +136,7 @@ export async function patchTask(ctx: Context, taskId: string, input: TaskPatch) 
   if (input.status === 'completed') throw new AppError('rule_violation', { rule: 'TASKS-B02' });
   const task = await current(ctx, taskId, input.revision);
   await owner(ctx, input.ownerId);
+  await sourceNote(ctx, input.sourceNoteId, task);
   const { revision, ...fields } = input;
   void revision;
   await update(ctx, task, { ...fields, ...(fields.status ? { completedAt: null } : {}) });
@@ -213,6 +232,7 @@ export async function groupTasks(ctx: Context, input: z.infer<typeof Group>) {
     priority: null,
     dueDate: null,
     ownerId: null,
+    sourceNoteId: null,
     parentId: null,
   });
   for (const [sortOrder, child] of children.entries())
