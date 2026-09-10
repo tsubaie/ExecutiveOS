@@ -3,7 +3,6 @@ import { Suspense, lazy, useId, useRef, useState, type MouseEvent } from 'react'
 import { useTranslations } from 'next-intl';
 import { cn } from '@/ui/cn';
 import type { Mentions } from './mentions';
-import { sourceOffsetFromPoint } from './caret';
 // Both halves load on demand: the renderer only when there is content to show, the editor only
 // when the field is entered, so neither weighs on a route's initial bundle.
 const Markdown = lazy(() => import('./Markdown').then((m) => ({ default: m.Markdown })));
@@ -97,7 +96,12 @@ function Preview({
   // A pointer click lands the caret where it hit; keyboard activation lands it at the end.
   const click = (event: MouseEvent<HTMLButtonElement>) => {
     const root = event.detail > 0 ? box.current : null;
-    edit(root ? sourceOffsetFromPoint(root, event.clientX, event.clientY, draft) : null);
+    if (!root) return edit(null);
+    const { clientX, clientY } = event;
+    // Loaded on demand: the mapping is only needed for pointer clicks and stays out of routes.
+    void import('./caret').then(({ sourceOffsetFromPoint }) =>
+      edit(sourceOffsetFromPoint(root, clientX, clientY, draft)),
+    );
   };
   return (
     <div className="grid">

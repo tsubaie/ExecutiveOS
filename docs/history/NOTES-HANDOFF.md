@@ -23,6 +23,8 @@ After the maintainer's third test, three more changes, plus a rebase:
 
 8. **Click-to-caret.** After the maintainer's fourth test: clicking the rendered preview opens the editor with the caret at the clicked text. The text node under the pointer is looked up in the markdown source (`src/ui/markdown/caret.ts`, nth rendered occurrence → nth source occurrence); a click that resolves nowhere, or keyboard entry, lands at the end. A race found by the mobile scenario was fixed alongside: a commit now waits for an in-flight "Add name" creation before deriving the participants.
 
+9. **Focus on the open record.** The framework's softening now covers the list as well as the sidebar and rail while a panel is open (EP-B07), so Notes and Tasks both dim everything but the open record; hover or focus still restores an element.
+
 ADR 0015 still describes the original "textarea with a preview toggle" in its context paragraph; the accepted decision (the renderer and sanitizer) is unchanged and the spec now governs the editor behavior.
 
 ## Requirement → scenario
