@@ -1,13 +1,16 @@
 'use client';
-import type { FocusEvent } from 'react';
+import { Suspense, lazy, type FocusEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '@/ui/primitives/input';
 import { Textarea } from '@/ui/primitives/textarea';
-import { MarkdownField } from '@/ui/markdown/MarkdownField';
 import { Field } from '@/ui/layout/Field';
+// The markdown field loads on demand so the Tasks route stays under its bundle budget.
+const MarkdownField = lazy(() =>
+  import('@/ui/markdown/MarkdownField').then((m) => ({ default: m.MarkdownField })),
+);
 import type { TaskPatch } from '../schema/validation';
 type TextValues = { title: string; description: string };
 export function useTaskText(
@@ -99,11 +102,13 @@ export function TaskTitle({
 export function TaskDescription({ editor }: { editor: ReturnType<typeof useTaskText> }) {
   const t = useTranslations('tasks');
   return (
-    <MarkdownField
-      name="description"
-      label={t('description')}
-      value={editor.initial?.description ?? ''}
-      onCommit={(value) => editor.blur('description', value)}
-    />
+    <Suspense fallback={<div className="min-h-40 rounded-lg border" aria-busy />}>
+      <MarkdownField
+        name="description"
+        label={t('description')}
+        value={editor.initial?.description ?? ''}
+        onCommit={(value) => editor.blur('description', value)}
+      />
+    </Suspense>
   );
 }

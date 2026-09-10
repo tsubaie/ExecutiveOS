@@ -25,6 +25,8 @@ After the maintainer's third test, three more changes, plus a rebase:
 
 9. **Focus on the open record.** The framework's softening now covers the list as well as the sidebar and rail while a panel is open (EP-B07), so Notes and Tasks both dim everything but the open record; hover or focus still restores an element.
 
+10. **Legacy import.** `scripts/db/import-mission-control-notes.ts <database.sql>` imports the `notion_notes` rows of a Mission Control plain-SQL dump as standalone notes through the notes service (title, content, date in the workspace timezone, tags, archived state; a missing title falls back to the legacy thread title). Legacy types outside the six defaults are registered as enabled note types (the maintainer's dump added `he_meeting`, editable on Administration → Note types). A note whose title and date already exist is skipped, so the script re-runs safely. Run on the maintainer's preview database on 2026-09-10: 32 imported, 3 skipped as duplicates within the dump, 5 archived. The dump itself stays outside the repository (`tmp/`).
+
 ADR 0015 still describes the original "textarea with a preview toggle" in its context paragraph; the accepted decision (the renderer and sanitizer) is unchanged and the spec now governs the editor behavior.
 
 ## Requirement → scenario
