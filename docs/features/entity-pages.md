@@ -63,6 +63,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 ## Forms
 
 - EP-B20 `renderers.rowTrail` renders beside the row button, after it, mirroring the leading slot that carries the checkbox and `rowAction`. The output of `renderers.row` sits inside the row button and therefore may not contain a control of its own; anything interactive on a row belongs in the leading or trailing slot. The slot is optional and adds no markup when absent.
+- EP-B21 The framework also owns the two small shells modules would otherwise copy: `EntityCreateForm` (focusable heading, last error, the module's fields, Create and Cancel; the module parses the form data) and `EntityActionDialog` (a bulk action with one small form, rendered through the bulk bar's escape hatch; closing without submitting keeps the selection).
 - EP-B19 The shared `Field` owns the identifiers for one control: the label points at the control with `htmlFor`, a hint is referenced with `aria-describedby`, an error with `aria-errormessage`, and `aria-invalid` is set only while an error is shown. Children are a render prop receiving those attributes, so the consumer keeps its own control. Submitting an invalid form focuses the first invalid field (`react-hook-form` default).
 
 ## Auto-save

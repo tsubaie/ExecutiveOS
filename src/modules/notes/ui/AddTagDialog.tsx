@@ -1,10 +1,8 @@
 'use client';
 import { useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/ui/primitives/dialog';
-import { ErrorPanel } from '@/ui/layout/ErrorPanel';
+import { EntityActionDialog } from '@/ui/entity/EntityActionDialog';
 import { Tag } from '../schema/validation';
 import { useNoteMutations, useTags } from './queries';
 // Rendered by the entity bulk bar (NOTES-B12); `finish(true)` clears the selection on success.
@@ -35,34 +33,21 @@ export function AddTagDialog({
     }
   }
   return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open) finish(false);
-      }}
+    <EntityActionDialog
+      title={t('addTag')}
+      description={t('addTagDescription', { count: items.length })}
+      submitLabel={t('addTag')}
+      error={error}
+      pending={pending}
+      finish={finish}
+      onSubmit={(form) => apply(String(form.get('tag') ?? ''))}
     >
-      <DialogContent>
-        <DialogTitle>{t('addTag')}</DialogTitle>
-        <DialogDescription>{t('addTagDescription', { count: items.length })}</DialogDescription>
-        {error && <ErrorPanel error={error} />}
-        <form
-          className="grid gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void apply(String(new FormData(event.currentTarget).get('tag') ?? ''));
-          }}
-        >
-          <Input name="tag" list={listId} aria-label={t('tagName')} required maxLength={50} />
-          <datalist id={listId}>
-            {(tags.data?.data ?? []).map((row) => (
-              <option key={row.tag} value={row.tag} />
-            ))}
-          </datalist>
-          <Button type="submit" disabled={pending}>
-            {t('addTag')}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <Input name="tag" list={listId} aria-label={t('tagName')} required maxLength={50} />
+      <datalist id={listId}>
+        {(tags.data?.data ?? []).map((row) => (
+          <option key={row.tag} value={row.tag} />
+        ))}
+      </datalist>
+    </EntityActionDialog>
   );
 }

@@ -1,10 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/ui/primitives/dialog';
-import { ErrorPanel } from '@/ui/layout/ErrorPanel';
+import { EntityActionDialog } from '@/ui/entity/EntityActionDialog';
 import type { TaskDetail } from '../schema/validation';
 import { useTaskMutations } from './queries';
 export function canGroup(items: TaskDetail[]) {
@@ -40,29 +38,16 @@ export function GroupTasksDialog({
     }
   }
   return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open) finish(false);
-      }}
+    <EntityActionDialog
+      title={t('group')}
+      description={t('groupDescription')}
+      submitLabel={t('group')}
+      error={error}
+      pending={pending}
+      finish={finish}
+      onSubmit={(form) => group(String(form.get('title') ?? ''))}
     >
-      <DialogContent>
-        <DialogTitle>{t('group')}</DialogTitle>
-        <DialogDescription>{t('groupDescription')}</DialogDescription>
-        {error && <ErrorPanel error={error} />}
-        <form
-          className="grid gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void group(String(new FormData(event.currentTarget).get('title') ?? ''));
-          }}
-        >
-          <Input name="title" aria-label={t('title')} required maxLength={500} />
-          <Button type="submit" disabled={pending}>
-            {t('group')}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <Input name="title" aria-label={t('title')} required maxLength={500} />
+    </EntityActionDialog>
   );
 }

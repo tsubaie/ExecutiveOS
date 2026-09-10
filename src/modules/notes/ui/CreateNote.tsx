@@ -1,13 +1,12 @@
 'use client';
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { Field } from '@/ui/layout/Field';
 import { Property } from '@/ui/layout/Property';
 import { DatePicker } from '@/ui/layout/DatePicker';
-import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { useToday } from '@/ui/format';
+import { EntityCreateForm } from '@/ui/entity/EntityCreateForm';
 import type { CreateApi } from '@/ui/entity/types';
 import { NoteCreate, type NoteDetail } from '../schema/validation';
 import { useNoteTypes } from './queries';
@@ -23,9 +22,8 @@ export function CreateNote({ api }: { api: CreateApi<NoteCreate, NoteDetail> }) 
   const [type, setType] = useState('');
   const [noteDate, setNoteDate] = useState<string | null>(today);
   const fallback = types.data?.meta.defaultType ?? '';
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const fields = Object.fromEntries(new FormData(event.currentTarget));
+  async function submit(form: FormData) {
+    const fields = Object.fromEntries(form);
     try {
       await api.submit(
         NoteCreate.parse({
@@ -39,11 +37,13 @@ export function CreateNote({ api }: { api: CreateApi<NoteCreate, NoteDetail> }) 
     }
   }
   return (
-    <form className="grid gap-5 p-5" onSubmit={(event) => void submit(event)}>
-      <h2 tabIndex={-1} className="text-xl font-semibold">
-        {t('newNote')}
-      </h2>
-      {error && <ErrorPanel error={error} />}
+    <EntityCreateForm
+      title={t('newNote')}
+      error={error}
+      pending={api.pending}
+      cancel={api.cancel}
+      onSubmit={submit}
+    >
       <Field label={t('title')}>
         {(control) => (
           <Input {...control} name="title" dir="auto" required pattern=".*\S.*" maxLength={500} />
@@ -57,14 +57,6 @@ export function CreateNote({ api }: { api: CreateApi<NoteCreate, NoteDetail> }) 
           <DatePicker value={noteDate} onChange={setNoteDate} label={t('date')} />
         </Property>
       </div>
-      <div className="flex gap-2">
-        <Button type="submit" disabled={api.pending}>
-          {c('create')}
-        </Button>
-        <Button variant="outline" onClick={api.cancel}>
-          {c('cancel')}
-        </Button>
-      </div>
-    </form>
+    </EntityCreateForm>
   );
 }
