@@ -72,17 +72,17 @@ ADR 0015 still describes the original "textarea with a preview toggle" in its co
 
 ## Audits
 
-`pnpm audit:all` in the tooling container (gate env: `executiveos_e2e_test` for the app, `executiveos_test` for Vitest), 2026-09-10:
+`pnpm audit:all` in the tooling container (gate env: `executiveos_e2e_test` for the app, `executiveos_test` for Vitest), final run on the rebased branch tip, 2026-09-10 (static and data halves in one run, the browser half re-run after the last bundle fix):
 
 ```text
 lint, typecheck, depcruise: pass (330 modules, 1142 dependencies, no violations)
 audit:structure 0 / audit:i18n 0 (23 dynamic-key warnings, pre-existing pattern) / audit:portability 0
 audit:docs 0 (coverage warnings only on unimplemented specs) / audit:schema 0 / audit:tests 0 (layer warnings)
 audit:deps 0 / audit:secrets 0
-vitest: 37 files, 135 tests passed
+vitest: 48 files, 180 tests passed (after the rebase onto main 6d548ba)
 build: pass (pre-existing instrumentation and backup bundler warnings)
-audit:bundle 0 (notes route 245 KB after lazy-loading the participant picker; shared bundle 166 KB warning, pre-existing)
-playwright: 52 passed (desktop and mobile; notes 16, tasks, people, admin, home)
+audit:bundle 0 (the markdown editor, mention menu, caret mapping and the Tasks description field load on demand; shared bundle 166 KB warning, pre-existing)
+playwright: 54 passed (desktop and mobile; notes 18, tasks, people, admin, home)
 audit:openapi 0 / audit:a11y 0 / audit:perf 0 (5 informational samples) / audit:dupes 0
 ```
 
