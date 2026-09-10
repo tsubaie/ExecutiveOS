@@ -75,7 +75,8 @@
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "pickDate": "Choose a date",
-    "saveFailed": "Not saved"
+    "saveFailed": "Not saved",
+    "notes": "Notes"
   },
   "people": {
     "fullName": "Full name",
@@ -139,7 +140,8 @@
     "directory": "Your people directory",
     "directoryDescription": "Keep contact details and responsibilities close at hand.",
     "openPeople": "Open directory",
-    "overview": "Overview"
+    "overview": "Overview",
+    "notes": "Recent notes"
   },
   "admin": {
     "users": "Members",

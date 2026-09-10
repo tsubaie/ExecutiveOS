@@ -5,7 +5,16 @@ export const Home = z.object({
   peopleCount: z.number(),
   sections: z.array(
     z.object({
-      key: z.enum(['nextMeetings', 'prep', 'overdue', 'today', 'waiting', 'kpis', 'initiatives']),
+      key: z.enum([
+        'nextMeetings',
+        'prep',
+        'overdue',
+        'today',
+        'waiting',
+        'kpis',
+        'initiatives',
+        'notes',
+      ]),
       enabled: z.boolean(),
       count: z.number(),
       href: z.string().nullable().default(null),

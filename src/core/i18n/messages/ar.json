@@ -75,7 +75,8 @@
     "previousMonth": "الشهر السابق",
     "nextMonth": "الشهر التالي",
     "pickDate": "اختر تاريخًا",
-    "saveFailed": "لم يُحفظ"
+    "saveFailed": "لم يُحفظ",
+    "notes": "الملاحظات"
   },
   "people": {
     "fullName": "الاسم الكامل",
@@ -139,7 +140,8 @@
     "directory": "دليل الأشخاص",
     "directoryDescription": "احتفظ ببيانات التواصل والمسؤوليات في متناولك.",
     "openPeople": "فتح الدليل",
-    "overview": "نظرة عامة"
+    "overview": "نظرة عامة",
+    "notes": "ملاحظات حديثة"
   },
   "admin": {
     "users": "الأعضاء",

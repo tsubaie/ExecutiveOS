@@ -17,7 +17,7 @@ beforeAll(async () => {
   await migrateDatabase();
 });
 beforeEach(async () => {
-  await db().execute(sql`truncate tasks, people, users, settings, audit_log cascade`);
+  await db().execute(sql`truncate tasks, notes, people, users, settings, audit_log cascade`);
   user = User.parse(
     await insertUser(db(), {
       id: id(),

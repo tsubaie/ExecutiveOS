@@ -13,6 +13,8 @@ export const routes = {
   home: () => '/home',
   tasks: (query?: Optional<'view' | 'id' | 'ownerId' | 'sort'>) => withQuery('/tasks', query),
   people: (query?: Optional<'view' | 'id'>) => withQuery('/people', query),
+  notes: (query?: Optional<'view' | 'id' | 'personId' | 'tag' | 'type'>) =>
+    withQuery('/notes', query),
   person: (personId: string) => withQuery('/people', { id: personId }),
   admin: (page: AdminPage) => `/admin/${page}`,
   login: () => '/login',

@@ -33,19 +33,32 @@ type Filters = {
   dueFrom: string;
   dueTo: string;
   hasSubtasks: string;
+  sourceNoteId: string;
+  hasSourceNote: string;
   parentId?: string | undefined;
   includeSubtasks?: string | undefined;
 };
 const children = sql<number>`(select count(*)::int from tasks c where c.parent_id = tasks.id and c.deleted_at is null)`;
 const completed = sql<number>`(select count(*)::int from tasks c where c.parent_id = tasks.id and c.deleted_at is null and c.status = 'completed')`;
+const sourceNote = sql`(select json_build_object('id', n.id, 'title', n.title, 'deletedAt', n.deleted_at, 'archivedAt', n.archived_at) from notes n where n.id = tasks.source_note_id)`;
 const columns = (ownerName: NameOf) => ({
   ...getTableColumns(tasks),
   subtaskCount: children,
   completedSubtaskCount: completed,
   ownerName: ownerName(tasks.ownerId),
+  sourceNote,
 });
-function base(f: Filters) {
+function noteFilters(f: Filters) {
   const predicates: SQL[] = [];
+  if (f.sourceNoteId) predicates.push(eq(tasks.sourceNoteId, f.sourceNoteId));
+  if (f.hasSourceNote)
+    predicates.push(
+      f.hasSourceNote === 'true' ? isNotNull(tasks.sourceNoteId) : isNull(tasks.sourceNoteId),
+    );
+  return predicates;
+}
+function base(f: Filters) {
+  const predicates: SQL[] = noteFilters(f);
   if (f.parentId) predicates.push(eq(tasks.parentId, f.parentId));
   else if (f.includeSubtasks !== 'true') predicates.push(isNull(tasks.parentId));
   if (f.ownerId) predicates.push(eq(tasks.ownerId, f.ownerId));

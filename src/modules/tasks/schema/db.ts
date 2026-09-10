@@ -13,6 +13,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { users } from '@/core/db/system-schema';
 import { people } from '@/modules/people/schema/db';
+import { notes } from '@/modules/notes/schema/db';
 const time = (name: string) => timestamp(name, { withTimezone: true });
 export const tasks = pgTable(
   'tasks',
@@ -27,6 +28,7 @@ export const tasks = pgTable(
     completedAt: time('completed_at'),
     ownerId: uuid('owner_id').references(() => people.id, { onDelete: 'set null' }),
     parentId: uuid('parent_id').references((): AnyPgColumn => tasks.id, { onDelete: 'set null' }),
+    sourceNoteId: uuid('source_note_id').references(() => notes.id, { onDelete: 'set null' }),
     sortOrder: integer('sort_order').notNull(),
     createdAt: time('created_at').notNull().defaultNow(),
     updatedAt: time('updated_at').notNull().defaultNow(),
@@ -41,6 +43,7 @@ export const tasks = pgTable(
   (t) => [
     index('tasks_owner_idx').on(t.ownerId),
     index('tasks_parent_idx').on(t.parentId),
+    index('tasks_source_note_idx').on(t.sourceNoteId),
     index('tasks_creator_idx').on(t.createdBy),
     index('tasks_updater_idx').on(t.updatedBy),
     index('tasks_due_idx').on(t.dueDate, t.id),

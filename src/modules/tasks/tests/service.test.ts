@@ -19,7 +19,7 @@ beforeAll(async () => {
   await migrateDatabase();
 });
 beforeEach(async () => {
-  await db().execute(sql`truncate tasks, people, users, settings, audit_log cascade`);
+  await db().execute(sql`truncate tasks, notes, people, users, settings, audit_log cascade`);
   const [row] = await db()
     .insert(users)
     .values({
@@ -33,6 +33,22 @@ beforeEach(async () => {
   user = User.parse(row);
 });
 afterAll(() => pool().end());
+it('TASKS-B05 lists tasks by source note and by whether they have one', async () => {
+  const { createNote } = await import('@/modules/notes/service');
+  const { NoteCreate } = await import('@/modules/notes/schema/validation');
+  const note = await run((ctx) => createNote(ctx, NoteCreate.parse({ title: 'Source' })));
+  const linked = await create('From note', { sourceNoteId: note.id });
+  const loose = await create('Loose');
+  const byNote = await run((ctx) =>
+    service.listTasks(ctx, TaskListQuery.parse({ view: 'all', sourceNoteId: note.id })),
+  );
+  expect(byNote.data.map((task) => task.id)).toEqual([linked.id]);
+  expect(byNote.data[0]?.sourceNote).toMatchObject({ id: note.id, title: 'Source' });
+  const unlinked = await run((ctx) =>
+    service.listTasks(ctx, TaskListQuery.parse({ view: 'all', hasSourceNote: 'false' })),
+  );
+  expect(unlinked.data.map((task) => task.id)).toEqual([loose.id]);
+});
 it('TASKS-A01 TASKS-B01 TASKS-B04 TASKS-B06 counts exclude children and normalized search matches Arabic', async () => {
   const parent = await create('إِعداد التقرير', { description: 'Budget outline' });
   await create('Child', { parentId: parent.id });

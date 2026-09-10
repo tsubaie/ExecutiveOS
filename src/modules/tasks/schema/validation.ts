@@ -29,6 +29,7 @@ export const TaskFields = z.object({
   priority: Priority.nullable().default(null),
   dueDate: z.iso.date().nullable().default(null),
   ownerId: z.uuid().nullable().default(null),
+  sourceNoteId: z.uuid().nullable().default(null),
 });
 export const TaskCreate = TaskFields.extend({
   parentId: z.uuid().nullable().default(null),
@@ -40,6 +41,7 @@ export const TaskPatch = TaskFields.extend({
   priority: TaskFields.shape.priority.removeDefault(),
   dueDate: TaskFields.shape.dueDate.removeDefault(),
   ownerId: TaskFields.shape.ownerId.removeDefault(),
+  sourceNoteId: TaskFields.shape.sourceNoteId.removeDefault(),
 })
   .partial()
   .extend({ revision: z.number().int().positive() })
@@ -63,6 +65,15 @@ export const Task = TaskFields.extend({
   ownerName: z.string().nullable().default(null),
   subtaskCount: z.number().default(0),
   completedSubtaskCount: z.number().default(0),
+  sourceNote: z
+    .object({
+      id: z.uuid(),
+      title: z.string(),
+      deletedAt: z.iso.datetime({ offset: true }).nullable(),
+      archivedAt: z.iso.datetime({ offset: true }).nullable(),
+    })
+    .nullable()
+    .default(null),
 });
 export type Task = z.infer<typeof Task>;
 export const TaskDetail = Task.extend({
@@ -78,6 +89,8 @@ export const TaskListQuery = z.strictObject({
   dueFrom: z.union([z.iso.date(), z.literal('')]).default(''),
   dueTo: z.union([z.iso.date(), z.literal('')]).default(''),
   hasSubtasks: z.enum(['', 'true', 'false']).default(''),
+  sourceNoteId: z.union([z.uuid(), z.literal('')]).default(''),
+  hasSourceNote: z.enum(['', 'true', 'false']).default(''),
   parentId: z.uuid().optional(),
   includeSubtasks: z.enum(['true', 'false']).optional(),
   sort: Sort.default('default'),
