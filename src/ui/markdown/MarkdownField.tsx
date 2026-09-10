@@ -1,8 +1,9 @@
 'use client';
-import { Suspense, lazy, useId, useState } from 'react';
+import { Suspense, lazy, useId, useRef, useState, type MouseEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/ui/cn';
 import type { Mentions } from './mentions';
+import { sourceOffsetFromPoint } from './caret';
 // Both halves load on demand: the renderer only when there is content to show, the editor only
 // when the field is entered, so neither weighs on a route's initial bundle.
 const Markdown = lazy(() => import('./Markdown').then((m) => ({ default: m.Markdown })));
@@ -32,6 +33,7 @@ export function MarkdownField({
 }: Props) {
   const id = useId();
   const [editing, setEditing] = useState(!value.trim());
+  const [caret, setCaret] = useState<number | null>(null);
   const [draft, setDraft] = useState(value);
   const [seen, setSeen] = useState(value);
   if (seen !== value) {
@@ -55,12 +57,22 @@ export function MarkdownField({
             draft={draft}
             maxLength={maxLength}
             mentions={mentions}
+            caret={caret}
             onChange={setDraft}
             onLeave={leave}
           />
         </Suspense>
       ) : (
-        <Preview id={id} label={label} draft={draft} name={name} edit={() => setEditing(true)} />
+        <Preview
+          id={id}
+          label={label}
+          draft={draft}
+          name={name}
+          edit={(at) => {
+            setCaret(at);
+            setEditing(true);
+          }}
+        />
       )}
     </div>
   );
@@ -78,19 +90,26 @@ function Preview({
   label: string;
   draft: string;
   name?: string | undefined;
-  edit: () => void;
+  edit: (caret: number | null) => void;
 }) {
   const t = useTranslations('common');
+  const box = useRef<HTMLButtonElement>(null);
+  // A pointer click lands the caret where it hit; keyboard activation lands it at the end.
+  const click = (event: MouseEvent<HTMLButtonElement>) => {
+    const root = event.detail > 0 ? box.current : null;
+    edit(root ? sourceOffsetFromPoint(root, event.clientX, event.clientY, draft) : null);
+  };
   return (
     <div className="grid">
       {name && <input type="hidden" name={name} value={draft} />}
       <button
+        ref={box}
         type="button"
         id={id}
         aria-label={label}
         title={t('clickToWrite')}
         className="min-h-40 w-full cursor-text rounded-lg border px-3 py-2 text-start hover:border-ring focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-        onClick={edit}
+        onClick={click}
       >
         <Suspense fallback={<div className="h-20" />}>
           <Markdown content={draft} interactive={false} />

@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { Textarea } from '@/ui/primitives/textarea';
 import { MentionMenu } from './MentionMenu';
 import {
@@ -16,6 +16,9 @@ type EditorProps = {
   draft: string;
   maxLength: number;
   mentions?: Mentions | undefined;
+  // Where the caret lands on mount: the source position of the click that opened the editor, or
+  // null for the end of the text.
+  caret?: number | null | undefined;
   onChange: (draft: string) => void;
   onLeave: () => void;
 };
@@ -26,10 +29,19 @@ export default function MarkdownEditor({
   draft,
   maxLength,
   mentions,
+  caret,
   onChange,
   onLeave,
 }: EditorProps) {
   const box = useRef<HTMLTextAreaElement>(null);
+  // sync: place the caret once, after the textarea has mounted with the draft.
+  useEffect(() => {
+    const element = box.current;
+    if (!element || !element.value.trim()) return;
+    const at = Math.min(element.value.length, caret ?? element.value.length);
+    element.focus();
+    element.setSelectionRange(at, at);
+  }, [caret]);
   const menu = useMentionMenu(mentions, box, onChange);
   return (
     <div className="relative">

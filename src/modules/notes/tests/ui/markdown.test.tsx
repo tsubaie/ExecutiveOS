@@ -9,6 +9,7 @@ import {
   matchMentions,
   mentionAt,
 } from '@/ui/markdown/mentions';
+import { sourceOffset } from '@/ui/markdown/caret';
 import { mount } from './harness';
 const content = [
   '# Agenda',
@@ -153,5 +154,25 @@ describe('mention helpers', () => {
       'c',
     ]);
     expect(derivedParticipants('nobody here', people)).toEqual([]);
+  });
+});
+describe('caret mapping', () => {
+  it('NOTES-B07 maps a click on rendered text to the same text in the markdown source', () => {
+    const source =
+      '# Agenda\n\n- Approve the **revised** budget\n- Move the launch\n\nMove the launch again';
+    const texts = [
+      'Agenda',
+      'Approve the ',
+      'revised',
+      ' budget',
+      'Move the launch',
+      'Move the launch again',
+    ];
+    expect(sourceOffset(source, texts, 0, 2)).toBe(source.indexOf('Agenda') + 2);
+    expect(sourceOffset(source, texts, 2, 3)).toBe(source.indexOf('revised') + 3);
+    expect(sourceOffset(source, texts, 4, 5)).toBe(source.indexOf('Move the launch') + 5);
+    expect(sourceOffset(source, texts, 5, 16)).toBe(source.indexOf('Move the launch again') + 16);
+    expect(sourceOffset(source, ['Approve', 'Approve'], 1, 0)).toBeNull();
+    expect(sourceOffset(source, ['  '], 0, 0)).toBeNull();
   });
 });
