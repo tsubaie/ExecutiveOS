@@ -9,7 +9,14 @@ import { server as notes } from '@/modules/notes';
 import { server as users } from '@/modules/users';
 import { server as settings } from '@/modules/settings';
 // Home aggregates these providers; the home module itself is the consumer, so it is not listed.
-export const serverModules: readonly ServerManifest[] = [tasks, notes, committees, people, users, settings];
+export const serverModules: readonly ServerManifest[] = [
+  tasks,
+  notes,
+  committees,
+  people,
+  users,
+  settings,
+];
 export function homeProviders(modules: readonly ServerManifest[] = serverModules) {
   return modules.flatMap((item) => (item.homeSummary ? [item.homeSummary] : []));
 }
@@ -18,11 +25,12 @@ export function homeProviders(modules: readonly ServerManifest[] = serverModules
 export async function collectHomeSections(
   ctx: Context,
   keys: readonly string[],
+  today: string,
   modules: readonly ServerManifest[] = serverModules,
 ) {
   const owned = new Map<string, HomeSection>();
   for (const provide of homeProviders(modules))
-    for (const section of await provide(ctx)) {
+    for (const section of await provide(ctx, today)) {
       if (!keys.includes(section.key))
         throw new Error(`Home section ${section.key} is not a known section`);
       if (owned.has(section.key)) throw new Error(`Home section ${section.key} is provided twice`);

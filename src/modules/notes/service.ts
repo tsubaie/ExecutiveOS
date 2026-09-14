@@ -16,7 +16,8 @@ import { aiPeople, getPerson } from '@/modules/people';
 import en from '@/core/i18n/messages/en.json';
 import ar from '@/core/i18n/messages/ar.json';
 import {
-  ManageTags, Tags,
+  ManageTags,
+  Tags,
   Note,
   NoteDetail,
   Counts,
@@ -227,9 +228,8 @@ export async function listTypes(ctx: Context) {
 export async function listTags(ctx: Context) {
   return { data: await repo.selectTags(ctx.db) };
 }
-export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
-  const clock = await today(ctx);
-  const row = await repo.selectRecent(ctx.db, addDays(clock.today, -6), clock.today);
+export async function homeSummary(ctx: Context, day: string): Promise<HomeSection[]> {
+  const row = await repo.selectRecent(ctx.db, addDays(day, -6), day);
   return [
     {
       key: 'notes',
@@ -237,7 +237,14 @@ export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
       count: z.number().parse(row.count),
       href: routes.notes({ view: 'this_week' }),
       items: z
-        .array(z.object({ id: z.uuid(), title: z.string() }))
+        .array(
+          z.object({
+            id: z.uuid(),
+            title: z.string(),
+            date: z.string().nullable(),
+            committee: z.string().nullable(),
+          }),
+        )
         .parse(row.items)
         .map((item) => ({ ...item, href: routes.notes({ view: 'all', id: item.id }) })),
     },
@@ -247,7 +254,6 @@ export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
 export function peopleForAi(ctx: Context) {
   return aiPeople(ctx);
 }
-
 
 function requireAdmin(ctx: Context) {
   if (ctx.user.role !== 'admin') throw new AppError('forbidden', { reason: 'role' });
@@ -265,15 +271,26 @@ export async function manageTags(ctx: Context, input: ManageTags) {
     const rows = await repo.lockTaggedNotes(database, change.tags);
     let updatedCount = 0;
     for (const row of rows) {
-      const replaced = row.tags.flatMap((tag) => sources.has(tag.toLowerCase())
-        ? change.target === null ? [] : [change.target] : [tag]);
-      const canonical = replaced.map((tag) => change.target !== null && tag.toLowerCase() === change.target.toLowerCase() ? change.target : tag);
+      const replaced = row.tags.flatMap((tag) =>
+        sources.has(tag.toLowerCase()) ? (change.target === null ? [] : [change.target]) : [tag],
+      );
+      const canonical = replaced.map((tag) =>
+        change.target !== null && tag.toLowerCase() === change.target.toLowerCase()
+          ? change.target
+          : tag,
+      );
       const tags = Tags.parse(canonical);
       if (JSON.stringify(tags) === JSON.stringify(row.tags)) continue;
       const updated = await repo.updateNote(database, row.id, row.revision, { tags }, ctx.user.id);
       if (!updated) throw new AppError('conflict', { reason: 'revision' });
-      await writeAudit(database, ctx.user.id, change.target === null ? 'tags.delete' : 'tags.merge', 'note', row.id,
-        { before: row.tags, after: tags });
+      await writeAudit(
+        database,
+        ctx.user.id,
+        change.target === null ? 'tags.delete' : 'tags.merge',
+        'note',
+        row.id,
+        { before: row.tags, after: tags },
+      );
       updatedCount += 1;
     }
     return { data: { updatedCount } };

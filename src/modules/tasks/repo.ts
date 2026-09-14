@@ -219,9 +219,26 @@ export async function selectHomeSummary(database: Database, today: string) {
   const columns: Record<string, SQL> = {};
   for (const [key, predicate] of Object.entries(predicates)) {
     columns[key + 'Count'] = sql`count(*) filter (where ${predicate})::int`;
+    // HOME-B01: rows carry the facts the principal triages on, so the page never re-queries.
     columns[key + 'Items'] =
-      sql`coalesce((select json_agg(item) from (select id,title from tasks where ${predicate} order by due_date asc nulls last,id limit 5) item),'[]'::json)`;
+      sql`coalesce((select json_agg(item) from (select t.id, t.title, t.revision, t.due_date::text as date,
+        p.full_name as owner, c.name as committee
+        from tasks t left join people p on p.id = t.owner_id and p.deleted_at is null
+        left join committees c on c.id = t.committee_id and c.deleted_at is null
+        where t.id in (select id from tasks where ${predicate})
+        order by t.due_date asc nulls last, t.id limit 5) item),'[]'::json)`;
   }
+  // HOME-B09: how much of the overdue pile is a month or more past due. A total says how much is
+  // late; this says whether it is a backlog or a crisis.
+  columns['overdueStale'] =
+    sql`count(*) filter (where ${predicates.overdue} and ${tasks.dueDate} < (${today}::date - 30))::int`;
+  // HOME-B10: waiting is a chase list, so it aggregates by the person holding the work rather than
+  // listing each task. One row per person, the people holding the most first.
+  columns['waitingPeople'] =
+    sql`coalesce((select json_agg(item) from (select p.id, p.full_name as title, count(*)::int as count
+      from tasks t join people p on p.id = t.owner_id and p.deleted_at is null
+      where t.id in (select id from tasks where ${predicates.waiting})
+      group by p.id, p.full_name order by count(*) desc, lower(p.full_name), p.id limit 5) item),'[]'::json)`;
   const [row] = await database.select(columns).from(tasks);
   return row ?? {};
 }

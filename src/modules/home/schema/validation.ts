@@ -11,6 +11,7 @@ export const Home = z.object({
         'overdue',
         'today',
         'waiting',
+        'committees',
         'kpis',
         'initiatives',
         'notes',
@@ -18,7 +19,23 @@ export const Home = z.object({
       enabled: z.boolean(),
       count: z.number(),
       href: z.string().nullable().default(null),
-      items: z.array(z.object({ id: z.uuid(), title: z.string(), href: z.string() })).default([]),
+      stale: z.number().nullable().default(null),
+      items: z
+        .array(
+          z.object({
+            id: z.uuid(),
+            title: z.string(),
+            href: z.string(),
+            date: z.iso.date().nullable().default(null),
+            owner: z.string().nullable().default(null),
+            committee: z.string().nullable().default(null),
+            count: z.number().nullable().default(null),
+            revision: z.number().nullable().default(null),
+            overdue: z.number().nullable().default(null),
+            done: z.number().nullable().default(null),
+          }),
+        )
+        .default([]),
     }),
   ),
 });

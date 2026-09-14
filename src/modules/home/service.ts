@@ -2,16 +2,18 @@
 import 'server-only';
 import type { Context } from '@/core/auth/session';
 import { getSetting } from '@/core/db/settings-repo';
+import { dayAt } from '@/core/time/tasks';
 import { collectHomeSections } from '@/core/modules/registry';
 import { getPerson, countPeople } from '@/modules/people';
 import { Home } from './schema/validation';
 // The section order is a product decision (docs/features/home.md); providers fill what they own.
 const sectionKeys = Home.shape.sections.element.shape.key.options;
 export async function homeSummary(ctx: Context) {
+  const today = dayAt(await getSetting(ctx.db, 'workspace.timezone'));
   const principalId = await getSetting(ctx.db, 'workspace.principal_person_id');
   const principal = principalId ? await getPerson(ctx, principalId) : null;
   const peopleCount = await countPeople(ctx);
-  const provided = await collectHomeSections(ctx, sectionKeys);
+  const provided = await collectHomeSections(ctx, sectionKeys, today);
   return Home.parse({
     name: ctx.user.name,
     principal: principal?.fullName ?? null,

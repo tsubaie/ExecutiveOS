@@ -225,7 +225,7 @@ it('HOME-B01 HOME-B03 TASKS-B15 Home includes task counts and links, with five i
   const today = dayAt('UTC');
   for (let i = 0; i < 7; i++) await create(`Today ${i}`, { dueDate: today });
   await create('Overdue', { dueDate: '2000-01-01' });
-  const sections = await run((ctx) => service.homeSummary(ctx));
+  const sections = await run((ctx) => service.homeSummary(ctx, today));
   expect(sections.find((section) => section.key === 'today')?.count).toBe(7);
   expect(sections.find((section) => section.key === 'today')?.items).toHaveLength(5);
   expect(sections.find((section) => section.key === 'overdue')?.count).toBe(1);

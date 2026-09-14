@@ -238,7 +238,11 @@ export async function selectRecent(database: Database, from: string, to: string)
   const [row] = await database
     .select({
       count: sql<number>`count(*) filter (where ${recent})::int`,
-      items: sql`coalesce((select json_agg(item) from (select id, title from notes where ${recent} order by note_date desc, created_at desc, id desc limit 5) item), '[]'::json)`,
+      // HOME-B01: the row shows when the note is dated and which committee it belongs to.
+      items: sql`coalesce((select json_agg(item) from (select n.id, n.title, n.note_date::text as date,
+        c.name as committee from notes n left join committees c on c.id = n.committee_id and c.deleted_at is null
+        where n.id in (select id from notes where ${recent})
+        order by n.note_date desc, n.created_at desc, n.id desc limit 5) item), '[]'::json)`,
     })
     .from(notes);
   return row ?? { count: 0, items: [] };

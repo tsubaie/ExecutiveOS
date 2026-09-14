@@ -1,103 +1,80 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import { ArrowUpRight, Users, Minus } from 'lucide-react';
 import { useHome } from './queries';
-import Loading from '@/ui/layout/Loading';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
-import { useCount } from '@/ui/format';
-import { routes } from '@/core/routes';
+import { Greeting } from './HomeGreeting';
+import { Stream } from './HomeStream';
+import { ambient, type Section } from './home-sections';
+const page = 'mx-auto max-w-[1400px] px-6 py-8 lg:px-10 lg:py-10';
 export function HomePage() {
   const t = useTranslations('home');
-  const c = useTranslations('common');
   const query = useHome();
-  const count = useCount();
-  if (query.isPending) return <Loading />;
+  if (query.isPending) return <HomeSkeleton />;
   if (query.error) return <ErrorPanel error={query.error} retry={() => void query.refetch()} />;
   const data = query.data.data;
+  // HOME-B02: a module the workspace never enabled is left out rather than given a row. An enabled
+  // section stays even at zero, because zero overdue actions is an answer.
+  const live: Section[] = data.sections.filter((section) => section.enabled);
+  // HOME-B07: the first section that actually has something in it leads, at full width. The section
+  // order is the product's urgency order, so the lead is whatever is most pressing today.
+  const lead = live.find((section) => section.count > 0);
+  // What the principal is accountable for carries the wide column; reference material sits quieter
+  // beside it rather than claiming the same weight.
+  const rest = live.filter((section) => section !== lead);
+  const carrying = rest.filter((section) => !ambient(section));
+  const reference = rest.filter(ambient);
   return (
-    <div className="mx-auto max-w-6xl px-5 py-8 lg:px-10 lg:py-12">
-      <p className="mb-3 text-sm text-accent">{t('overview')}</p>
-      <h1 className="text-3xl font-semibold tracking-tight lg:text-4xl">
-        {t('greeting', { name: data.name })}
-      </h1>
-      <p className="mt-3 text-text-muted">{t('title')}</p>
-      {data.principal && data.principal !== data.name && (
-        <p className="mt-2 text-sm text-text-muted">{t('preparing', { name: data.principal })}</p>
+    <div className={page}>
+      <Greeting
+        name={data.name}
+        principal={data.principal}
+        peopleCount={data.peopleCount}
+        live={live}
+      />
+      {live.length > 0 ? (
+        <>
+          {lead && <Stream section={lead} lead />}
+          {rest.length > 0 && (
+            <div className="mt-10 grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+              <div className="flex flex-col gap-10">
+                {carrying.map((section) => (
+                  <Stream key={section.key} section={section} />
+                ))}
+              </div>
+              {reference.length > 0 && (
+                <div className="flex flex-col gap-10">
+                  {reference.map((section) => (
+                    <Stream key={section.key} section={section} quiet />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="mt-10 border-t pt-10 text-center">
+          <p className="text-sm">{t('empty')}</p>
+          <p className="mt-2 text-sm text-text-muted">{t('emptyHint')}</p>
+        </div>
       )}
-      <div className="mt-10 grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section>
-          <h2 className="mb-4 text-sm font-medium">{t('overview')}</h2>
-          <div className="divide-y rounded-xl border bg-surface px-5">
-            {data.sections.map((section) => (
-              <HomeSection key={section.key} section={section} />
-            ))}
-          </div>
-        </section>
-        <Link
-          href={routes.people()}
-          className="group rounded-xl border bg-surface p-6 hover:border-accent"
-        >
-          <div className="mb-8 flex items-start justify-between">
-            <span className="rounded-lg bg-accent/10 p-3 text-accent">
-              <Users className="size-6" />
-            </span>
-            <ArrowUpRight className="size-5 text-text-muted rtl:-rotate-90" />
-          </div>
-          <h2 className="text-lg font-semibold">{t('directory')}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-text-muted">
-            {t('directoryDescription')}
-          </p>
-          <p className="mt-6 border-t pt-4 text-sm text-accent">
-            {c('count', { count: count(data.peopleCount) })}
-          </p>
-        </Link>
-      </div>
     </div>
   );
 }
 
-function HomeSection({
-  section,
-}: {
-  section: {
-    key:
-      'nextMeetings' | 'prep' | 'overdue' | 'today' | 'waiting' | 'kpis' | 'initiatives' | 'notes';
-    enabled: boolean;
-    count: number;
-    href: string | null;
-    items: { id: string; title: string; href: string }[];
-  };
-}) {
-  const t = useTranslations('home');
+// The skeleton keeps the finished layout's shape so the page does not jump when the query lands.
+function HomeSkeleton() {
   const c = useTranslations('common');
-  const count = useCount();
+  const block = 'animate-pulse rounded-md bg-surface-raised';
   return (
-    <section className="py-4">
-      <div className="flex min-h-8 items-center justify-between gap-3">
-        <h3 className="text-sm">{t(section.key)}</h3>
-        {section.enabled && section.href ? (
-          <Link className="text-xs text-accent" href={section.href}>
-            {c('count', { count: count(section.count) })}
-          </Link>
-        ) : (
-          <span className="flex items-center gap-2 text-xs text-text-muted">
-            <Minus className="size-3" />
-            {t('disabled')}
-          </span>
-        )}
+    <div role="status" aria-label={c('loading')} className={page}>
+      <div className={`h-4 w-28 ${block}`} />
+      <div className={`mt-3 h-9 w-[32rem] max-w-full ${block} lg:h-10`} />
+      <div className={`mt-3 h-4 w-48 ${block}`} />
+      <div className={`mt-8 h-44 ${block}`} />
+      <div className="mt-10 grid items-start gap-x-14 gap-y-10 xl:grid-cols-2">
+        <div className={`h-32 ${block}`} />
+        <div className={`h-32 ${block}`} />
       </div>
-      {section.items.length > 0 && (
-        <ul className="mt-3 grid gap-2">
-          {section.items.map((item) => (
-            <li key={item.id}>
-              <Link href={item.href} className="block truncate text-sm text-accent">
-                <bdi>{item.title}</bdi>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    </div>
   );
 }

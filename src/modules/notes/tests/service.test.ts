@@ -24,18 +24,35 @@ beforeAll(async () => {
 beforeEach(() => harness.reset());
 afterAll(() => pool().end());
 it('NOTES-B21 ADMIN-B28 merges tags across active archived and trashed notes without changing content', async () => {
-  const active = await note('Active', { content: 'Keep this content', tags: ['Old', 'Other', 'Target'] });
+  const active = await note('Active', {
+    content: 'Keep this content',
+    tags: ['Old', 'Other', 'Target'],
+  });
   const archived = await note('Archived', { tags: ['OLD'] });
   await run((ctx) => service.archiveNote(ctx, archived.id, 1));
   const trashed = await note('Trashed', { tags: ['Old'] });
   await run((ctx) => service.removeNote(ctx, trashed.id, 1));
-  expect((await run((ctx) => manageTags(ctx, { tags: ['old'], target: 'Target' }))).data.updatedCount).toBe(3);
+  expect(
+    (await run((ctx) => manageTags(ctx, { tags: ['old'], target: 'Target' }))).data.updatedCount,
+  ).toBe(3);
   const updated = await run((ctx) => service.getNote(ctx, active.id));
-  expect(updated).toMatchObject({ tags: ['Target', 'Other'], content: 'Keep this content', revision: 2 });
+  expect(updated).toMatchObject({
+    tags: ['Target', 'Other'],
+    content: 'Keep this content',
+    revision: 2,
+  });
   expect((await run((ctx) => service.getNote(ctx, archived.id))).archivedAt).not.toBeNull();
-  expect(await run((ctx) => service.getNote(ctx, trashed.id, true))).toMatchObject({ tags: ['Target'], revision: 3 });
-  expect((await run((ctx) => listManagedTags(ctx))).data).toEqual([{ tag: 'Target', count: 3 }, { tag: 'Other', count: 1 }]);
-  expect((await run((ctx) => manageTags(ctx, { tags: ['old'], target: 'Target' }))).data.updatedCount).toBe(0);
+  expect(await run((ctx) => service.getNote(ctx, trashed.id, true))).toMatchObject({
+    tags: ['Target'],
+    revision: 3,
+  });
+  expect((await run((ctx) => listManagedTags(ctx))).data).toEqual([
+    { tag: 'Target', count: 3 },
+    { tag: 'Other', count: 1 },
+  ]);
+  expect(
+    (await run((ctx) => manageTags(ctx, { tags: ['old'], target: 'Target' }))).data.updatedCount,
+  ).toBe(0);
 });
 it('NOTES-B21 deletes selected tags without deleting notes and supports case-only renaming', async () => {
   const item = await note('Keep', { tags: ['Old', 'Other'] });
@@ -46,8 +63,17 @@ it('NOTES-B21 deletes selected tags without deleting notes and supports case-onl
 });
 it('ADMIN-B28 rejects member tag administration without changing notes', async () => {
   const item = await note('Keep', { tags: ['Old'] });
-  await expect(run((ctx) => manageTags({ ...ctx, user: { ...ctx.user, role: 'member' } }, { tags: ['Old'], target: null }))).rejects.toMatchObject({ code: 'forbidden' });
-  await expect(run((ctx) => listManagedTags({ ...ctx, user: { ...ctx.user, role: 'member' } }))).rejects.toMatchObject({ code: 'forbidden' });
+  await expect(
+    run((ctx) =>
+      manageTags(
+        { ...ctx, user: { ...ctx.user, role: 'member' } },
+        { tags: ['Old'], target: null },
+      ),
+    ),
+  ).rejects.toMatchObject({ code: 'forbidden' });
+  await expect(
+    run((ctx) => listManagedTags({ ...ctx, user: { ...ctx.user, role: 'member' } })),
+  ).rejects.toMatchObject({ code: 'forbidden' });
   expect((await run((ctx) => service.getNote(ctx, item.id))).tags).toEqual(['Old']);
 });
 it('NOTES-B01 NOTES-A01 creates a note with no type, today in the workspace timezone, no participants and no tasks', async () => {
@@ -325,9 +351,7 @@ it('NOTES-B13 removes a suggestion when its last use is removed', async () => {
   const one = await note('One', { tags: ['Shared', 'Removed'] });
   await note('Two', { tags: ['Shared'] });
   await patch(one.id, { revision: 1, tags: [] });
-  expect((await run((ctx) => service.listTags(ctx))).data).toEqual([
-    { tag: 'Shared', count: 1 },
-  ]);
+  expect((await run((ctx) => service.listTags(ctx))).data).toEqual([{ tag: 'Shared', count: 1 }]);
 });
 it('NOTES-B14 NOTES-A11 HOME-B01 home summary lists recent notes and skips archived and older ones', async () => {
   const timezone = await getSetting(db(), 'workspace.timezone');
@@ -336,11 +360,11 @@ it('NOTES-B14 NOTES-A11 HOME-B01 home summary lists recent notes and skips archi
   await note('Old', { noteDate: addDays(today, -8) });
   const parked = await note('Parked');
   await run((ctx) => service.archiveNote(ctx, parked.id, 1));
-  const [section] = await run((ctx) => service.homeSummary(ctx));
+  const [section] = await run((ctx) => service.homeSummary(ctx, today));
   expect(section).toMatchObject({ key: 'notes', enabled: true, count: 1 });
   expect(section?.items.map((item) => item.id)).toEqual([fresh.id]);
   expect(section?.href).toContain('view=this_week');
   await db().execute(sql`delete from notes`);
-  expect((await run((ctx) => service.homeSummary(ctx)))[0]?.count).toBe(0);
+  expect((await run((ctx) => service.homeSummary(ctx, today)))[0]?.count).toBe(0);
   void tasks;
 });

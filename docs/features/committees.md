@@ -24,7 +24,10 @@ See `03-data-model.md` § committees. Invariants:
 - COMM-B03 **Detail** tabs: Tasks (`tasks?committeeId=` with band grouping, "+ Task" pre-filled), Meetings (`meetings?committeeId=` upcoming then past, "+ Meeting" pre-filled), Notes (`notes?committeeId=`; one row per note), Activity (`GET /committees/:id/activity`: audit entries where `entity` is the committee or an entity whose structural column references it, newest first, cursor paged, 50 per page; visible to all members; private tables never appear), Linked section.
 - COMM-B04 **Archive / unarchive / delete / restore**; reorder by drag with keyboard alternative (`PATCH /committees/reorder`).
 - COMM-B05 **Stats** computed in one aggregated query over tasks, meetings, notes.
-- COMM-B06 **Invalidation**: committee list and detail; task, meeting, note mutations that set or change `committee_id` invalidate the old and new committee's detail and the committee list (stats).
+- COMM-B06 **Home**: the module provides the Home page's "Committees with open work" section through its
+  server manifest (HOME-B01, HOME-B03): active, non-deleted committees carrying at least one open top-level
+  task, counted and listed busiest first, in one query. An archived or trashed committee never appears.
+- COMM-B07 **Invalidation**: committee list and detail; task, meeting, note mutations that set or change `committee_id` invalidate the old and new committee's detail and the committee list (stats).
 
 ## API
 
