@@ -15,6 +15,11 @@ import { seedLarge } from '../db/large-data';
 import { report, finish, type Report } from './lib/report';
 export type Sample = { name: string; ms: number; queries: number };
 export const limits = { ms: 300, queries: 6 };
+// The query ceiling is per module golden path (docs/07 § Data access). Home is not one of those:
+// it is an aggregate over every installed module, and `features/home.md` HOME-A02 sets its own
+// budget at twelve. The per-module ceiling still binds the providers it collects — the registry
+// scenario holds each of them to two queries.
+export const queryBudgets: Record<string, number> = { 'home.summary': 12 };
 type Ctx = { db: Database; user: User; requestId: string };
 const goldenPaths: { name: string; run: (ctx: Ctx) => Promise<object> }[] = [
   {
@@ -38,11 +43,12 @@ export function evaluatePerf(samples: Sample[], budget = limits): Report {
         file: sample.name,
         message: `${Math.round(sample.ms)} ms exceeds ${budget.ms} ms`,
       });
-    if (sample.queries > budget.queries)
+    const allowed = queryBudgets[sample.name] ?? budget.queries;
+    if (sample.queries > allowed)
       result.violations.push({
         rule: 'query-budget',
         file: sample.name,
-        message: `${sample.queries} queries exceed ${budget.queries}`,
+        message: `${sample.queries} queries exceed ${allowed}`,
       });
   }
   return result;

@@ -129,7 +129,7 @@ Indexes: `(note_date, created_at, id) where deleted_at is null`, `(type)`, `(arc
 `name, unit, direction (higher|lower), category, objective_id fk set null, teams, notes, sort_order, freshness_days int default 120, search_text` + entity columns.
 
 ### kpi_readings
-`kpi_id fk cascade, reading_date date, value numeric(14,4), note` + child columns. Unique `(kpi_id, reading_date) where deleted_at is null`.
+`kpi_id fk cascade, reading_date date, value numeric(14,4), note` + child columns, `revision` and `updated_by`: KPIS-B08 edits a reading's note in place, so the row goes through the shared revision-checked update helper and records who last wrote it.  Unique `(kpi_id, reading_date) where deleted_at is null`. The magnitude CHECK restates the limit `numeric(14,4)` already imposes; a value past it is refused by the type before the constraint is reached.
 
 ### kpi_targets
 `kpi_id fk cascade, year int, quarter int check 1..4, target_value numeric(14,4)` + child columns. Unique `(kpi_id, year, quarter) where deleted_at is null`. Zero and negative targets allowed; status rules handle them (`features/kpis.md`).

@@ -11,6 +11,16 @@ const Timezone = z.string().refine((value) => {
     return false;
   }
 });
+// KPIS-I04: the ratio bands a KPI's status is read against. `on` and `near` are ratios of current
+// to target, so they run the same way the direction does: for `higher` a bigger ratio is better and
+// `on` must not sit below `near`; for `lower` the ratio is inverted and the order flips.
+const Band = z.object({ on: z.number().positive().max(100), near: z.number().positive().max(100) });
+export const StatusThresholds = z
+  .object({ higher: Band, lower: Band })
+  .refine((value) => value.higher.on >= value.higher.near && value.lower.on <= value.lower.near, {
+    error: 'thresholds_order',
+  });
+export type StatusThresholds = z.output<typeof StatusThresholds>;
 type Scope = Pick<SettingEntry, 'readRoles' | 'writeRoles' | 'scope'>;
 const workspace: Scope = { readRoles: ['admin'], writeRoles: ['admin'], scope: 'workspace' };
 const user: Scope = {
@@ -50,10 +60,10 @@ export const settingsRegistry = {
     [],
   ),
   'notes.default_type': entry(z.string().nullable(), null),
-  'kpis.status_thresholds': entry(
-    z.object({ onTrack: z.number().min(0).max(100), atRisk: z.number().min(0).max(100) }),
-    { onTrack: 90, atRisk: 70 },
-  ),
+  'kpis.status_thresholds': entry(StatusThresholds, {
+    higher: { on: 0.99, near: 0.85 },
+    lower: { on: 1.01, near: 1.18 },
+  }),
   'tasks.default_view': entry(z.string(), 'today'),
   'user.locale': entry(Locale, defaults.locale, user),
   'user.timezone': entry(Timezone, defaults.timezone, user),

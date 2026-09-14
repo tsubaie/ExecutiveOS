@@ -1,8 +1,8 @@
 # Feature: KPIs
 
-**Status:** accepted
+**Status:** implemented
 **Spec reviewed:** 2026-09-07
-**Implementation verified:** not yet
+**Implementation verified:** 2026-09-14
 **Owner module:** `src/modules/kpis`
 
 ## Purpose
@@ -44,7 +44,15 @@ See `03-data-model.md`. Invariants:
 - KPIS-B05 **Sparkline**: last 8 readings up to today.
 - KPIS-B06 **Objectives** CRUD with manual sort; deleting an objective soft-deletes it and leaves `objective_id` on KPIs and initiatives (chip renders "archived"); purge nulls.
 - KPIS-B07 **List** rows: status dot and label, name, current value with unit, effective target with quarter label, change arrow, category, sparkline. Views `all` (default), `attention` (off, stale, no_data), `on_target`, `near_target`, `off_target`, `no_data`, `stale`, `no_target`, `trash`. Facets objective, category, team, `linkedTo`. Sort: severity (off, stale, no_data, near, no_target, on) then name (default); name; change.
-- KPIS-B08 **Detail**: header, gauge card, trend chart (readings up to today with target line per quarter), readings table (add, edit note, delete), targets table with "set year" (four inputs), notes, Linked section, comments.
+  A status is a function of today's date and the workspace thresholds rather than of a column, so it
+  cannot be filtered, counted or ordered in SQL without writing the rules a second time. The list
+  therefore reads its candidates in one statement, ranks them with `computeKpiStatus`, and pages on
+  that ranking with the cursor format of `04-api-conventions.md` (`{ v, sort, filtersHash, last }`,
+  where `last` is the computed sort tuple). A scorecard is a bounded instrument; the candidate read
+  is capped at `CANDIDATE_LIMIT` rows and `meta.counts` counts that set.
+  The values the facets offer come from `GET /kpis/facets` rather than from the page on screen, so a
+  filter can name a category no row of the current page happens to carry.
+- KPIS-B08 **Detail**: header, gauge card, trend chart (readings up to today with target line per quarter), readings table (add, edit note, delete), targets table with "set year" (four inputs), notes, Linked section, comments. The gauge is a meter bent into an arc rather than a dial: one ratio against one limit, the figure itself as the headline, the arc capped at the limit, and the status named in words beside it so the state never travels as colour alone. The trend carries two series and therefore always carries a legend; the target is the reference, stepped between quarters and dashed.
 - KPIS-B09 **Readings**: date defaults to today; future dates allowed (excluded from current until reached) and flagged; duplicate date → 409 offering overwrite (`PUT /kpis/:id/readings/:date`).
 - KPIS-B10 **Threshold changes** in Settings invalidate all KPI lists and details (statuses are computed at read time).
 - KPIS-B11 **Quarter rollover**: statuses are computed per request; the list refetches on the day change like tasks.
@@ -56,6 +64,7 @@ See `03-data-model.md`. Invariants:
 |---|---|
 | GET/POST | `/objectives`; PATCH/DELETE/restore `/objectives/:id`; PATCH `/objectives/reorder` |
 | GET | `/kpis` (`view, q, objectiveId, category, team, linkedTo, sort, limit, cursor`); items carry `meta { current, currentDate, previous, percentChange, effectiveTarget, effectiveTargetLabel, status, achievement, sparkline }` |
+| GET | `/kpis/facets` → `{ categories, teams, objectives }`, the values the rail's facets offer |
 | POST | `/kpis`; GET/PATCH/DELETE/restore `/kpis/:id` (detail adds `readings[]` last 200, `targets[]`, `previousQuarter`) |
 | GET/POST | `/kpis/:id/readings`; PUT `/kpis/:id/readings/:date`; PATCH/DELETE `/kpis/:id/readings/:readingId` |
 | GET/PUT | `/kpis/:id/targets` (PUT upserts `[{ year, quarter, targetValue }]`); DELETE `/kpis/:id/targets/:targetId` |
@@ -64,6 +73,19 @@ See `03-data-model.md`. Invariants:
 ## UI
 
 Charts via wrappers (Sparkline, TrendChart, Gauge). RTL: time axis right-to-left, readings table order unchanged (chronological), labels logical. Year form tab order Q1→Q4. Mobile: gauge, trend, readings.
+
+Objectives are managed from Administration (`/admin/objectives`), beside the other workspace
+vocabularies (note types, tags). They are read by every member — the KPI picker and the objective
+facet need them — and written by an administrator, which is why `GET /objectives` is session
+guarded and every objective write is admin guarded.
+
+The list is not grouped. Its default order ranks by severity, so rows sharing an objective are not
+contiguous and a group heading would repeat down the page; the objective is named on every row and
+offered as a facet instead.
+
+The list page's featured strip is the scorecard band: how the measures divide between on target,
+near target, off target and no data. "Needs attention" stays a rail view rather than a fifth tile,
+because it is the same rows counted a second time.
 
 ## Acceptance criteria
 
@@ -91,6 +113,12 @@ Charts via wrappers (Sparkline, TrendChart, Gauge). RTL: time axis right-to-left
 
 - `computeKpiStatus` has one definition used by list, detail, Home, and tests.
 - Chart wrappers are the only importers of the chart library.
+
+## Known gaps
+
+The detail panel's **Linked section** and **comments** have no implementation: `core/links` and the
+`comments` table are owned by work that has not shipped. Everything else in KPIS-B08 is present, and
+the two sections are added by the modules that own them rather than duplicated here.
 
 ## Out of scope
 

@@ -74,7 +74,11 @@ All list + detail modules use `src/ui/entity` per `features/entity-pages.md`. Pa
 
 ## Charts
 
-- `recharts` wrapped once in `src/ui/charts/` (Sparkline, TrendChart, Gauge, ProgressBar). Modules use wrappers only. Colors from tokens; both themes; RTL-aware.
+- `recharts` wrapped once in `src/ui/charts/` (TrendChart, Gauge). Modules use wrappers only, and the wrappers are the only importers of the library (dependency-cruiser `chart-library-only-in-wrappers`). A mark small enough to sit inside a list row — the `Sparkline` — is drawn directly in SVG and lives beside them: a charting runtime per row costs more than the rest of the page, and it would pull the library into a list route that has no axis, tooltip or legend to show. The library loads with the record panel that needs it. Colours come from `src/ui/charts/tokens.ts`, which resolves theme variables at paint time so a chart follows the theme switch without re-rendering; no chart file carries a literal. A proportion inside a row is the `Meter` in `src/ui/layout`, not a chart.
+- Marks are thin and the chrome is recessive: 2px lines with round joins, markers at least 8px with a 2px surface ring, gridlines a solid hairline one step off the surface, never dashed. A dash is reserved for a reference series, where it means "threshold".
+- Two or more series always carry a legend, written in HTML beside the plot rather than drawn by the library, so identity survives translation, the text tokens and a screen reader. Text never wears a series colour; the colour sits on the mark next to the words. One series needs no legend: the heading already names it.
+- Never a second value axis. Two measures of different scale are two charts.
+- Every chart ships the same figures as a visually hidden table (`ChartTable`). A chart small enough to sit inside a list row carries a spoken summary instead, because a hidden table per row would drown the rows it belongs to, and every figure it draws is already written in the row.
 
 ## Copy and tone
 

@@ -4,6 +4,7 @@ import { manifest as home } from '@/modules/home/manifest';
 import { manifest as tasks } from '@/modules/tasks/manifest';
 import { manifest as people } from '@/modules/people/manifest';
 import { manifest as notes } from '@/modules/notes/manifest';
+import { manifest as kpis } from '@/modules/kpis/manifest';
 import { manifest as users } from '@/modules/users/manifest';
 import { manifest as settings } from '@/modules/settings/manifest';
 // Registering a module for the shell is one import here; nothing else in src/ui lists modules.
@@ -12,6 +13,7 @@ export const clientModules: readonly ClientManifest[] = [
   tasks,
   notes,
   committees,
+  kpis,
   people,
   users,
   settings,

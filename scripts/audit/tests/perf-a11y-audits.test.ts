@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { evaluateAxe, pageRoutes } from '../a11y';
-import { evaluatePerf, limits } from '../perf';
+import { evaluatePerf, limits, queryBudgets } from '../perf';
 describe('audit:perf', () => {
   it('rejects golden paths over the time or query budget', () => {
     const result = evaluatePerf([
@@ -12,6 +12,17 @@ describe('audit:perf', () => {
     expect(result.violations.map((v) => `${v.rule}:${v.file}`)).toEqual([
       'server-time:slow',
       'query-budget:chatty',
+    ]);
+  });
+  it('HOME-A02 holds the aggregate home path to its own larger budget', () => {
+    const budget = queryBudgets['home.summary'] ?? limits.queries;
+    expect(budget).toBeGreaterThan(limits.queries);
+    const result = evaluatePerf([
+      { name: 'home.summary', ms: 10, queries: budget },
+      { name: 'home.summary', ms: 10, queries: budget + 1 },
+    ]);
+    expect(result.violations.map((v) => v.message)).toEqual([
+      `${budget + 1} queries exceed ${budget}`,
     ]);
   });
 });

@@ -7,12 +7,16 @@ function withQuery(path: string, query: Query = {}) {
   const encoded = params.toString();
   return encoded ? `${path}?${encoded}` : path;
 }
-export type AdminPage = 'users' | 'settings' | 'notes' | 'ai' | 'backups' | 'jobs' | 'audit';
+export type AdminPage =
+  'users' | 'settings' | 'notes' | 'objectives' | 'ai' | 'backups' | 'jobs' | 'audit';
 export const routes = {
   committees: (query?: Optional<'view' | 'id' | 'scope'>) => withQuery('/committees', query),
   root: () => '/',
   home: () => '/home',
-  tasks: (query?: Optional<'view' | 'id' | 'ownerId' | 'sort' | 'committeeId'>) => withQuery('/tasks', query),
+  kpis: (query?: Optional<'view' | 'id' | 'objectiveId' | 'category' | 'team' | 'sort'>) =>
+    withQuery('/kpis', query),
+  tasks: (query?: Optional<'view' | 'id' | 'ownerId' | 'sort' | 'committeeId'>) =>
+    withQuery('/tasks', query),
   people: (query?: Optional<'view' | 'id'>) => withQuery('/people', query),
   notes: (query?: Optional<'view' | 'id' | 'personId' | 'tag' | 'type' | 'committeeId'>) =>
     withQuery('/notes', query),

@@ -64,6 +64,13 @@
       "when": 1789057338316,
       "tag": "0008_committees",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789389413807,
+      "tag": "0009_kpis",
+      "breakpoints": true
     }
   ]
 }

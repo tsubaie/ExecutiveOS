@@ -66,7 +66,8 @@ it('HOME-B02 HOME-B03 aggregates installed task sections, counts people, and col
   expect(section('overdue')?.items.map((item) => item.title)).toEqual(['Overdue report']);
   expect(section('today')).toMatchObject({ enabled: true, count: 0, items: [] });
   expect(section('nextMeetings')).toMatchObject({ enabled: false, count: 0, items: [] });
-  expect(section('kpis')).toMatchObject({ enabled: false });
+  // The scorecard is installed and answers with nothing to chase, which is itself an answer.
+  expect(section('kpis')).toMatchObject({ enabled: true, count: 0, items: [] });
 });
 
 it('COMM-B06 HOME-B01 lists active committees carrying open work, busiest first', async () => {

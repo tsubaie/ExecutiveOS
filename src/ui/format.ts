@@ -34,6 +34,24 @@ export function useCount() {
   const format = useFormatter();
   return (value: number) => format.number(value, 'integer');
 }
+// Measured quantities keep their decimals; percentages round to whole points and a change carries
+// its sign, so a reader never has to infer direction from an arrow alone.
+export function useDecimal() {
+  const format = useFormatter();
+  return (value: number) => format.number(value, 'decimal');
+}
+export function useYear() {
+  const format = useFormatter();
+  return (value: number) => format.number(value, 'year');
+}
+export function usePercent() {
+  const format = useFormatter();
+  return (value: number) => format.number(value, 'percent');
+}
+export function useSignedPercent() {
+  const format = useFormatter();
+  return (value: number) => format.number(value, 'signedPercent');
+}
 // Up to two initials from a display name; works for Arabic and Latin names (PEOPLE-A06).
 export function initials(name: string) {
   return name

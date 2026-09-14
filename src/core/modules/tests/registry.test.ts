@@ -52,6 +52,7 @@ describe('module registry', () => {
       'tasks',
       'notes',
       'committees',
+      'kpis',
       'people',
       'users',
       'settings',

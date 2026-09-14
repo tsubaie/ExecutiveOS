@@ -67,6 +67,30 @@ export function decodeCursor(cursor: string | undefined, spec: SortSpec, hash: s
     throw new AppError('validation_failed', { fieldErrors: { cursor: ['cursor_mismatch'] } });
   }
 }
+// Some lists rank on a value the database does not hold — a KPI's status is a function of today's
+// date and the workspace thresholds (KPIS-B07). Those pages compute the tuple themselves and page
+// on it with the same wire format, so a cursor means one thing across the API (docs/04 § Lists).
+export type Tuple = (string | number)[];
+export function compareTuples(a: Tuple, b: Tuple) {
+  for (const [index, left] of a.entries()) {
+    const right = b[index] ?? '';
+    if (left < right) return -1;
+    if (left > right) return 1;
+  }
+  return 0;
+}
+export const encodeTupleCursor = (sort: string, hash: string, last: Tuple) =>
+  Buffer.from(JSON.stringify({ v: 1, sort, filtersHash: hash, last })).toString('base64url');
+export function decodeTupleCursor(cursor: string | undefined, sort: string, hash: string) {
+  if (!cursor) return null;
+  try {
+    const parsed = Cursor.parse(JSON.parse(Buffer.from(cursor, 'base64url').toString()));
+    if (parsed.sort !== sort || parsed.filtersHash !== hash) throw new Error('cursor mismatch');
+    return parsed.last;
+  } catch {
+    throw new AppError('validation_failed', { fieldErrors: { cursor: ['cursor_mismatch'] } });
+  }
+}
 // One SELECT with a filtered count per view instead of a query per view.
 export function filteredCounts<K extends string>(predicates: Record<K, SQL | undefined>) {
   const fields = {} as Record<K, SQL<number>>; // cast: filled for every key below

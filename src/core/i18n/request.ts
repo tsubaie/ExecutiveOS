@@ -44,7 +44,21 @@ export default getRequestConfig(async () => {
     timeZone,
     formats: {
       dateTime: { day, dateTime: { ...day, hour: 'numeric', minute: '2-digit' } },
-      number: { integer: { numberingSystem, maximumFractionDigits: 0 } },
+      number: {
+        integer: { numberingSystem, maximumFractionDigits: 0 },
+        // A KPI reading is a measured quantity rather than a count, so it keeps its decimals;
+        // percentages are read at a glance and round to whole points.
+        decimal: { numberingSystem, maximumFractionDigits: 2 },
+        // A year is an identifier, not a quantity: no thousands separator.
+        year: { numberingSystem, useGrouping: false, maximumFractionDigits: 0 },
+        percent: { numberingSystem, style: 'percent', maximumFractionDigits: 0 },
+        signedPercent: {
+          numberingSystem,
+          style: 'percent',
+          maximumFractionDigits: 0,
+          signDisplay: 'exceptZero',
+        },
+      },
     },
   };
 });

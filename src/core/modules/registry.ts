@@ -6,6 +6,7 @@ import type { HomeSection, ServerManifest } from './server-manifest';
 import { server as tasks } from '@/modules/tasks';
 import { server as people } from '@/modules/people';
 import { server as notes } from '@/modules/notes';
+import { server as kpis } from '@/modules/kpis';
 import { server as users } from '@/modules/users';
 import { server as settings } from '@/modules/settings';
 // Home aggregates these providers; the home module itself is the consumer, so it is not listed.
@@ -13,6 +14,7 @@ export const serverModules: readonly ServerManifest[] = [
   tasks,
   notes,
   committees,
+  kpis,
   people,
   users,
   settings,
