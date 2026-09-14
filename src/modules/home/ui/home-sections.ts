@@ -31,27 +31,6 @@ export type Section = {
   items: Item[];
   stale: number | null;
 };
-export type StatKey =
-  | 'statNextMeetings'
-  | 'statPrep'
-  | 'statOverdue'
-  | 'statToday'
-  | 'statWaiting'
-  | 'statCommittees'
-  | 'statKpis'
-  | 'statInitiatives'
-  | 'statNotes';
-export const statLabel: Record<SectionKey, StatKey> = {
-  nextMeetings: 'statNextMeetings',
-  prep: 'statPrep',
-  overdue: 'statOverdue',
-  today: 'statToday',
-  waiting: 'statWaiting',
-  committees: 'statCommittees',
-  kpis: 'statKpis',
-  initiatives: 'statInitiatives',
-  notes: 'statNotes',
-};
 export const daysBetween = (from: string, to: string) =>
   Math.round((plainDateValue(to).getTime() - plainDateValue(from).getTime()) / 86400000);
 // Overdue is the only state on this page that means something has gone wrong, so it is the only one
