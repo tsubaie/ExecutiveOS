@@ -1,3 +1,4 @@
+import { CommitteeReference } from '@/modules/committees/schema/validation';
 import { z } from 'zod';
 export const Status = z.enum(['inbox', 'next_action', 'waiting_on', 'someday', 'completed']);
 export const OpenStatus = Status.exclude(['completed']);
@@ -30,6 +31,7 @@ export const TaskFields = z.object({
   dueDate: z.iso.date().nullable().default(null),
   ownerId: z.uuid().nullable().default(null),
   sourceNoteId: z.uuid().nullable().default(null),
+  committeeId: z.uuid().nullable().default(null),
 });
 export const TaskCreate = TaskFields.extend({
   parentId: z.uuid().nullable().default(null),
@@ -42,6 +44,7 @@ export const TaskPatch = TaskFields.extend({
   dueDate: TaskFields.shape.dueDate.removeDefault(),
   ownerId: TaskFields.shape.ownerId.removeDefault(),
   sourceNoteId: TaskFields.shape.sourceNoteId.removeDefault(),
+  committeeId: TaskFields.shape.committeeId.removeDefault(),
 })
   .partial()
   .extend({ revision: z.number().int().positive() })
@@ -49,6 +52,7 @@ export const TaskPatch = TaskFields.extend({
 export type TaskPatch = z.infer<typeof TaskPatch>;
 const timestamp = z.preprocess((v) => (v instanceof Date ? v.toISOString() : v), z.iso.datetime());
 export const Task = TaskFields.extend({
+  committee: CommitteeReference.nullable().default(null),
   id: z.uuid(),
   revision: z.number().int(),
   status: Status,
@@ -90,6 +94,7 @@ export const TaskListQuery = z.strictObject({
   dueTo: z.union([z.iso.date(), z.literal('')]).default(''),
   hasSubtasks: z.enum(['', 'true', 'false']).default(''),
   sourceNoteId: z.union([z.uuid(), z.literal('')]).default(''),
+  committeeId: z.union([z.uuid(), z.literal('')]).default(''),
   hasSourceNote: z.enum(['', 'true', 'false']).default(''),
   parentId: z.uuid().optional(),
   includeSubtasks: z.enum(['true', 'false']).optional(),
@@ -123,4 +128,25 @@ export const Reorder = z.strictObject({
   parentId: z.uuid().nullable(),
   orderedIds: ids,
   revisions: z.record(z.uuid(), z.number().int().positive()),
+});
+
+export const BreakdownOutput = z.object({
+  subtasks: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1).max(120),
+        description: z.string().max(10000).nullable(),
+        dueDate: z.string().nullable(),
+      }),
+    )
+    .min(1)
+    .max(8),
+});
+export const BreakdownApply = z.strictObject({
+  jobId: z.uuid(),
+  indexes: z
+    .array(z.number().int().min(0).max(7))
+    .min(1)
+    .max(8)
+    .refine((values) => new Set(values).size === values.length),
 });

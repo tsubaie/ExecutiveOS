@@ -1,5 +1,6 @@
 import type { ServerManifest } from '@/core/modules/server-manifest';
 export {
+  aiPeople,
   createPerson,
   countPeople,
   listPeople,

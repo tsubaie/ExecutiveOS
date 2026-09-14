@@ -50,6 +50,7 @@ describe('module registry', () => {
     expect(serverModules.map((item) => item.id)).toEqual([
       'tasks',
       'notes',
+      'committees',
       'people',
       'users',
       'settings',

@@ -1,5 +1,6 @@
 /** TASKS-I01–I06, B01–B12, B16: bounded hierarchy, completion, provenance, fenced edits, source note. */
 import 'server-only';
+import { requireCommittee } from '@/modules/committees';
 import { z } from 'zod';
 import type { Context } from '@/core/auth/session';
 import { id } from '@/core/db/ids';
@@ -11,7 +12,7 @@ import { AppError } from '@/core/http/errors';
 import { routes } from '@/core/routes';
 import type { HomeSection } from '@/core/modules/server-manifest';
 import { dayAt, addDays, bandOf } from '@/core/time/tasks';
-import { getPerson, personNameSql } from '@/modules/people';
+import { aiPeople, getPerson, personNameSql } from '@/modules/people';
 import { getNote } from '@/modules/notes';
 import {
   TaskDetail,
@@ -115,6 +116,7 @@ function update(
   });
 }
 export async function createTask(ctx: Context, input: TaskCreate) {
+  await requireCommittee(ctx, input.committeeId);
   await repo.lockTasks(ctx.db);
   await owner(ctx, input.ownerId);
   await sourceNote(ctx, input.sourceNoteId);
@@ -135,6 +137,7 @@ export async function createTask(ctx: Context, input: TaskCreate) {
 export async function patchTask(ctx: Context, taskId: string, input: TaskPatch) {
   if (input.status === 'completed') throw new AppError('rule_violation', { rule: 'TASKS-B02' });
   const task = await current(ctx, taskId, input.revision);
+  await requireCommittee(ctx, input.committeeId, task.committeeId);
   await owner(ctx, input.ownerId);
   await sourceNote(ctx, input.sourceNoteId, task);
   const { revision, ...fields } = input;
@@ -233,6 +236,7 @@ export async function groupTasks(ctx: Context, input: z.infer<typeof Group>) {
     dueDate: null,
     ownerId: null,
     sourceNoteId: null,
+    committeeId: children.every((child) => child.committeeId === children[0]?.committeeId) ? children[0]?.committeeId ?? null : null,
     parentId: null,
   });
   for (const [sortOrder, child] of children.entries())
@@ -271,4 +275,8 @@ export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
       .parse(row[key + 'Items'])
       .map((item) => ({ ...item, href: routes.tasks({ view: 'all', id: item.id }) })),
   }));
+}
+
+export function peopleForAi(ctx: Context) {
+  return aiPeople(ctx);
 }

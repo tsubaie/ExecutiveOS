@@ -94,12 +94,14 @@ function EntityListRow<T extends Entity, P extends object, C>({
 }: Surface<T, P, C> & { rows: Rendered<T>[]; row: Rendered<T>; index: number }) {
   const { item, leaving } = row;
   const current = !leaving && c.state.id === item.id;
+  const card = config.renderers.rowStyle === 'card';
   return (
     <li className={cn(leaving && 'entity-row-leaving')} inert={leaving || undefined}>
       <EntityGroupHeading config={config} rows={rows} index={index} />
       <div
         className={cn(
-          'entity-row relative flex min-w-0 items-center border-b transition-colors',
+          'entity-row relative flex min-w-0 items-center transition-colors',
+          card ? 'mx-3 mb-2 flex-wrap overflow-hidden rounded-xl border border-border/60 bg-surface-raised/30 hover:border-accent/40 @lg:flex-nowrap' : 'border-b',
           current ? 'bg-accent-soft' : 'hover:bg-surface-raised/50',
         )}
         data-current={current ? '' : undefined}
@@ -112,6 +114,7 @@ function EntityListRow<T extends Entity, P extends object, C>({
           className={cn(
             'h-auto min-h-11 min-w-0 flex-1 justify-start rounded-none px-3 py-1.5 text-start hover:bg-transparent',
             !config.rowAction && !c.selecting && 'ps-4',
+            card && 'min-h-14 basis-3/4 rounded-lg px-4 py-3 @lg:basis-0',
           )}
           onFocus={() => c.setFocused(index)}
           onClick={() => c.navigate({ id: item.id })}
@@ -131,7 +134,11 @@ function EntityRowTrail<T extends Entity, P extends object, C>({
   item,
 }: Surface<T, P, C> & { item: T }) {
   if (!config.renderers.rowTrail) return null;
-  return <div className="me-3 shrink-0">{config.renderers.rowTrail(item)}</div>;
+  const trail = config.renderers.rowTrail(item);
+  if (!trail) return null;
+  return <div className={config.renderers.rowStyle === 'card'
+    ? 'mx-4 mb-3 w-full @lg:ms-1 @lg:me-4 @lg:my-2 @lg:w-auto @lg:max-w-[45%] @lg:shrink-0'
+    : 'me-3 shrink-0'}>{trail}</div>;
 }
 
 // The leading control: a selection checkbox in multi-select mode, otherwise the row action.
@@ -145,7 +152,7 @@ function EntityRowLead<T extends Entity, P extends object, C>({
     <>
       {config.bulkActions?.length && c.selecting ? (
         <Checkbox
-          className="entity-check ms-1 shrink-0"
+          className={cn('entity-check ms-1 shrink-0', config.renderers.rowStyle === 'card' && 'ms-3 self-center')}
           aria-label={t('selectItem', { name: config.renderers.name(item) })}
           checked={c.selected.includes(item.id)}
           onCheckedChange={(checked) =>
@@ -162,7 +169,7 @@ function EntityRowLead<T extends Entity, P extends object, C>({
         />
       ) : null}
       {config.rowAction && !c.selecting && (
-        <div className="ms-1 shrink-0">{config.rowAction(item)}</div>
+        <div className={cn('ms-1 shrink-0', config.renderers.rowStyle === 'card' && 'ms-3 flex items-center')}>{config.rowAction(item)}</div>
       )}
     </>
   );
@@ -180,6 +187,9 @@ function EntityGroupHeading<T extends Entity, P extends object, C>({
   const heading = item ? config.group?.(item) : null;
   if (!heading || (before && heading === config.group?.(before))) return null;
   const size = rows.filter((row) => !row.leaving && config.group?.(row.item) === heading).length;
+  if (config.renderers.rowStyle === 'card') return <h2 className="flex items-center gap-2 px-4 pt-5 pb-2 text-xs font-medium text-text-muted">
+    {heading}<span className="text-[10px] tabular-nums">{count(size)}</span>
+  </h2>;
   return (
     <h2 className="flex h-7 items-center gap-2 border-b bg-surface-raised/60 px-4 text-[11px] leading-none font-semibold tracking-wider text-text-muted uppercase">
       {heading}

@@ -18,5 +18,5 @@ export type JobHandler = {
   concurrency: number;
   schema: z.ZodType;
   run: (job: Claimed, signal: AbortSignal) => Promise<z.infer<ReturnType<typeof z.json>>>;
-  publish: (database: Database) => Promise<void>;
+  publish: (database: Database, job: Claimed, result: z.infer<ReturnType<typeof z.json>>) => Promise<void>;
 };

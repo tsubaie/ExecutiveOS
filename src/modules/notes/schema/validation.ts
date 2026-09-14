@@ -1,3 +1,4 @@
+import { CommitteeReference } from '@/modules/committees/schema/validation';
 import { z } from 'zod';
 export const DefaultType = z.enum([
   'board_meeting',
@@ -27,6 +28,7 @@ const Content = z.string().max(50000);
 const Type = z.string().trim().min(1).max(100);
 const revision = z.number().int().positive();
 export const NoteCreate = z.strictObject({
+  committeeId: z.uuid().nullable().default(null),
   title: Title,
   content: Content.default(''),
   type: Type.nullable().default(null),
@@ -36,6 +38,7 @@ export const NoteCreate = z.strictObject({
 });
 export type NoteCreate = z.infer<typeof NoteCreate>;
 export const NotePatch = z.strictObject({
+  committeeId: z.uuid().nullable().optional(),
   title: Title.optional(),
   content: Content.optional(),
   type: Type.nullable().optional(),
@@ -67,6 +70,8 @@ export const NoteTask = z.object({
 });
 export type NoteTask = z.infer<typeof NoteTask>;
 export const Note = z.object({
+  committee: CommitteeReference.nullable().default(null),
+  committeeId: z.uuid().nullable().default(null),
   id: z.uuid(),
   revision: z.number().int(),
   title: Title,
@@ -100,6 +105,7 @@ export const NoteTypes = z.object({
   meta: z.object({ defaultType: z.string().nullable() }),
 });
 export const NoteListQuery = z.strictObject({
+  committeeId: z.union([z.uuid(), z.literal('')]).default(''),
   view: z.string().max(120).default('all'),
   q: z.string().max(500).default(''),
   type: z.union([Type, z.literal('')]).default(''),
@@ -138,3 +144,49 @@ export const BulkResult = z.object({ data: z.object({ updatedIds: z.array(z.uuid
 export const TagList = z.object({
   data: z.array(z.object({ tag: z.string(), count: z.number() })),
 });
+export const ManageTags = z.strictObject({
+  tags: z.array(Tag).min(1).max(200).transform(dedupe),
+  target: Tag.nullable(),
+});
+export type ManageTags = z.infer<typeof ManageTags>;
+export const ManageTagsResult = z.object({ data: z.object({ updatedCount: z.number().int().nonnegative() }) });
+
+export const SuggestedTask = z.object({
+  title: z.string().trim().min(1).max(120),
+  description: z.string().max(10000).nullable(),
+  status: z.enum(['inbox', 'next_action', 'waiting_on']),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).nullable(),
+  due_date: z.string().nullable(),
+  owner_name: z.string().nullable(),
+  source_snippet: z.string().nullable(),
+});
+export const RefinementOutput = z.object({
+  refined_content: z.string().max(50000),
+  suggested_tasks: z.array(SuggestedTask).max(15),
+  suggested_tags: z.array(z.string().min(1).max(50)).max(5),
+  summary_of_changes: z.string().max(5000),
+});
+export const TagOutput = z.object({ tags: z.array(z.string().min(1).max(50)).max(5) });
+export const NoteAiApply = z
+  .strictObject({
+    jobId: z.uuid(),
+    acceptContent: z.boolean(),
+    taskIndexes: z.array(z.number().int().min(0).max(14)).max(15),
+    taskTitles: z.array(z.strictObject({
+      index: z.number().int().min(0).max(14),
+      title: SuggestedTask.shape.title,
+    })).max(15).optional(),
+    tagIndexes: z.array(z.number().int().min(0).max(4)).max(5),
+  })
+  .refine(
+    (input) =>
+      new Set(input.taskTitles?.map((task) => task.index)).size === (input.taskTitles?.length ?? 0) &&
+      (input.taskTitles ?? []).every((task) => input.taskIndexes.includes(task.index)) &&
+      new Set(input.taskIndexes).size === input.taskIndexes.length &&
+      new Set(input.tagIndexes).size === input.tagIndexes.length,
+  );
+
+// NOTES-B08: shared by manual editing and applying refined content.
+export function derivedParticipants(content: string, candidates: { id: string; name: string }[]) {
+  return candidates.filter((item) => content.includes(`@${item.name}`)).map((item) => item.id);
+}

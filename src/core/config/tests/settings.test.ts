@@ -26,9 +26,9 @@ beforeEach(async () => {
 });
 afterAll(() => pool().end());
 describe('ADMIN-B07 typed settings registry', () => {
-  it('rejects secret-like keys and models outside the claude-* namespace', () => {
+  it('rejects secret-like keys and unqualified model identifiers', () => {
     expect(settingKeys.some((key) => /secret|password|token$|api.?key/iu.test(key))).toBe(false);
-    expect(settingsRegistry['ai.model.default'].schema.safeParse('claude-opus-5').success).toBe(
+    expect(settingsRegistry['ai.model.default'].schema.safeParse('anthropic/claude-opus-5').success).toBe(
       true,
     );
     expect(settingsRegistry['ai.model.default'].schema.safeParse('gpt-5').success).toBe(false);

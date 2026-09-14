@@ -10,12 +10,14 @@ import { EntityCreateForm } from '@/ui/entity/EntityCreateForm';
 import type { CreateApi } from '@/ui/entity/types';
 import { NoteCreate, type NoteDetail } from '../schema/validation';
 import { useNoteTypes } from './queries';
+import { CommitteePicker } from '@/modules/committees/ui';
 import { TypeSelect } from './NoteFields';
 // Create asks for title, type and date only (notes.md § UI); everything else is added on the
 // detail right after, with autosave.
-export function CreateNote({ api }: { api: CreateApi<NoteCreate, NoteDetail> }) {
+export function CreateNote({ api, committeeId = null }: { api: CreateApi<NoteCreate, NoteDetail>; committeeId?: string | null }) {
   const t = useTranslations('notes');
   const c = useTranslations('common');
+  const committees = useTranslations('committees');
   const today = useToday();
   const types = useNoteTypes();
   const [error, setError] = useState<Error | null>(null);
@@ -28,6 +30,7 @@ export function CreateNote({ api }: { api: CreateApi<NoteCreate, NoteDetail> }) 
       await api.submit(
         NoteCreate.parse({
           title: fields.title,
+          committeeId: fields.committeeId || null,
           type: type || fallback || null,
           noteDate: noteDate ?? today,
         }),
@@ -49,6 +52,7 @@ export function CreateNote({ api }: { api: CreateApi<NoteCreate, NoteDetail> }) 
           <Input {...control} name="title" dir="auto" required pattern=".*\S.*" maxLength={500} />
         )}
       </Field>
+      <Property label={committees('committee')}><CommitteePicker value={committeeId} name="committeeId" /></Property>
       <div className="grid gap-2">
         <Property label={t('type')}>
           <TypeSelect value={type || fallback} onChange={setType} />

@@ -56,7 +56,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 
 ## Layout
 
-- EP-B07 Desktop (≥ 1024 px): rail 208 px (collapsible, ≥ 1280 px), list, detail 480 px inline; list resizes, never shifts. The list column opens with one sticky bar that carries the page title, the current view and its count (a button into the filter sheet where the rail is hidden), search, Filter, selection mode and the primary Create action; the page description is exposed to assistive technology only. Below 640 px the search group wraps under the title. Rows are 44 px single-line by default; group headers are 28 px; rail items 32 px with a divider before views marked `separated`. Views marked `featured` also show their count in a strip under the bar (tinted by `tone` when the count is above zero); views may carry an `icon` for the rail. While a panel or the create form is open the shell sidebar, the rail and the list soften with a light blur so only the open record reads sharp; hovering or focusing an element restores it, colours do not change, and the effect is skipped under reduced motion transitions. The panel bar shows the item's position in the loaded list ("3 of 11") when no save is in flight; it carries no previous/next controls, moving between items is done from the list.
+- EP-B07 Desktop (≥ 1024 px): rail 208 px (collapsible, ≥ 1280 px), list, detail 480 px inline; list resizes, never shifts. The list column opens with one sticky bar that carries the page title, the current view and its count (a button into the filter sheet where the rail is hidden), search, Filter, selection mode and the primary Create action; the page description is exposed to assistive technology only. Card lists place Create above the desktop views rail and use a compact search/sort/action toolbar; without a visible rail, the title/view and Create remain above it (EP-B22). Rows are 44 px single-line by default; group headers are 28 px; rail items 32 px with a divider before views marked `separated`. Views marked `featured` also show their count in a strip under the bar (tinted by `tone` when the count is above zero); views may carry an `icon` for the rail. While a panel or the create form is open the shell sidebar, the rail and the list soften with a light blur so only the open record reads sharp; hovering or focusing an element restores it, colours do not change, and the effect is skipped under reduced motion transitions. The panel bar shows the item's position in the loaded list ("3 of 11") when no save is in flight; it carries no previous/next controls, moving between items is done from the list.
 - EP-B08 Mobile: views `list` → `detail` → `create`, full screen, slide from the end side (`dir`-aware); rail as a bottom sheet with active-filter count. Back gesture and browser back both go to the previous view.
 - EP-B09 Direction: all animation and column order derive from `dir`.
 
@@ -110,3 +110,19 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 
 - No module page file exceeds 250 lines.
 - The framework has zero imports from `src/modules`.
+
+- EP-B22 Search places its decorative icon and input in separate flex items within a shared focus border, preserving space for Arabic and English text without overlap at narrow widths.
+
+EP-B15 Clear filters resets the search draft as well as the URL, cancelling a pending debounce even before the draft reaches the URL. External query changes rebase the local draft so old text cannot reappear. EP-B22 Clear filters stays within the search action row; its label never overlaps the search field in either direction.
+
+EP-B22 entity pages share the toolbar controller. Card lists show Create above the desktop rail and a compact search/sort/action bar; mobile and collapsed-rail layouts retain the title/view/Create row. Other entity lists retain that header at all widths. Clear filters stays beside search, has an accessible icon-only form in narrow containers, and is invisible when no filters or non-All view are active; its reserved space keeps search width stable. Search retains the explicit view; starting a search before a module default arrives pins All, and a module default must not replace an active search. Delayed URL acknowledgements preserve newer typing. Both Tasks and Notes use these same components and controller.
+
+EP-B14 card lists share lightweight group headings and loaded-row counts in the framework. EP-B07 a view with `featured: "compact"` appears beside the current view in the toolbar instead of the statistics strip; `featured: true` retains the card presentation.
+
+EP-B20 `renderers.rowStyle: "card"` opts into spaced horizontal card containers with rounded borders and responsive trailing metadata; the same row button, selection checkbox, focus/navigation and sibling interactive controls remain in use. Default rows retain their existing layout.
+
+EP-B20 Notes and Tasks both select the shared card presentation. Completion/selection controls remain independent siblings of the opening button; missing trailing content produces no empty footer.
+
+EP-B20 card density is compact: a 56px minimum opening target, flexible title, grouped trailing metadata and an unbordered secondary line only when the container is narrow. EP-B22 sorting is directly accessible beside search; filters and selection remain shared. Empty Clear filters reserves an icon slot without showing inactive text.
+
+EP-B07 featured summaries use rounded bordered cards with an accent selected state. Optional `featuredOrder` controls summary order independently from the views rail. Five summaries use five columns in wide containers; narrow containers use two columns.

@@ -28,10 +28,6 @@ export function matchMentions(items: MentionItem[], query: string, allowCreate =
     found.push({ id: NEW_MENTION + typed, name: typed, create: true });
   return found;
 }
-// NOTES-B08: the participants of a note are the candidates whose "@Name" appears in its content.
-export function derivedParticipants(content: string, candidates: MentionItem[]) {
-  return candidates.filter((item) => content.includes(`@${item.name}`)).map((item) => item.id);
-}
 // Replaces the active token with "@Name " and returns the new text and caret position.
 export function insertMention(text: string, state: MentionState, caret: number, name: string) {
   const inserted = `@${name} `;

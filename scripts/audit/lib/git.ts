@@ -5,7 +5,9 @@ export function git(root: string, args: string[]) {
 export function changedSince(root: string, base: string) {
   try {
     const merge = git(root, ['merge-base', base, 'HEAD']);
-    return git(root, ['diff', '--name-only', merge, 'HEAD']).split('\n').filter(Boolean);
+    const changed = git(root, ['diff', '--name-only', merge]);
+    const added = git(root, ['ls-files', '--others', '--exclude-standard']);
+    return [...new Set([changed, added].flatMap((paths) => paths.split('\n')).filter(Boolean))];
   } catch {
     return null;
   }

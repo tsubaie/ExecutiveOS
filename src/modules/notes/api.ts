@@ -1,6 +1,11 @@
+import type { Context } from '@/core/auth/session';
+import { createTask } from '@/modules/tasks';
+import { TaskCreate } from '@/modules/tasks/schema/validation';
+import { SuggestedTask } from './schema/validation';
 import { z } from 'zod';
 import { defineHandler, authenticated } from '@/core/http/handler';
-import { AppError } from '@/core/http/errors';
+import { startNoteAi } from './ai/service';
+import { noteAiApplyHandler, noteAiDiscardHandler } from './ai/api';
 import {
   NoteDetail,
   NoteCreate,
@@ -15,6 +20,16 @@ import {
   NoteTypes,
 } from './schema/validation';
 import * as service from './service';
+import { listManagedTags, manageTags } from './service';
+import { ManageTags, ManageTagsResult } from './schema/validation';
+export const managedTags = defineHandler({
+  guard: 'admin', input: z.strictObject({}), response: TagList,
+  handler: (_, ctx) => listManagedTags(authenticated(ctx)),
+});
+export const manageTagSelection = defineHandler({
+  guard: 'admin', input: ManageTags, response: ManageTagsResult, idempotent: true,
+  handler: (input, ctx) => manageTags(authenticated(ctx), input),
+});
 const noteId = (params: Record<string, string>) => z.uuid().parse(params.id);
 const response = z.object({ data: NoteDetail });
 export const list = defineHandler({
@@ -113,14 +128,26 @@ export const tags = defineHandler({
   response: TagList,
   handler: (_input, ctx) => service.listTags(authenticated(ctx)),
 });
-// NOTES-B17: the AI routes exist and refuse until the capabilities ship (Phase 3b).
-const unavailable = defineHandler({
-  guard: 'session',
-  input: Revision,
-  response,
-  handler: async () => {
-    throw new AppError('ai_unavailable');
-  },
-});
-export const refine = unavailable;
-export const suggestTags = unavailable;
+function noteAiStart(capability: 'notes.refine' | 'notes.suggest_tags') {
+  return defineHandler({
+    guard: 'session',
+    input: Revision,
+    response: z.object({ data: z.object({ id: z.uuid() }) }),
+    status: 202,
+    handler: async (input, ctx, params) => ({
+      data: await startNoteAi(authenticated(ctx), noteId(params), input.revision, capability),
+    }),
+  });
+}
+export const refine = noteAiStart('notes.refine');
+export const suggestTags = noteAiStart('notes.suggest_tags');
+export const refineApply = noteAiApplyHandler('notes.refine', createSuggestedTask);
+export const tagsApply = noteAiApplyHandler('notes.suggest_tags', createSuggestedTask);
+export const refineDiscard = noteAiDiscardHandler('notes.refine');
+export const tagsDiscard = noteAiDiscardHandler('notes.suggest_tags');
+
+async function createSuggestedTask(ctx: Context, noteId: string, task: z.infer<typeof SuggestedTask>, ownerId: string | null) {
+  const row = await createTask(ctx, TaskCreate.parse({ title: task.title, description: task.description,
+    status: task.status, priority: task.priority, dueDate: task.due_date, sourceNoteId: noteId, ownerId }));
+  return row.id;
+}

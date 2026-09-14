@@ -17,6 +17,8 @@ const secretKeys = new Set([
   'idempotencykey',
   'apikey',
   'anthropicapikey',
+  'openrouterapikey',
+  'encryptedkey',
   'secret',
   'sessionsecret',
   'authorization',

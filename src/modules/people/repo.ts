@@ -123,3 +123,10 @@ export function updatePerson(
 export function restorePerson(database: Database, personId: string, opId: string, actorId: string) {
   return restoreEntity<typeof people.$inferSelect>(database, people, personId, opId, actorId);
 }
+
+export function selectAiPeople(database: Database) {
+  return database
+    .select({ id: people.id, name: people.fullName, isAssignable: people.isAssignable })
+    .from(people)
+    .where(isNull(people.deletedAt));
+}

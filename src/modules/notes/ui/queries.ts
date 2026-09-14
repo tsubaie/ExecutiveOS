@@ -72,7 +72,7 @@ export function useNoteMutations() {
   const client = useQueryClient();
   const refresh = async () => {
     await Promise.all(
-      ['notes', 'people', 'home', 'tasks'].map((key) =>
+      ['notes', 'people', 'home', 'tasks', 'committees'].map((key) =>
         client.invalidateQueries({ queryKey: [key] }),
       ),
     );

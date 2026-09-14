@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { clearEntityFilters, changeUrl } from '../url-state';
 describe('Entity filtering', () => {
+  it('EP-B22 search retains the current view and pins All before a module default arrives', () => {
+    expect(new URLSearchParams(changeUrl(new URLSearchParams(), { q: 'work' })).get('view')).toBe('all');
+    expect(new URLSearchParams(changeUrl(new URLSearchParams('view=today'), { q: 'work' })).get('view')).toBe('today');
+  });
   it('EP-B15 clear removes all module facets, search, selection and detail', () => {
     const query = new URLSearchParams('q=test&ownerId=person&priority=high&sort=title&sel=a&id=a');
     const next = new URLSearchParams(

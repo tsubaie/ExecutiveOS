@@ -43,6 +43,27 @@
       "when": 1789035077887,
       "tag": "0005_notes-optional-type",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789046584414,
+      "tag": "0006_ai_credentials",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789047993716,
+      "tag": "0007_note_refinements",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789057338316,
+      "tag": "0008_committees",
+      "breakpoints": true
     }
   ]
 }

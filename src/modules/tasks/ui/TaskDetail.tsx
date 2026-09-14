@@ -2,6 +2,7 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Trash2, NotebookPen } from 'lucide-react';
+import { CommitteeBadge } from '@/modules/committees/ui';
 import { Button } from '@/ui/primitives/button';
 import { useDateTime, useRelativeTime } from '@/ui/format';
 import { routes } from '@/core/routes';
@@ -9,6 +10,7 @@ import type { DetailApi } from '@/ui/entity/types';
 import type { TaskDetail as Detail, TaskPatch } from '../schema/validation';
 import { TaskFields } from './TaskFields';
 import { TaskToggle } from './TaskToggle';
+import { TaskAi } from './TaskAi';
 import { Subtasks } from './Subtasks';
 export function TaskDetail({
   task,
@@ -44,6 +46,8 @@ export function TaskDetail({
           />
         </>
       )}
+      {task.committeeId && <div className="mt-3"><CommitteeBadge id={task.committeeId} /></div>}
+      <TaskAi key={task.id} task={task} />
       <Subtasks task={task} />
       <TaskFooter task={task} remove={api.remove} />
     </div>

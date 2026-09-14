@@ -1,0 +1,16 @@
+{
+  "refined_content": "## Next steps\nReview the draft with @Alex.",
+  "suggested_tasks": [
+    {
+      "title": "Review the draft",
+      "description": null,
+      "status": "next_action",
+      "priority": null,
+      "due_date": null,
+      "owner_name": "Alex",
+      "source_snippet": "Review the draft"
+    }
+  ],
+  "suggested_tags": ["planning"],
+  "summary_of_changes": "Grouped the next steps."
+}

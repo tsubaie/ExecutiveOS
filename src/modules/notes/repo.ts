@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, eq, isNull, isNotNull, inArray, sql, getTableColumns, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { notes, notePeople } from './schema/db';
+import { notes, notePeople, noteRefinements } from './schema/db';
 import type { Database } from '@/core/db/client';
 import { id } from '@/core/db/ids';
 import { normalize } from '@/core/search/normalize';
@@ -15,6 +15,7 @@ import {
   type SortSpec,
 } from '@/core/db/keyset';
 type Filters = {
+  committeeId?: string;
   view: string;
   q: string;
   type: string;
@@ -29,6 +30,7 @@ const openTasks = sql<number>`(select count(*)::int from tasks t where t.source_
 const doneTasks = sql<number>`(select count(*)::int from tasks t where t.source_note_id = notes.id and t.deleted_at is null and t.status = 'completed')`;
 const columns = {
   ...getTableColumns(notes),
+  committee: sql`(select json_build_object('id', c.id, 'name', c.name, 'status', c.status, 'deleted', c.deleted_at is not null) from committees c where c.id = notes.committee_id)`,
   participants,
   openTaskCount: openTasks,
   doneTaskCount: doneTasks,
@@ -41,6 +43,7 @@ function searchPredicate(q: string) {
 }
 function base(f: Filters) {
   const predicates: SQL[] = [];
+  if (f.committeeId) predicates.push(eq(notes.committeeId, f.committeeId));
   if (f.type) predicates.push(eq(notes.type, f.type));
   if (f.tag)
     predicates.push(
@@ -148,27 +151,43 @@ export function selectNoteTasks(database: Database, noteId: string) {
       sql`(t.status = 'completed'), t.completed_at desc nulls last, t.due_date asc nulls last, lower(t.title), t.id`,
     );
 }
-export function selectTags(database: Database) {
+export function selectTags(database: Database, includeDeleted = false) {
   return database
     .select({ tag: sql<string>`tag`, count: sql<number>`count(*)::int` })
     .from(sql`notes, unnest(tags) tag`)
-    .where(sql`deleted_at is null`)
+    .where(includeDeleted ? undefined : sql`deleted_at is null`)
     .groupBy(sql`tag`)
     .orderBy(sql`count(*) desc, lower(tag), tag collate "C"`);
+}
+// NOTES-B21: include trash so restoring a note cannot revive a removed tag.
+export function lockTaggedNotes(database: Database, tags: string[]) {
+  const names = sql.join(tags.map((tag) => sql`lower(${tag})`), sql`, `);
+  return database.select().from(notes)
+    .where(sql`exists (select 1 from unnest(${notes.tags}) tag where lower(tag) in (${names}))`)
+    .orderBy(notes.id).for('update');
 }
 export async function insertNote(database: Database, input: typeof notes.$inferInsert) {
   const [row] = await database.insert(notes).values(input).returning();
   if (!row) throw new Error('Note insert failed');
   return row;
 }
-export function updateNote(
+export async function updateNote(
   database: Database,
   noteId: string,
   revision: number,
   patch: EntityPatch<typeof notes.$inferInsert>,
   actorId: string,
 ) {
-  return updateEntity<typeof notes.$inferSelect>(database, notes, noteId, revision, patch, actorId);
+  const row = await updateEntity<typeof notes.$inferSelect>(
+    database,
+    notes,
+    noteId,
+    revision,
+    patch,
+    actorId,
+  );
+  if (row) await staleRefinements(database, noteId);
+  return row;
 }
 export function restoreNote(database: Database, noteId: string, opId: string, actorId: string) {
   return restoreEntity<typeof notes.$inferSelect>(database, notes, noteId, opId, actorId);
@@ -223,4 +242,46 @@ export async function selectRecent(database: Database, from: string, to: string)
     })
     .from(notes);
   return row ?? { count: 0, items: [] };
+}
+
+export async function pendingRefinement(database: Database, noteId: string) {
+  const [row] = await database
+    .select()
+    .from(noteRefinements)
+    .where(and(eq(noteRefinements.noteId, noteId), eq(noteRefinements.status, 'pending')));
+  return row;
+}
+export async function insertRefinement(
+  database: Database,
+  value: typeof noteRefinements.$inferInsert,
+) {
+  await database.insert(noteRefinements).values(value);
+}
+export async function reviewRefinement(
+  database: Database,
+  jobId: string,
+  status: string,
+  actor: string,
+  appliedTaskIds: string[] = [],
+) {
+  await database
+    .update(noteRefinements)
+    .set({
+      status,
+      appliedTaskIds,
+      reviewedBy: actor,
+      reviewedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(noteRefinements.jobId, jobId));
+}
+export async function staleRefinements(database: Database, noteId: string) {
+  await database
+    .update(noteRefinements)
+    .set({ status: 'stale', updatedAt: new Date() })
+    .where(and(eq(noteRefinements.noteId, noteId), eq(noteRefinements.status, 'pending')));
+}
+export async function lockNote(database: Database, noteId: string) {
+  const [row] = await database.select().from(notes).where(eq(notes.id, noteId)).for('update');
+  return row;
 }

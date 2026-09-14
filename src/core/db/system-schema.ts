@@ -228,3 +228,17 @@ export const aiInvocations = pgTable(
   },
   (t) => [index('ai_invocations_job_idx').on(t.jobId)],
 );
+
+export const aiCredentials = pgTable(
+  'ai_credentials',
+  {
+    id: integer().primaryKey().default(1),
+    provider: text().notNull(),
+    encryptedKey: text('encrypted_key').notNull(),
+    updatedAt: time('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    check('ai_credentials_singleton', sql`${t.id} = 1`),
+    check('ai_credentials_provider', sql`${t.provider} in ('anthropic', 'openrouter')`),
+  ],
+);

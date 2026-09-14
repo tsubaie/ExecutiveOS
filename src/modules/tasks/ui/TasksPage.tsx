@@ -1,4 +1,5 @@
 'use client';
+import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import {
   ListChecks,
@@ -13,15 +14,15 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { View as ViewDef } from '@/ui/entity/types';
+import { useCommitteeOptions } from '@/modules/committees/ui';
 import { EntityPage } from '@/ui/entity/EntityPage';
 import { sortOptions } from '@/ui/entity/filters';
 import { View, Priority, Sort } from '../schema/validation';
 import { useTasks, useTask, useTaskMutations, useOwners } from './queries';
-import { PersonAvatar } from '@/ui/layout/PersonAvatar';
-import { TaskRow } from './TaskRow';
-import { TaskDetail } from './TaskDetail';
+import { TaskRow, TaskTrail } from './TaskRow';
+const TaskDetail = dynamic(() => import('./TaskDetail').then((module) => module.TaskDetail));
 import { TaskToggle } from './TaskToggle';
-import { CreateTask } from './CreateTask';
+const CreateTask = dynamic(() => import('./CreateTask').then((module) => module.CreateTask));
 import { GroupTasksDialog, canGroup } from './GroupTasks';
 // Rail icons, the count strip (featured) and the archive divider per view.
 const presentation: Record<string, Partial<ViewDef>> = {
@@ -31,12 +32,13 @@ const presentation: Record<string, Partial<ViewDef>> = {
   upcoming: { icon: CalendarDays },
   next: { icon: Play, featured: true },
   waiting: { icon: Clock, featured: true },
-  inbox: { icon: Inbox },
+  inbox: { icon: Inbox, featured: true, featuredOrder: 0 },
   someday: { icon: Moon },
   completed: { icon: CheckCircle2, separated: true },
   trash: { icon: Trash2 },
 };
 function useTaskFilters() {
+  const committee = useCommitteeOptions();
   const t = useTranslations('tasks');
   const c = useTranslations('common');
   const owners = useOwners();
@@ -44,6 +46,7 @@ function useTaskFilters() {
     views: View.options.map((view) => ({ id: view, label: t(view), ...presentation[view] })),
     sort: sortOptions(Sort.options, t),
     facets: [
+      committee,
       {
         key: 'ownerId',
         label: t('owner'),
@@ -92,9 +95,10 @@ export function TasksPage() {
         },
       ]}
       renderers={{
+        rowStyle: 'card',
         name: (task) => task.title,
         row: (task) => <TaskRow task={task} />,
-        rowTrail: (task) => task.ownerName && <PersonAvatar name={task.ownerName} />,
+        rowTrail: (task) => <TaskTrail task={task} />,
         detail: (task, api) => <TaskDetail task={task} api={api} />,
         create: (api) => <CreateTask api={api} />,
       }}

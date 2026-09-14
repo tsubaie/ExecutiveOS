@@ -26,6 +26,7 @@ export function useEntityController<T extends Entity, P extends object, C>(
   const [focused, setFocused] = useState(0);
   const [selecting, setSelecting] = useState(false);
   const [railOpen, setRailOpen] = useState(true);
+  const [searchReset, setSearchReset] = useState(0);
   const navigate = useGuardedNavigate(guarded, path, router);
   const close = useCallback(() => navigate({ id: null, new: null }), [navigate]);
   const neighbors = useEntityNeighbors(list, state.id, navigate);
@@ -45,8 +46,11 @@ export function useEntityController<T extends Entity, P extends object, C>(
   return {
     state: { ...state, sort },
     facets,
-    clearFilters: (id: string | null = null) =>
-      navigate({ ...clearEntityFilters(Object.keys(facets)), id }, true),
+    searchReset,
+    clearFilters: (id: string | null = null) => {
+      setSearchReset((value) => value + 1);
+      navigate({ ...clearEntityFilters(Object.keys(facets)), id }, true);
+    },
     selecting: selecting || selected.length > 0,
     setSelecting,
     ...{ railOpen, setRailOpen },
@@ -121,7 +125,7 @@ function useDefaultView(defaultView: string | undefined, panel: boolean) {
   const path = usePathname();
   // sync: record the module default view in the URL once counts arrive.
   useEffect(() => {
-    if (!params.has('view') && defaultView && !panel) {
+    if (!params.has('view') && !params.has('q') && defaultView && !panel) {
       const next = new URLSearchParams(params);
       next.set('view', defaultView);
       router.replace(`${path}?${next}`, { scroll: false });

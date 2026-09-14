@@ -109,3 +109,7 @@ export async function restorePerson(ctx: Context, personId: string, opId: string
   await getPerson(ctx, personId, true);
   return Person.parse(await restoreByOp(ctx, ops, personId, opId));
 }
+
+export async function aiPeople(ctx: Context) {
+  return repo.selectAiPeople(ctx.db);
+}

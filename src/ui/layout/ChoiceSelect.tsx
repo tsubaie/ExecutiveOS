@@ -13,7 +13,14 @@ export type { Choice, ChoiceSelectProps } from './choice';
 // (docs/05 § Design system). Either way a hidden input carries `name` into plain form posts.
 export const SEARCH_THRESHOLD = 10;
 const SearchableChoice = lazy(() => import('./SearchableChoice'));
-export function ChoiceSelect<V extends string>(props: ChoiceSelectProps<V>) {
+// Keep the successful form control outside Suspense: its value must survive a lazy picker switch.
+export function ChoiceSelect<V extends string>({ name, ...props }: ChoiceSelectProps<V>) {
+  return <>
+    {name && <input type="hidden" name={name} value={props.value} />}
+    <ChoiceControl {...props} />
+  </>;
+}
+function ChoiceControl<V extends string>(props: ChoiceSelectProps<V>) {
   if (props.items.length <= SEARCH_THRESHOLD) return <PlainChoice {...props} />;
   // The lazy module works in plain strings; the lookup hands back the typed value.
   const change = (next: string) => {

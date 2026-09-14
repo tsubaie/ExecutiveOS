@@ -1,10 +1,10 @@
+import { derivedParticipants } from '../../schema/validation';
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MarkdownField } from '@/ui/markdown/MarkdownField';
 import { Markdown } from '@/ui/markdown/Markdown';
 import {
-  derivedParticipants,
   insertMention,
   matchMentions,
   mentionAt,

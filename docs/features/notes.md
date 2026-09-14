@@ -11,7 +11,7 @@ Capture meeting and personal notes fast, record who was involved, turn what was 
 
 ## Vocabulary
 
-Note (title, markdown content, type, date, tags, participants, tasks), Type (configurable identifiers; defaults `board_meeting`, `executive_meeting`, `sector_meeting`, `one_on_one`, `personal`, `other`), Participant (a person mentioned in the note's content, stored in `note_people`, ADR 0014), Mention (`@Name` in the content), Linked task (a task whose `source_note_id` is the note), Refinement (AI proposal awaiting review; Phase 3b).
+Note (title, markdown content, type, date, tags, participants, tasks), Type (configurable identifiers; defaults `board_meeting`, `executive_meeting`, `sector_meeting`, `one_on_one`, `personal`, `other`), Participant (a person mentioned in the note's content, stored in `note_people`, ADR 0014), Mention (`@Name` in the content), Linked task (a task whose `source_note_id` is the note), Refinement (AI proposal awaiting explicit review).
 
 ## Data model
 
@@ -39,12 +39,14 @@ See `03-data-model.md` § notes, note_people, note_refinements. Invariants:
 - NOTES-B10 **Archive** `POST /notes/:id/archive { revision }` sets `archived_at`; `unarchive` clears it. Archived notes keep every relationship.
 - NOTES-B11 **Trash** soft-deletes with an op id; `restore { opId }` restores exactly that row; purge after `retention.trash_days`.
 - NOTES-B12 **Bulk** `POST /notes/bulk/archive { items: [{ id, revision }] }` and `POST /notes/bulk/tag { items, tag }`, each one transaction: any stale revision → 409 `conflict reason: "revision"` naming the id and nothing changes; a note that would exceed ten tags → 422 `NOTES-I03` naming it and nothing changes; an already archived note or a note that already has the tag is left as is. Idempotent by key.
-- NOTES-B13 **Tags** `GET /notes/tags` returns distinct tags over non-deleted notes with counts, sorted by count then name; used for the facet and the editor's autocomplete.
+- NOTES-B13 **Tags** `GET /notes/tags` returns distinct tags over non-deleted notes with counts, sorted by count then name; used for the facet and the editor's autocomplete. Suggestions include only tags still used by at least one non-deleted note. The editor refreshes suggestions on focus, disables browser form-history suggestions, and excludes tags already selected case-insensitively. New tags may still be typed.
 - NOTES-B14 **Home**: `homeSummary` contributes one section "Recent notes": non-archived notes with `note_date` within the last seven days, count and up to five items newest first, `href` to `notes?view=this_week`.
 - NOTES-B15 **Person page**: the person detail shows a Notes section with the latest five notes where the person is a participant and a link to `notes?personId=<id>`; the notes module exposes `listNotes` for it.
 - NOTES-B16 **Invalidation**: any note mutation invalidates `notes.list*`, `notes.counts`, `notes.detail(id)`, `notes.tags`, `home`, and the details of the people whose participation changed; task mutations invalidate `notes` (counts and panels).
 - NOTES-B20 **Types are administered**: the note types (identifier, label per locale, enabled) and the default type are edited on the Administration → Note types page, which writes `notes.types` and `notes.default_type` (`ADMIN-B08`). Disabling a type keeps it on existing notes (I02); `GET /notes/types` returns the enabled types with labels and the resolved default.
-- NOTES-B17 **AI**: Refine and Suggest tags are absent from the UI and their routes return 503 `ai_unavailable` until the capabilities exist (Phase 3b). The contract below is binding for that work.
+- NOTES-B17 **AI**: Refine and Suggest tags enqueue revision-snapshotted jobs when the corresponding capability and model are available; otherwise routes return 503 `ai_unavailable`. The UI shows progress and proposals with explicit content/task/tag selection. Apply checks the source revision (stale → 409), creates selected linked tasks once and records the applied IDs. Discard changes no note content. Stale proposals offer regeneration. This implementation awaits verification.
+- NOTES-B18 **Refinement review (Mission Control parity)**: A note with content has a Refine action when AI is available, with refining progress and retry on failure. A completed proposal replaces the editor with Refined Note and Suggested Tasks tabs, an expandable original captured from the job input, a change summary, selectable suggested tags and task cards showing status, priority, owner, due date and source snippet. Tasks and tags start selected. Task titles are editable (1–120 trimmed characters), with select/deselect-all controls. Apply Note Only applies refined content and selected tags; Apply Note & Tasks also creates the selected tasks using reviewed titles. Back to note (or Escape within the review) preserves the pending proposal for reopening; Discard dismisses it. Stale proposals cannot be applied and offer regeneration. All writes retain B17's transactional revision and repeat-apply guarantees. Prompt v2 mirrors Mission Control's structure guidance: meeting/planning/general sections as appropriate, minimal changes for short or already structured notes, no invented facts, existing-tag reuse. Mixed Arabic/English notes refine into Arabic while preserving names, technical terms and mentions; task titles retain their source passage's language. Existing prompt-v1 jobs remain executable. Development awaits tests/audits.
+
 
 ## API
 
@@ -56,11 +58,11 @@ See `03-data-model.md` § notes, note_people, note_refinements. Invariants:
 | POST | `/notes/:id/restore` `archive` `unarchive` |
 | POST | `/notes/bulk/archive` `/notes/bulk/tag` |
 | GET | `/notes/tags` ; GET `/notes/types` (enabled types with labels and the default) |
-| POST | `/notes/:id/refine` `suggest-tags` (503 until Phase 3b) |
+| POST | `/notes/:id/refine` and `/notes/:id/suggest-tags`; each also has `/apply` and `/discard` POST routes |
 
 ## UI
 
-List on the entity framework. Row: title (`unicode-bidi: plaintext`), date label (relative within six days, otherwise the date), type chip when the note has a type, open/done task count, tags trailing on wide lists and hidden on a phone; an archived note in search results carries an "Archived" chip. Participants render beside the row through `renderers.rowTrail` as initials avatars (`PersonAvatar`, up to three then "+n"), so pressing one reveals the full name exactly as the owner avatar does on Tasks (`PEOPLE-B09`, `EP-B20`) instead of opening the note. Rail: All, This week, one entry per enabled type, then Archived and Trash under a divider. Grouped by band (B06). Facets: type, tag, person. Bulk bar: Archive (confirm) and Add tag (dialog with autocomplete).
+List on the entity framework. Row (NOTES-B02): compact full-width horizontal cards inspired by Mission Control, with subtle rounded borders and consistent small gaps. A small neutral identity dot precedes the title; titles use one line when they fit and at most two when long. Type/archive badges, completed/total linked-task progress and date form a compact trailing cluster, wrapping below on narrow screens. Tags and participant avatars are omitted from the cards to reduce clutter; they remain available in note details and existing filters. Task progress shows a semantic progress indicator and done/total count, with the open/done explanation available as a title and accessible label. Group headings are lightweight text/count labels, without filled bands. The weekly count remains in the views rail and in the compact header when the rail is hidden; there is no standalone statistics card. Rail: All, This week, one entry per enabled type, then Archived and Trash under a divider. Grouped by band (B06). Facets: type, tag, person. Bulk bar: Archive (confirm) and Add tag (dialog with autocomplete).
 
 Detail: the title is the editable heading (labelled "Note title"), then type and date as label/value rows, participants as a read-only row of avatar chips that link to the person's page (like the owner link on a task), tags as chips with an autocomplete input (overflow beyond ten is blocked with a count), content shown as the rendered markdown (`src/ui/markdown`, ADR 0015) that turns into a textarea when entered (a click places the caret at the clicked text; keyboard entry at the end) and back into the preview when left, with `@` mentions, the tasks panel (B09) with completed tasks collapsed under a count, footer with relative "Updated", Archive and Move to trash. Autosave through the framework save queue; `revision` conflicts keep the draft.
 
@@ -68,7 +70,7 @@ Create: title, type ("No type" unless `notes.default_type` is set), date (today)
 
 ## AI
 
-Phase 3b. `notes.refine` (default model, dedup `notes.refine:<noteId>`) takes the note content, tags, type, locale and the names of assignable people and returns:
+`notes.refine` (default model, dedup `notes.refine:<noteId>`) takes the note content, tags, type, locale and the names of assignable people and returns:
 
 ```ts
 {
@@ -119,4 +121,25 @@ Type labels come from `notes.types` per locale; the six defaults have catalog en
 
 ## Out of scope
 
-Threads and merging (ADR 0012); a structural note-to-meeting relationship in v1 (ADR 0012); committee and initiative references; `linkedTo` facets (links core); attachments; pinning; private notes; AI refine and suggest tags (Phase 3b).
+Threads and merging (ADR 0012); a structural note-to-meeting relationship in v1 (ADR 0012); committee and initiative references; `linkedTo` facets (links core); attachments; pinning; private notes. AI refine and suggest tags are developed but await verification.
+
+NOTES-B18 progress feedback appears immediately during submission, then distinguishes queued and running states with an animated spinner (respecting reduced motion), a polite live status and elapsed waiting time. The action is disabled and marked busy; previous errors/success messages are hidden during retries. Submission refreshes only its job query, retaining the note editor. No fabricated percentage is shown; completion or failure ends the indicator. Submission asks the user to keep the page open; accepted jobs explain that the user may return later and must explicitly apply changes.
+
+NOTES-B17 tag generation uses a maximum 1024-token output allowance for new jobs and a 45-second provider-attempt deadline, including streaming. A deadline failure is terminal (no automatic retry) and offers a localized timeout explanation and manual retry. Other AI generation retains a five-minute provider-attempt deadline, now also covering response streaming. Progress shows a longer-than-usual message after thirty seconds in the running view. These limits bound waiting; they do not guarantee provider latency or successful output within the deadline.
+
+- NOTES-B19 **Cancel generation**: Refinement and tag progress expose Cancel during submission, queuing and execution. During submission, remember the intent and request cancellation of the returned job ID; never cancel a previous job. Show Cancelling until terminal status, surface cancellation failures with retry, and confirm cancellation without applying changes. A member may cancel their own AI jobs; administrators may cancel any supported AI job. Queued cancellation completes immediately; running cancellation sets the durable flag, the runner observes active cancellation requests on its one-second tick and aborts the provider stream, and existing publication fences reject results after cancellation. If completion wins the transaction race, retain its review result. Repeated cancellation is harmless. Upstream usage already incurred remains recorded.
+
+NOTES-B18 selected suggested tags have an accent background, accent border/ring, stronger text and a checkmark; unselected tags have a neutral outline and plus icon. The pressed state remains available to assistive technology, and shape/icon cues supplement color in both refinement and tag-only reviews.
+
+NOTES-B18 elapsed waiting time uses the persisted job creation timestamp once accepted, including queue time and retries. Refreshing or reopening the note preserves elapsed time. Before acceptance it uses the current submission time; a new request starts a new timer.
+
+NOTES-B18 Arabic action wording is «تحسين بالذكاء الاصطناعي»; settings use «تحسين الملاحظات» consistently.
+
+- NOTES-B21 **Tag administration**: Administrators can search tag usage and select up to 200 source tags on `/admin/notes`, then confirm deletion (target null) or merging/renaming into a trimmed 1–50 character target. `GET /admin/notes/tags` includes archived and trashed notes. Admin-only, idempotent `POST /admin/notes/tags { tags, target }` atomically updates all matching notes including trash; matches are case-insensitive. Existing target tags are deduplicated with the requested target spelling; unrelated tags retain order. Revisions and audit entries update only changed notes, pending AI refinements become stale, and note content/deletion/archive state is preserved. Row locks and revision checks protect concurrent changes; absent sources are harmless. UI confirms sources and destination, disables controls while saving, shows errors or updated-note count, and invalidates notes/home/AI queries. No tag table or migration is needed.
+
+## Committee integration (COMM-B03, COMM-B06)
+
+Create and detail forms reuse the committee picker; cards show the assigned committee chip.
+`committeeId` filters notes and view counts. Committee tabs reuse note rows, the create form
+and autosaved detail panel. Assignment changes refresh committee summaries and activity.
+Existing archived/trashed assignments remain readable and editable until explicitly changed.
