@@ -11,6 +11,7 @@ export const Home = z.object({
         'overdue',
         'today',
         'waiting',
+        'committees',
         'kpis',
         'initiatives',
         'notes',

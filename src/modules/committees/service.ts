@@ -9,6 +9,8 @@ import { dayAt } from '@/core/time/tasks';
 import { requireRevision, applyUpdate, restoreByOp } from '@/core/entity/service';
 import { filtersHash, decodeCursor, encodeCursor } from '@/core/db/keyset';
 import { AppError } from '@/core/http/errors';
+import { routes } from '@/core/routes';
+import type { HomeSection } from '@/core/modules/server-manifest';
 import { Committee, CommitteeChoices, type CommitteeCreate, type CommitteePatch, type CommitteeListQuery, Reorder } from './schema/validation';
 import * as repo from './repo';
 const today = async (ctx: Context) => dayAt(await getSetting(ctx.db, 'workspace.timezone'));
@@ -87,4 +89,20 @@ export async function reorderCommittees(ctx: Context, input: z.infer<typeof Reor
     await applyUpdate(ctx, ops, row, { sortOrder }, { action: 'reorder' });
   }
   return { data: { updatedIds: input.items.map((item) => item.id) } };
+}
+// HOME-B01: the home page consumes this through the module's server manifest (HOME-B03).
+export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
+  const row = await repo.selectHomeSummary(ctx.db);
+  return [
+    {
+      key: 'committees',
+      enabled: true,
+      count: z.number().parse(row.count),
+      href: routes.committees({ view: 'open' }),
+      items: z
+        .array(z.object({ id: z.uuid(), title: z.string() }))
+        .parse(row.items)
+        .map((item) => ({ ...item, href: routes.committees({ view: 'all', id: item.id }) })),
+    },
+  ];
 }

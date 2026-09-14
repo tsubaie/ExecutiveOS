@@ -139,14 +139,16 @@
     "overdue": "Overdue actions",
     "today": "Due today",
     "waiting": "Waiting on",
+    "committees": "Committees with open work",
     "kpis": "Attention KPIs",
     "initiatives": "Initiatives at risk",
-    "disabled": "Module not enabled",
     "directory": "Your people directory",
     "directoryDescription": "Keep contact details and responsibilities close at hand.",
     "openPeople": "Open directory",
     "overview": "Overview",
-    "notes": "Recent notes"
+    "notes": "Recent notes",
+    "empty": "No modules are enabled yet.",
+    "emptyHint": "Enable a module in Administration to fill this screen."
   },
   "admin": {
     "users": "Members",

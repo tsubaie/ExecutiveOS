@@ -17,11 +17,16 @@ The one screen the principal opens first. It is a set of queries over existing m
   3. **Overdue actions** (`tasks?view=today` overdue band, top-level only)
   4. **Due today** (band today)
   5. **Waiting on** (`waiting_on` tasks with owner)
-  6. **Pending AI reviews** (pending note refinements, ready briefs without feedback from me, learnings proposals if admin)
-  7. **Attention KPIs** (`kpis?view=attention`)
-  8. **Initiatives at risk** (`initiatives?view=at_risk`)
-  9. **Recent notes** (non-archived notes dated within the last seven days, `notes?view=this_week`; NOTES-B14)
-- HOME-B02 Sections for disabled modules or with zero items collapse to a single line; the page never shows an empty box.
+  6. **Committees with open work** (active committees carrying open top-level tasks, busiest first, `committees?view=open`)
+  7. **Pending AI reviews** (pending note refinements, ready briefs without feedback from me, learnings proposals if admin)
+  8. **Attention KPIs** (`kpis?view=attention`)
+  9. **Initiatives at risk** (`initiatives?view=at_risk`)
+  10. **Recent notes** (non-archived notes dated within the last seven days, `notes?view=this_week`; NOTES-B14)
+- HOME-B02 A section whose module is not installed is omitted from the page entirely: an absent module is
+  an administration fact, not something the principal acts on, and a list of "not enabled" rows crowds out
+  the live ones. An installed section stays visible at zero items, collapsed to its single heading line,
+  because zero overdue actions is an answer. When no section is installed the page shows one empty state
+  pointing at Administration rather than an empty box.
 - HOME-B03 One aggregated endpoint `GET /home` returns all sections in one round trip; each module exposes a `homeSummary(ctx)` function through its `server` manifest that runs ≤ 2 queries. Every section and item carries its own `href`; the page never composes module URLs.
 - HOME-B04 Refetch on focus and every 60 seconds.
 - HOME-B05 Greeting uses the user's name and the principal's name when they differ ("Preparing for <principal>").
@@ -32,10 +37,12 @@ The one screen the principal opens first. It is a set of queries over existing m
 - HOME-A01 With seed data, Home shows the today meeting with its prep status, overdue actions, and the at-risk initiative; every "View all" opens the module in the matching view. (en, ar)
 - HOME-A02 `GET /home` completes in ≤ 12 queries with seed data. (en)
 - HOME-A03 With AI disabled the Pending AI reviews section is absent. (en)
+- HOME-A04 A committee carrying an open task appears under Committees with open work, and its "View all"
+  opens Committees in the open view. (en, ar)
 
 ## Required scenarios
 
 - api: `/home` shape; query counter; disabled modules; duplicate and unknown section ownership (B06).
-- ui: collapse rules; links.
+- ui: omission of uninstalled sections; zero-item sections kept; empty state; links.
 - e2e `home.spec.ts`: A01–A03.
 - Mutation targets: `homeSummary` aggregators for tasks and meetings.
