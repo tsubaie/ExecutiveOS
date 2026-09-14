@@ -9,6 +9,7 @@ export const ErrorCode = z.enum([
   'rule_violation',
   'rate_limited',
   'ai_unavailable',
+  'ai_failed',
   'internal',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
@@ -21,6 +22,7 @@ export const statuses: Record<ErrorCode, number> = {
   rule_violation: 422,
   rate_limited: 429,
   ai_unavailable: 503,
+  ai_failed: 502,
   internal: 500,
 };
 export class AppError extends Error {

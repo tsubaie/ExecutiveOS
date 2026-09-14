@@ -13,6 +13,8 @@ export function changeUrl(params: URLSearchParams, patch: Record<string, string 
   for (const [key, value] of Object.entries(patch))
     if (value === null || value === '') result.delete(key);
     else result.set(key, value);
+  // A search begun before a module default arrives stays in the visible All view.
+  if ('q' in patch && !result.has('view')) result.set('view', 'all');
   if (patch.new === '1') result.delete('id');
   if (patch.id) result.delete('new');
   if (filterKeys.some((key) => key in patch)) {

@@ -9,7 +9,7 @@ Source of truth for schema is `src/modules/*/schema/db.ts` (Drizzle) plus custom
 | **Entity** | tasks, notes, committees, objectives, kpis, initiatives, meetings, people, users | `id uuid pk`, `revision int not null default 1`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_op_id` |
 | **Child** (owned rows edited by users) | kpi_readings, kpi_targets, initiative_deliverables, initiative_updates, initiative_progress, meeting_agenda_items, meeting_documents, meeting_briefs, note_refinements, brief_feedback, comments, meeting_private_notes | `id`, `created_at`, `updated_at`, `created_by`, `deleted_at`, `deleted_op_id`; `revision` only where the spec says the row is inline-editable |
 | **Junction** | meeting_attendees, note_people, entity_links | `created_at`, `created_by`, `deleted_at`, `deleted_op_id` |
-| **History / system** | sessions, login_attempts, jobs, job_attempts, schedules, ai_invocations, audit_log, files, prep_learnings, idempotency_keys, settings, workspace | as specified per table |
+| **History / system** | sessions, login_attempts, jobs, job_attempts, schedules, ai_invocations, ai_credentials, audit_log, files, prep_learnings, idempotency_keys, settings, workspace | as specified per table |
 
 Global rules:
 
@@ -79,6 +79,10 @@ Indexes: `(status, run_after, priority desc)`, `(kind, status)`, `(entity_type, 
 
 ### schedules
 `id, kind, cron text, timezone text, payload jsonb, enabled boolean, last_occurrence timestamptz null, created_at, updated_at`. Seeded rows: `system.backup` (daily 02:00), `system.prune` (daily 03:00), `system.files.purge` (daily 03:30), `system.files.orphan_sweep` (hourly).
+
+### ai_credentials
+
+Singleton system table: `id integer primary key default 1 CHECK (id = 1)`, `provider text NOT NULL CHECK (provider IN (anthropic, openrouter))`, `encrypted_key text NOT NULL`, `updated_at timestamptz NOT NULL`. ADMIN-B24 stores one active provider credential with a versioned AES-256-GCM envelope, never plaintext. Not a settings entry, entity, or contextual relationship. General exports exclude this table. Database backups preserve ciphertext; decryption requires the original `SESSION_SECRET`.
 
 ### ai_invocations
 `id, job_id fk null, capability, capability_version int, requested_model, effective_model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, latency_ms, status (ok|error|refused|invalid_output), error text null, estimated_cost_micros bigint, pricing_version text, created_by, created_at`.
@@ -200,3 +204,8 @@ Adding a relationship requires adding a row to this table in the same PR and, if
 ## Import from legacy Mission Control
 
 `scripts/db/import-mission-control.ts` maps the legacy schema to this one (integer ids to UUID v7, `task_owners` to assignable people, every `notion_notes` record to one standalone note, `strategy_*` tables to objectives, KPIs, initiatives). It must not infer or create note groups from shared titles, dates, types, or legacy metadata. Optional, documented in its header, not part of the product surface. Rights to reuse any legacy code are a separate decision recorded in the roadmap.
+
+Committee development migration `0008_committees.sql` creates committees and the indexed nullable
+`committee_id` references on Tasks and Notes. Existing rows retain their contents and receive a null
+assignment. The database enforces scope/status/name constraints and case-insensitive live-name
+uniqueness. Meeting/initiative relationships remain dependent on their respective modules.

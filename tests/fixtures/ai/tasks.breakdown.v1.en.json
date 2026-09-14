@@ -1,0 +1,10 @@
+{
+  "subtasks": [
+    {
+      "title": "Collect the requirements",
+      "description": "Ask stakeholders for requirements.",
+      "dueDate": null
+    },
+    { "title": "Review the proposal", "description": null, "dueDate": null }
+  ]
+}

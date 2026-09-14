@@ -11,6 +11,7 @@ import {
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import { committees } from '@/modules/committees/schema/db';
 import { users } from '@/core/db/system-schema';
 import { people } from '@/modules/people/schema/db';
 import { notes } from '@/modules/notes/schema/db';
@@ -20,6 +21,7 @@ export const tasks = pgTable(
   {
     id: uuid().primaryKey(),
     revision: integer().notNull().default(1),
+    committeeId: uuid('committee_id').references(() => committees.id, { onDelete: 'set null' }),
     title: text().notNull(),
     description: text(),
     status: text().notNull().default('inbox'),
@@ -41,6 +43,7 @@ export const tasks = pgTable(
     ),
   },
   (t) => [
+    index('tasks_committee_idx').on(t.committeeId),
     index('tasks_owner_idx').on(t.ownerId),
     index('tasks_parent_idx').on(t.parentId),
     index('tasks_source_note_idx').on(t.sourceNoteId),

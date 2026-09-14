@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { defineHandler, authenticated } from '@/core/http/handler';
-import { AppError } from '@/core/http/errors';
+import { startBreakdown, applyBreakdown } from './ai/service';
+import { BreakdownApply } from './schema/validation';
 import {
   TaskDetail,
   TaskCreate,
@@ -132,8 +133,18 @@ export const reorder = defineHandler({
 export const breakdown = defineHandler({
   guard: 'session',
   input: Revision,
-  response,
-  handler: async () => {
-    throw new AppError('ai_unavailable');
-  },
+  response: z.object({ data: z.object({ id: z.uuid() }) }),
+  status: 202,
+  handler: async (input, ctx, params) => ({
+    data: await startBreakdown(authenticated(ctx), taskId(params), input.revision),
+  }),
+});
+export const breakdownApply = defineHandler({
+  guard: 'session',
+  input: BreakdownApply,
+  response: z.object({ data: z.object({ ids: z.array(z.uuid()) }) }),
+  idempotent: true,
+  handler: async (input, ctx, params) => ({
+    data: await applyBreakdown(authenticated(ctx), taskId(params), input),
+  }),
 });

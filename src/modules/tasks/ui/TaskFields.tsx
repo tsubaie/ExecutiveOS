@@ -1,6 +1,7 @@
 'use client';
 import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
+import { CommitteePicker } from '@/modules/committees/ui';
 import { TaskTitle, TaskDescription, useTaskText } from './TaskTextFields';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { Property } from '@/ui/layout/Property';
@@ -45,6 +46,7 @@ export function TaskFields({
         <TaskTitle editor={editor} />
       )}
       <TaskProperties initial={initial} save={save} />
+      <TaskCommittee initial={initial} save={save} />
       <TaskDescription editor={editor} />
     </fieldset>
   );
@@ -141,4 +143,9 @@ function TaskProperties({
       </Property>
     </div>
   );
+}
+
+function TaskCommittee({ initial, save }: { initial: Initial | undefined; save: ((patch: Patch) => void) | undefined }) {
+  const committeeText = useTranslations('committees');
+  return <Property label={committeeText('committee')}><CommitteePicker value={initial?.committeeId ?? null} name="committeeId" onChange={(committeeId) => save?.({ committeeId })} /></Property>;
 }

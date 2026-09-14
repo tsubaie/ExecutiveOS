@@ -1,28 +1,28 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { SlidersHorizontal, ListChecks, PanelLeftClose, CirclePlus } from 'lucide-react';
+import { SlidersHorizontal, ListChecks, PanelLeftClose, CirclePlus, X } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { EntitySearch } from './EntitySearch';
 import { EntityBulkBar } from './EntityBulkBar';
 import { ChoiceSelect } from '@/ui/layout/ChoiceSelect';
 import { useCount } from '@/ui/format';
+import { cn } from '@/ui/cn';
 import type { Entity, EntityPageProps } from './types';
 import type { EntityController } from './use-entity-controller';
 export type Surface<T extends Entity, P extends object, C> = {
   config: EntityPageProps<T, P, C>;
   controller: EntityController<T, P, C>;
 };
-// Title and current view lead, search, filter and selection follow, and Create closes the bar at
-// its trailing end; when the bar wraps (a phone, or beside an open detail) Create stays on the
-// title row so the primary action never drops below the fold.
+// Card lists use a compact desktop toolbar; title and Create remain visible without a rail.
 export function EntityToolbar<T extends Entity, P extends object, C>({
   config,
   controller: c,
 }: Surface<T, P, C>) {
   const t = useTranslations('common');
   return (
-    <div className="sticky top-0 z-10 border-b bg-surface px-3 py-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2">
+    <div className="sticky top-0 z-10 space-y-3 border-b bg-surface p-3">
+      {config.renderers.rowStyle === 'card' && c.railOpen && <h1 className="sr-only hidden xl:block">{config.title}</h1>}
+      <div className={cn('flex min-w-0 items-center gap-2', config.renderers.rowStyle === 'card' && c.railOpen && 'xl:hidden')}>
         <Button
           variant="ghost"
           size="icon"
@@ -32,17 +32,17 @@ export function EntityToolbar<T extends Entity, P extends object, C>({
         >
           <PanelLeftClose className="size-4 rtl:rotate-180" />
         </Button>
-        <div className="flex min-w-0 flex-1 items-baseline gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-2">
           <h1 className="shrink-0 text-lg font-semibold whitespace-nowrap">{config.title}</h1>
           <p className="sr-only">{config.description}</p>
           <EntityToolbarSummary config={config} controller={c} />
         </div>
-        <Button className="@2xl:order-last" onClick={() => c.navigate({ new: '1' })}>
+        <Button className="shrink-0" onClick={() => c.navigate({ new: '1' })}>
           <CirclePlus className="size-5" strokeWidth={2.25} />
           {t('create')}
         </Button>
-        <EntityToolbarControls config={config} controller={c} />
       </div>
+      <EntityToolbarControls config={config} controller={c} />
       {config.bulkActions?.length && c.selecting ? (
         <EntityBulkBar
           items={c.list.items.filter((item) => c.selected.includes(item.id))}
@@ -140,18 +140,57 @@ function EntityToolbarControls<T extends Entity, P extends object, C>({
 }: Surface<T, P, C>) {
   const t = useTranslations('common');
   const count = Object.values(c.facets).filter(Boolean).length + (c.state.sort ? 1 : 0);
+  const filtered = count > 0 || Boolean(c.state.q) || c.state.view !== 'all';
   return (
-    <div className="flex w-full min-w-0 items-center gap-2 @2xl:w-auto @2xl:flex-1 @2xl:basis-[260px] @2xl:justify-end">
-      <EntitySearch query={c.state.q} navigate={c.navigate} />
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+      {config.renderers.rowStyle === 'card' && c.railOpen && <Button variant="ghost" size="icon" className="hidden xl:inline-flex"
+        aria-label={t('collapseViews')} onClick={() => c.setRailOpen(false)}><PanelLeftClose className="size-4 rtl:rotate-180" /></Button>}
+      <div className="flex min-w-0 flex-1 basis-full @lg:basis-0"><EntitySearch key={c.searchReset} query={c.state.q} navigate={c.navigate} /></div>
+      {config.filters.sort && <div className="min-w-0 max-w-44">
+        <ChoiceSelect label={t('sort')} value={c.state.sort}
+          items={config.filters.sort.options.map((option) => ({ value: option.id, text: option.label, label: option.label }))}
+          onChange={(sort) => c.navigate({ sort }, true)} />
+      </div>}
       <Button
         variant={count ? 'secondary' : 'outline'}
         aria-label={count ? t('filtersActive', { count }) : t('filter')}
         onClick={() => c.setFiltersOpen(true)}
       >
         <SlidersHorizontal className="size-4" />
-        <span className="hidden @lg:inline">{t('filter')}</span>
         {count > 0 && <span className="tabular-nums">{count}</span>}
       </Button>
+      <Button variant="ghost" size="icon" className={cn('shrink-0 text-text-muted', !filtered && 'invisible')} aria-label={t('clear')} title={t('clear')} onClick={() => c.clearFilters()}>
+        <X aria-hidden={true} className="size-4" />
+      </Button>
+      <EntitySelectionControl config={config} controller={c} />
+    </div>
+  );
+}
+
+// The current view and its count double as the way into the filter sheet where the rail is hidden.
+function EntityToolbarSummary<T extends Entity, P extends object, C>({
+  config,
+  controller: c,
+}: Surface<T, P, C>) {
+  const format = useCount();
+  return <>
+    <Button variant="ghost" size="sm"
+      className="h-7 min-w-0 justify-start gap-1.5 px-1.5 text-sm font-normal text-text-muted"
+      onClick={() => c.setFiltersOpen(true)}>
+      <span className="truncate">{config.filters.views.find((view) => view.id === c.state.view)?.label}</span>
+      <span className="tabular-nums">{format(c.list.counts[c.state.view] ?? 0)}</span>
+    </Button>
+    {config.filters.views.filter((view) => view.featured === 'compact' && view.id !== c.state.view).map((view) =>
+      <Button key={view.id} variant="ghost" size="sm" className="h-7 gap-1.5 rounded-full px-2 text-xs font-normal text-text-muted"
+        onClick={() => c.navigate({ view: view.id }, true)}>
+        <span>{view.label}</span><span className="tabular-nums">{format(c.list.counts[view.id] ?? 0)}</span>
+      </Button>)}
+  </>;
+}
+
+function EntitySelectionControl<T extends Entity, P extends object, C>({ config, controller: c }: Surface<T, P, C>) {
+  const t = useTranslations('common');
+  return <>
       {config.bulkActions?.length ? (
         <Button
           variant={c.selecting ? 'secondary' : 'ghost'}
@@ -166,41 +205,5 @@ function EntityToolbarControls<T extends Entity, P extends object, C>({
           <ListChecks className="size-4" />
         </Button>
       ) : null}
-    </div>
-  );
-}
-
-// The current view and its count double as the way into the filter sheet where the rail is hidden.
-function EntityToolbarSummary<T extends Entity, P extends object, C>({
-  config,
-  controller: c,
-}: Surface<T, P, C>) {
-  const t = useTranslations('common');
-  const format = useCount();
-  const filtered = Object.values(c.facets).some(Boolean) || Boolean(c.state.sort) || c.state.q;
-  return (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 min-w-0 justify-start gap-1.5 px-1.5 text-sm font-normal text-text-muted"
-        onClick={() => c.setFiltersOpen(true)}
-      >
-        <span className="truncate">
-          {config.filters.views.find((view) => view.id === c.state.view)?.label}
-        </span>
-        <span className="tabular-nums">{format(c.list.counts[c.state.view] ?? 0)}</span>
-      </Button>
-      {filtered && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-1.5 text-xs text-text-muted"
-          onClick={() => c.clearFilters()}
-        >
-          {t('clear')}
-        </Button>
-      )}
-    </>
-  );
+  </>;
 }

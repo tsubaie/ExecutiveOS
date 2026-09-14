@@ -1,38 +1,40 @@
 import 'server-only';
-import Anthropic from '@anthropic-ai/sdk';
-import { env } from '@/core/config/env';
+import { z } from 'zod';
+import { type Database } from '@/core/db/client';
+import { aiClient } from './sdk';
+import { connectionError } from './connection-error';
 type Connection = {
   state: 'disabled' | 'enabled' | 'error';
   checkedAt: string | null;
   error: string | null;
 };
+const KeyStatus = z.object({ data: z.object({ limit_remaining: z.number().nullable() }) });
 let connection: Connection = { state: 'disabled', checkedAt: null, error: null };
 export function aiConnection() {
   return connection;
 }
-export async function checkConnection() {
-  const key = env().ANTHROPIC_API_KEY;
-  if (!key) {
-    connection = { state: 'disabled', checkedAt: new Date().toISOString(), error: null };
-    return connection;
-  }
+export function resetConnection() {
+  connection = { state: 'disabled', checkedAt: null, error: null };
+}
+export async function checkConnection(database?: Database) {
+  let error: string | null = null;
   try {
-    const client = new Anthropic({ apiKey: key, maxRetries: 0, timeout: 10000 });
-    await client.models.list();
-    connection = { state: 'enabled', checkedAt: new Date().toISOString(), error: null };
-  } catch (error) {
-    connection = {
-      state: 'error',
-      checkedAt: new Date().toISOString(),
-      error:
-        error instanceof Anthropic.AuthenticationError
-          ? 'invalid_key'
-          : error instanceof Anthropic.RateLimitError
-            ? 'rate_limit'
-            : error instanceof Anthropic.APIConnectionError
-              ? 'network'
-              : 'provider',
-    };
+    const client = await aiClient(10_000, database);
+    if (!client) {
+      connection = { state: 'disabled', checkedAt: new Date().toISOString(), error: null };
+      return connection;
+    }
+    // ADMIN-B23: the public model catalog cannot verify a key; this authenticated endpoint can.
+    const raw: unknown = await client.get('/v1/key');
+    const status = KeyStatus.parse(raw);
+    if (status.data.limit_remaining !== null && status.data.limit_remaining <= 0) error = 'billing';
+  } catch (cause) {
+    error = connectionError(cause);
   }
+  connection = {
+    state: error ? 'error' : 'enabled',
+    checkedAt: new Date().toISOString(),
+    error,
+  };
   return connection;
 }

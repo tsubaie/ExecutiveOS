@@ -32,7 +32,8 @@ export function useAdminResource(path: string) {
   return useQuery({
     queryKey: ['admin', path],
     queryFn: () => request(`/admin/${path}`, z.object({ data: z.json() })),
-    refetchInterval: path === 'jobs' || path === 'backups' ? 2000 : 60000,
+    refetchInterval: path === 'ai' ? false : path === 'jobs' || path === 'backups' ? 2000 : 60000,
+    refetchOnWindowFocus: path !== 'ai',
   });
 }
 export function useAdminAction(path: string) {

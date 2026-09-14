@@ -58,6 +58,27 @@ const note = async (page: Page, title: string, fields: object = {}) =>
   (await api(page, 'notes', '', 'POST', { title, ...fields })).body.data;
 const detail = (page: Page) => page.locator('aside.entity-detail');
 const rows = (page: Page) => page.locator('[data-row-id]');
+test('NOTES-B02 EP-B20 notes use separated horizontal cards that still open details', async ({ page }) => {
+  await loginAs(page, 'en');
+  const title = `Horizontal card ${Date.now()}`;
+  const first = await note(page, `${title} one`, { tags: ['Budget', 'Risk'] });
+  const second = await note(page, `${title} two`);
+  await page.goto(`/notes?view=all&q=${encodeURIComponent(title)}`);
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    const one = page.locator(`[data-row-id="${first.id}"]`).locator('..');
+    const two = page.locator(`[data-row-id="${second.id}"]`).locator('..');
+    await expect(one).toBeVisible();
+    await expect(two).toBeVisible();
+    expect(await one.evaluate((element) => Number.parseFloat(getComputedStyle(element).borderRadius))).toBeGreaterThan(0);
+    const a = await one.boundingBox();
+    const b = await two.boundingBox();
+    if (!a || !b) throw new Error('Missing note card geometry');
+    expect(Math.max(a.y, b.y) - Math.min(a.y + a.height, b.y + b.height)).toBeGreaterThan(0);
+  }
+  await page.locator(`[data-row-id="${first.id}"]`).click();
+  await expect(page).toHaveURL(new RegExp(`id=${first.id}`));
+});
 for (const locale of ['en', 'ar']) {
   const m = locale === 'ar' ? ar : en;
   test(`NOTES-A01 NOTES-A03 create a note, add a task from it and complete it ${locale}`, async ({
@@ -88,10 +109,10 @@ for (const locale of ['en', 'ar']) {
     await page.goto(`/notes?view=all&q=${encodeURIComponent(title)}`);
     await expect(rows(page)).toHaveCount(1);
     await expect(page.getByText(m.notes.today, { exact: true }).first()).toBeVisible();
-    await expect(rows(page).first().getByText('0/1')).toBeVisible();
+    await expect(rows(page).first().locator('..').getByText('1/1', { exact: true })).toBeVisible();
   });
 }
-test('NOTES-A02 NOTES-B08 a mention adds a participant, "Add name" creates another, both reach the row and the person page', async ({
+test('NOTES-A02 NOTES-B08 a mention adds a participant, "Add name" creates another, both persist in details and reach the person page', async ({
   page,
 }) => {
   await loginAs(page, 'en');
@@ -123,7 +144,8 @@ test('NOTES-A02 NOTES-B08 a mention adds a participant, "Add name" creates anoth
   ).toBeVisible();
   await page.goto(`/notes?view=all&q=${encodeURIComponent(title)}`);
   await expect(rows(page)).toHaveCount(1);
-  await expect(page.getByRole('button', { name: `Show ${fresh}` })).toBeVisible();
+  await rows(page).first().click();
+  await expect(detail(page).getByRole('link', { name: fresh })).toBeVisible();
   const person = (await api(page, 'people', `?view=all&q=${encodeURIComponent(fresh)}`)).body
     .data[0];
   expect(person.isAssignable).toBe(false);
@@ -173,7 +195,7 @@ test('NOTES-A05 NOTES-A06 archive from the bulk bar, find it by search, and tag 
   await page.getByRole('button', { name: en.notes.archive, exact: true }).click();
   await page.getByRole('button', { name: en.common.confirm, exact: true }).click();
   await expect(rows(page)).toHaveCount(3);
-  await expect(rows(page).first().getByText(en.notes.archivedChip)).toBeVisible();
+  await expect(rows(page).first().locator('..').getByText(en.notes.archivedChip)).toBeVisible();
   await page.goto('/notes?view=all');
   await expect(rows(page).filter({ hasText: prefix })).toHaveCount(0);
   await selectView(page, 'en', new RegExp(en.notes.archived));

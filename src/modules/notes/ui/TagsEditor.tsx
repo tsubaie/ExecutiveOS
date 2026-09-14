@@ -41,18 +41,20 @@ export function TagsEditor({ tags, save }: { tags: string[]; save: (tags: string
         <TagChips tags={tags} remove={(tag) => save(tags.filter((item) => item !== tag))} />
         <Input
           list={listId}
+          autoComplete="off"
           value={draft}
           aria-label={t('addTagLabel')}
           placeholder={t('addTagPlaceholder')}
           maxLength={50}
           className="h-8 w-40 text-sm"
           onChange={(event) => setDraft(event.target.value)}
+          onFocus={() => { void suggestions.refetch(); }}
           onKeyDown={keyDown}
           onBlur={(event) => event.target.value.trim() && add(event.target.value)}
         />
         <datalist id={listId}>
           {(suggestions.data?.data ?? [])
-            .filter((row) => !tags.includes(row.tag))
+            .filter((row) => row.count > 0 && !tags.some((tag) => tag.toLowerCase() === row.tag.toLowerCase()))
             .map((row) => (
               <option key={row.tag} value={row.tag} />
             ))}

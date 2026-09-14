@@ -13,7 +13,8 @@ const Environment = z.object({
     message:
       'TRUSTED_PROXY_CIDRS must be a comma-separated list of IP addresses or CIDR blocks, for example "10.0.0.0/8, fd00::/8"',
   }),
-  ANTHROPIC_API_KEY: optionalText,
+  OPENROUTER_API_KEY: optionalText,
+  AI_RATE_LIMIT_ENABLED: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
   FILES_DIR: z.string().default(defaults.filesDir),
   BACKUP_DIR: z.string().default(defaults.backupDir),
   FILES_QUOTA_GB: z.coerce.number().positive().default(20),

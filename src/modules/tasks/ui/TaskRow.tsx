@@ -1,56 +1,38 @@
 'use client';
+import { CommitteeChip } from '@/modules/committees/ui';
 import { useTranslations } from 'next-intl';
 import { ListChecks, NotebookPen } from 'lucide-react';
 import { cn } from '@/ui/cn';
 import type { Task } from '../schema/validation';
+import { PersonAvatar } from '@/ui/layout/PersonAvatar';
 import { useDueLabel } from './use-due-label';
-// One line on a wide list: title and priority lead, subtask progress, owner and due date trail.
-// On a phone the trailing group wraps under a two-line title.
+// Task and note titles share the compact entity card, with task-specific metadata trailing.
 export function TaskRow({ task }: { task: Task }) {
+  return <span className="flex min-w-0 flex-1 items-center gap-2">
+    <span className={cn('plaintext line-clamp-2 min-w-0 text-sm leading-relaxed font-medium whitespace-normal', task.status === 'completed' && 'text-text-muted line-through')}>
+      {task.title}
+    </span>
+    <TaskPriority priority={task.priority} />
+  </span>;
+}
+export function TaskTrail({ task }: { task: Task }) {
   const t = useTranslations('tasks');
   const due = useDueLabel()(task);
-  const completed = task.status === 'completed';
-  return (
-    <span className="grid min-w-0 flex-1 gap-1 sm:flex sm:items-center sm:gap-3">
-      <span className="flex min-w-0 flex-1 items-center gap-2">
-        <span
-          className={cn(
-            'plaintext line-clamp-2 min-w-0 text-sm font-medium whitespace-normal sm:line-clamp-none sm:truncate sm:whitespace-nowrap',
-            completed && 'text-text-muted line-through',
-          )}
-        >
-          {task.title}
-        </span>
-        <TaskPriority priority={task.priority} />
-      </span>
-      <span className="flex shrink-0 items-center gap-3 text-xs text-text-muted tabular-nums">
-        {!completed && task.status !== 'next_action' && <span>{t(task.status)}</span>}
-        {task.subtaskCount > 0 && (
-          <span
-            className="inline-flex items-center gap-1"
-            title={t('progress', { done: task.completedSubtaskCount, total: task.subtaskCount })}
-          >
-            <ListChecks className="size-3.5" aria-hidden />
-            {t('progressShort', { done: task.completedSubtaskCount, total: task.subtaskCount })}
-          </span>
-        )}
-        {task.sourceNote && <SourceNoteChip note={task.sourceNote} />}
-        {due && task.dueDate && (
-          <time
-            dateTime={task.dueDate}
-            title={due.absolute}
-            className={cn(
-              'min-w-16 text-end',
-              due.tone === 'danger' && 'font-medium text-danger',
-              due.tone === 'accent' && 'font-medium text-accent',
-            )}
-          >
-            {due.label}
-          </time>
-        )}
-      </span>
-    </span>
-  );
+  return <span className="flex flex-wrap items-center justify-end gap-2 text-xs text-text-muted @lg:gap-3">
+    {task.committee && <CommitteeChip committee={task.committee} />}
+    {task.status !== 'next_action' && task.status !== 'completed' && <span className="rounded-full bg-surface-raised/60 px-2 py-1">{t(task.status)}</span>}
+    {task.subtaskCount > 0 && <span className="inline-flex items-center gap-1 tabular-nums"
+      title={t('progress', { done: task.completedSubtaskCount, total: task.subtaskCount })}>
+      <ListChecks className="size-3.5" aria-hidden />
+      {t('progressShort', { done: task.completedSubtaskCount, total: task.subtaskCount })}
+    </span>}
+    {task.sourceNote && <span className="hidden @2xl:inline-flex"><SourceNoteChip note={task.sourceNote} /></span>}
+    {due && task.dueDate && <time dateTime={task.dueDate} title={due.absolute}
+      className={cn('whitespace-nowrap tabular-nums', due.tone === 'danger' && 'font-medium text-danger', due.tone === 'accent' && 'font-medium text-accent')}>
+      {due.label}
+    </time>}
+    {task.ownerName && <PersonAvatar name={task.ownerName} />}
+  </span>;
 }
 
 // Only urgent and high carry a tint so the eye lands on what needs it; the rest stay quiet.

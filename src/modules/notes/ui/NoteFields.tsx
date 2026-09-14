@@ -9,11 +9,13 @@ import { DatePicker } from '@/ui/layout/DatePicker';
 import { Avatar } from '@/ui/layout/Avatar';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { MarkdownField } from '@/ui/markdown/MarkdownField';
-import { NEW_MENTION, derivedParticipants, type MentionItem } from '@/ui/markdown/mentions';
+import { NEW_MENTION, type MentionItem } from '@/ui/markdown/mentions';
+import { derivedParticipants } from '../schema/validation';
 import { routes } from '@/core/routes';
 import type { NoteDetail, NotePatch, Participant } from '../schema/validation';
 import { useAllPeople, useNoteMutations, useNoteTypes } from './queries';
 import { useTypeLabel } from './use-note-labels';
+import { CommitteePicker } from '@/modules/committees/ui';
 import { TagsEditor } from './TagsEditor';
 export type Patch = Omit<NotePatch, 'revision'>;
 type Save = (patch: Patch) => void;
@@ -22,6 +24,7 @@ type Save = (patch: Patch) => void;
 // commits on leave through the framework save queue.
 export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
   const t = useTranslations('notes');
+  const committees = useTranslations('committees');
   const { draft, change } = useDraftProperties(note, save);
   const mentions = useMentions(note, save);
   return (
@@ -43,6 +46,7 @@ export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
           />
         </Property>
       </div>
+<Property label={committees('committee')}><CommitteePicker value={note.committeeId} onChange={(committeeId) => save({ committeeId })} /></Property>
       <ParticipantLinks participants={note.participants} />
       <TagsEditor tags={note.tags} save={(tags) => save({ tags })} />
       {mentions.error && <ErrorPanel error={mentions.error} />}

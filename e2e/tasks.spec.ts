@@ -44,6 +44,27 @@ async function api(page: Page, path: string, method = 'GET', body?: object, key?
     { path, method, body, key },
   );
 }
+test('TASKS-B02 TASKS-B08 EP-B20 task cards retain an independent completion control and rounded Inbox-first summaries', async ({ page }) => {
+  await loginAs(page, 'en');
+  const title = `Horizontal task ${Date.now()}`;
+  const result = await api(page, '', 'POST', { title, priority: 'high' });
+  const id = String(result.body.data.id);
+  await page.goto(`/tasks?view=all&q=${encodeURIComponent(title)}`);
+  const firstSummary = page.locator('[data-entity-stats]').getByRole('button').first();
+  await expect(firstSummary).toContainText(en.tasks.inbox);
+  expect(await firstSummary.evaluate((element) => Number.parseFloat(getComputedStyle(element).borderRadius))).toBeGreaterThan(0);
+  const open = page.locator(`[data-row-id="${id}"]`);
+  const card = open.locator('..');
+  await expect(open).toBeVisible();
+  expect(await card.evaluate((element) => Number.parseFloat(getComputedStyle(element).borderRadius))).toBeGreaterThan(0);
+  const toggle = card.getByRole('checkbox');
+  await expect(toggle).toBeVisible();
+  expect(await open.getByRole('checkbox').count()).toBe(0);
+  const completed = page.waitForResponse((response) => response.url().endsWith(`/tasks/${id}/complete`) && response.request().method() === 'POST');
+  await toggle.click();
+  expect((await completed).ok()).toBe(true);
+  await expect(page).not.toHaveURL(/[?&]id=/);
+});
 for (const locale of ['en', 'ar'])
   test(`TASKS-A01 TASKS-A03 TASKS-A04 TASKS-B08 TASKS-B15 create edit subtasks complete restore ${locale}`, async ({
     page,
@@ -270,7 +291,10 @@ for (const locale of ['en', 'ar']) {
     expect(bounds?.width).toBeGreaterThanOrEqual(44);
     expect(bounds?.height).toBeGreaterThanOrEqual(44);
     const row = page.locator(`[data-row-id="${task.id}"]`);
-    expect((await row.boundingBox())?.y).toBeLessThan(320);
+    // Five summary cards wrap into three rows on mobile; the task must still fit in the first viewport.
+    const rowBounds = await row.boundingBox();
+    expect(rowBounds).not.toBeNull();
+    expect(rowBounds!.y + rowBounds!.height).toBeLessThan(844);
     await row.focus();
     await page.keyboard.press('x');
     await expect(

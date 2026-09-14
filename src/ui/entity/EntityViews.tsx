@@ -53,12 +53,13 @@ export function EntityStats<T extends Entity, P extends object, C>({
   controller: c,
 }: Surface<T, P, C>) {
   const count = useCount();
-  const featured = config.filters.views.filter((view) => view.featured);
+  const featured = config.filters.views.filter((view) => view.featured === true)
+    .sort((a, b) => (a.featuredOrder ?? 1) - (b.featuredOrder ?? 1));
   if (!featured.length) return null;
   return (
-    <div className="grid grid-cols-4 gap-1.5 border-b px-2 py-2 @lg:gap-2 @lg:px-3 @lg:py-2.5">
+    <div data-entity-stats className={cn('grid grid-cols-2 gap-2 border-b px-3 py-3', featured.length === 5 ? '@lg:grid-cols-5' : '@lg:grid-cols-4')}>
       {featured.map((view) => {
-        const value = c.list.counts[view.id] ?? 0;
+        const value = c.list.summaryCounts?.[view.id] ?? c.list.counts[view.id] ?? 0;
         const active = c.state.view === view.id;
         const Icon = view.icon;
         return (
@@ -67,7 +68,8 @@ export function EntityStats<T extends Entity, P extends object, C>({
             variant="ghost"
             aria-pressed={active}
             className={cn(
-              'h-auto min-w-0 flex-col items-start gap-1 rounded-lg border px-2 py-1.5 text-start @lg:px-3 @lg:py-2',
+              'h-auto min-w-0 flex-col items-start gap-1 px-2 py-1.5 text-start @lg:px-3 @lg:py-2',
+              'rounded-xl border',
               active
                 ? 'border-accent/50 bg-accent-soft hover:bg-accent-soft'
                 : 'border-border bg-bg/60 hover:bg-surface-raised',

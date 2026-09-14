@@ -1,92 +1,36 @@
 # 06 — AI integration
 
-> Model identifiers in settings (`ai.model.default`, `ai.model.fast`) accept any `claude-*` id; availability is checked against the provider at connection time, not by the registry.
+> Model settings accept OpenRouter `provider/model` IDs (including variants). Syntax validation does not establish availability or feature compatibility.
 
-AI runs inside the application by calling the Claude API with the official TypeScript SDK. There is no worker service and no CLI. All model calls run as jobs (ADR 0010). If `ANTHROPIC_API_KEY` is not set or the connection check fails, AI entry points are hidden and AI routes return `503 ai_unavailable`; nothing else changes.
+AI runs inside the application using the official Anthropic TypeScript SDK. OpenRouter is the only provider, using `OPENROUTER_API_KEY` as an environment fallback, per ADR 0016 and ADMIN-B23. Saved admin credentials (ADMIN-B24) override environment configuration without a restart. Only the selected key is used; a missing key disables AI. Keys are encrypted in a dedicated table; changing `SESSION_SECRET` requires re-entry. There is no worker service or CLI. All model calls must run as jobs (ADR 0010).
+
+**Development status:** saved credentials and connection checks were previously delivered. Model selection, task breakdown, note refinement, tag suggestions, controls and usage accounting are now in development and await verification and deployment. ADR 0017 governs their execution; the remaining meeting and initiative capabilities below remain planned.
 
 ## Layers
 
-```
-modules/<m>/ai/capabilities.ts   capability definitions (schemas, model policy, prompt builder)
-modules/<m>/ai/prompts/<name>.v<N>.ts
-core/ai/capabilities.ts          registry: name → capability
-core/ai/provider.ts              interface AiProvider { complete<T>(req, signal): Promise<AiResult<T>> }
-core/ai/anthropic.ts             the only provider in v1
-core/ai/fake.ts                  fixture provider for tests
-core/ai/client.ts                SDK client, timeouts, connection check, model feature matrix
-core/ai/budget.ts                reservations against the monthly budget, per-user rate limits
-core/jobs/*                      every capability runs as kind ai.<name>
-```
+- `core/ai/credentials.ts`, `secret.ts`, `sdk.ts`: encrypted credential resolution and SDK construction.
+- `core/ai/models.ts`: compatible OpenRouter catalog and persisted model selection.
+- `core/ai/admission.ts`, `controls.ts`: availability, model/context limits, reservations, rate limits and admin settings.
+- `core/ai/provider.ts`, `execute.ts`, `usage.ts`: structured streaming, safe failures and invocation accounting.
+- `core/ai/review.ts`: authorized, repeat-safe proposal application.
+- `modules/<m>/ai/`, `jobs.ts`: versioned prompts, domain normalization, review services and fenced publication.
+- `ui/ai/`: shared polling and progress/review states. Current-user jobs are read through `/ai/job` with entity and capability filters.
 
-A capability:
+## Model policy and setup
 
-```ts
-export const noteRefine = defineCapability({
-  name: "notes.refine",
-  version: 3,
-  input: NoteRefineInput,
-  output: NoteRefineOutput,
-  model: "default",           // "default" | "fast"
-  effort: "high",
-  maxOutputTokens: 16000,
-  estimateInputTokens: (input) => …,   // for budget reservation
-  system: SYSTEM_PROMPT,
-  buildUser: (input) => ContentBlock[],
-  rateLimitPerHour: 30,
-});
-```
+Save an OpenRouter key on `/admin/ai`, test the connection, then explicitly select a default model for task breakdown/note refinement and a fast model for tag suggestions. Only text models advertising structured outputs appear. The catalog is cached for one minute; admission rechecks model presence and context/output limits. Existing default strings are configuration placeholders, not certified model availability. Select the desired capabilities and optionally set a monthly token budget. Generation also requires the in-process jobs runner to be enabled.
 
-`runCapability(cap, input, ctx)` validates input, snapshots everything the job needs into the payload (input, `capabilityVersion`, `promptVersion`, resolved model, locale, `learningsVersion` where applicable, entity revisions and content hashes), reserves budget, enqueues `ai.<name>` with a `dedup_key` from the spec, and returns the job id. The UI polls `GET /jobs/:id`.
+## Connection check
 
-## Model policy
+On boot and on Test connection, the SDK calls authenticated `/v1/key` through `https://openrouter.ai/api` with bearer authentication, a ten-second timeout and no retries. The public catalog is not a credential check. Invalid response shapes fail closed; exhausted key limits map to billing errors. Saving a key resets connection status and takes effect without restart; environment changes require restart. A saved key indicator is separate from verified connection status. Admin guidance discloses that OpenRouter forwards requests to downstream providers.
 
-| Setting | Default | Notes |
-|---|---|---|
-| `ai.model.default` | `claude-opus-5` | must be in `core/ai/models.ts` |
-| `ai.model.fast` | `claude-sonnet-5` | |
-| `ai.enabled_capabilities` | all | admin toggle per capability |
-| `ai.monthly_token_budget` | null | soft cap in workspace timezone months |
+## Task and note execution
 
-`core/ai/models.ts` holds the allowlist with a feature matrix (structured outputs, adaptive thinking, effort levels, PDF input, fallback support, max output). A capability whose requirements the configured model does not meet fails admission with `ai_unavailable` `reason: "provider"` and a message naming the missing feature. Model IDs are exact strings; never append date suffixes.
+All generation runs as durable jobs. Admission snapshots inputs, revision, content hash, locale, capability/prompt versions, model limits and catalog pricing. Calls stream with an abort signal, required structured output and parameter-compatible routing; no tools, adaptive thinking, explicit caching or model fallback is requested. Zod and domain checks validate proposals. Each job allows two attempts, retrying only network, rate-limit and invalid-output failures. Refusal/authentication failures are terminal; Retry-After delays are honored.
 
-## Connection check (BYOK contract)
+The admin disclosure lists the task/note content, existing tags and assignable people names included in these requests. Emails are excluded. Data framing escapes delimiter characters, and prompts treat embedded instructions as untrusted source material. Apply is an explicit, transactional, revision-fenced action; generated content never replaces entity data automatically.
 
-On boot and when the key changes, `core/ai/client.ts` calls `client.models.list()` and stores `{ ok, checkedAt, error }` used by `/health` and the admin AI page. Errors map to actionable messages: invalid key, billing or quota, rate limit, network. The admin page has "Test connection" and "Rotate key" instructions (set the env var, restart). It also lists exactly what is sent to the provider per capability (document content, meeting title and objective, attendee names and roles, agenda titles with KPI status and initiative health, note content, existing tags, assignable people names, active learnings). Private notes and user emails are never sent.
-
-## Call shape
-
-```ts
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-
-const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 0, timeout: 300_000 });
-
-const stream = client.beta.messages.stream({
-  model,
-  max_tokens: cap.maxOutputTokens,
-  thinking: { type: "adaptive" },
-  output_config: { effort: cap.effort, format: zodOutputFormat(cap.output) },
-  betas: ["server-side-fallback-2026-07-01"],
-  fallbacks: "default",
-  system: [{ type: "text", text: cap.system, cache_control: { type: "ephemeral" } }],
-  messages: [{ role: "user", content: cap.buildUser(input) }],
-}, { signal });
-const response = await stream.finalMessage();
-```
-
-Rules:
-
-- Structured outputs for every capability. Draft-style outputs use `{ text: string }`.
-- Adaptive thinking; depth via `effort`. No `budget_tokens`, no prefill.
-- SDK retries are disabled (`maxRetries: 0`); the job runner owns retries so an attempt is one API call and budget accounting is exact.
-- Streaming always, with the job's abort signal.
-- Stable system prompt first with `cache_control`; volatile content in the user turn.
-- `stop_reason === "refusal"` → job fails with `ai_failed reason: "refused"`, not retried. `parsed_output` null → `invalid_output`, retried once with the same input.
-- Typed errors: `RateLimitError` → retry with backoff honoring `retry-after`; `AuthenticationError` → mark AI `error`, fail without retry; `APIConnectionError` and 5xx → retry; `BadRequestError` → fail without retry and surface the message to the admin log.
-- Fallback: on `claude-opus-5` the server-side fallback beta is enabled by default; `ai_invocations.effective_model` records what actually answered. Admins can disable it (`ai.fallbacks` setting).
-- Every attempt writes one `ai_invocations` row including cache write tokens, capability version, requested and effective model, and estimated cost from a versioned pricing table.
-
-## Document input
+## Planned document input
 
 `meetings.brief` sends PDFs as `document` content blocks (base64). Limits enforced before the call: binary ≤ `MAX_UPLOAD_MB` (default 20, which is under the 32 MB request limit after base64 expansion), ≤ 300 pages, and a `count_tokens` preflight ≤ 150 000 tokens. Over any limit the job fails with a message asking the user to split the document; nothing is truncated silently. DOCX, MD, and TXT send extracted text framed in `<document>` tags. The text path is labeled in the brief ("analyzed from extracted text").
 
@@ -99,12 +43,12 @@ Rules:
 - Rendered AI markdown goes through the sanitizing renderer with remote images disabled and `http(s)` links only; learnings and briefs are untrusted content.
 - Indirect injection is a tested threat: fixtures include a document that tries to change the recommendation and to name a fake owner; tests assert the finding appears under `critical_review` and the owner is dropped.
 
-## v1 capabilities
+## Capability scope (task/note development; others planned)
 
 | Name | Model | dedup_key | Input → output |
 |---|---|---|---|
 | `notes.refine` | default | `notes.refine:<noteId>` | note + context → `NoteRefineOutput` (`features/notes.md`) |
-| `notes.suggest_tags` | fast | `notes.tags:<noteId>` | content, existing tags → `{ tags }` |
+| `notes.suggest_tags` | fast | `notes.suggest_tags:<noteId>` | content, existing tags → `{ tags }` |
 | `tasks.breakdown` | default | `tasks.breakdown:<taskId>` | task → `{ subtasks[] }` |
 | `initiatives.update_draft` | default | `initiatives.draft:<id>` | initiative context → `{ health, body }` |
 | `meetings.brief` | default, effort high, 32 000 output | `meetings.brief:<docId>:<locale>` | document + context + active learnings → `BriefSections` |
@@ -113,15 +57,15 @@ Rules:
 
 ## Language
 
-Output follows the language of the input content unless `targetLocale` is given. Mixed content keeps each part in its language. Arabic output is checked for leading bidi control characters.
+Output follows the language of the input content unless `targetLocale` is given. For note refinement prompt v2, mixed Arabic/English content refines into Arabic per NOTES-B18; task titles keep the source passage language. Other capabilities preserve each part’s language. Arabic output is checked for leading bidi control characters.
 
 ## Cost and admission
 
-- Budget reservation: before enqueueing, `core/ai/budget.ts` reserves `estimateInputTokens + maxOutputTokens` against `ai.monthly_token_budget` (month in workspace timezone); on completion the reservation is replaced by actual usage. Over budget → `ai_unavailable reason: "budget"`. A banner appears at 80 percent.
-- Per-user hourly limits: briefs 10, translations 10, refine 30, breakdown 30, tags 60; proposals are system-initiated and unlimited.
-- Admin AI page: calls, tokens, cache hit rate, estimated cost by capability for 30 days; pricing table version shown.
+Task/note admission reserves two attempts using framed UTF-8 input bytes plus 8192 tokens of schema/prompt allowance and the capped output limit. Monthly usage and active reservations count against the configured budget in workspace timezone months. This conservative policy can reject inputs a tokenizer would admit. The enqueue advisory lock serializes admission. Per-user hourly limits are 30 for refinement/breakdown and 60 for tags.
 
-## Testing AI
+Every attempt records usage and estimated cost using the snapshotted catalog prices. Unknown failed-response usage retains an estimated per-attempt reservation. Active jobs retain their reservation until termination, including while an invocation has been recorded, so admission can temporarily count extra consumption. The admin page shows usage, reservations, an 80-percent warning and thirty-day per-capability estimates. Estimates do not apply provider cache discounts and are not an invoice.
+
+## Verification contract (execution paused by maintainer)
 
 - Unit tests use `FakeProvider` with fixtures `tests/fixtures/ai/<capability>.v<N>.<case>.json`, recorded once with `pnpm ai:record` and reviewed like code.
 - Contract tests: every fixture validates against the current output schema.

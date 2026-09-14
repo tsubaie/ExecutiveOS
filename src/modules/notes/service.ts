@@ -1,5 +1,6 @@
 /** NOTES-I01–I07, B01–B16: standalone notes with participants, tags, linked tasks and archive. */
 import 'server-only';
+import { requireCommittee } from '@/modules/committees';
 import { z } from 'zod';
 import type { Context } from '@/core/auth/session';
 import { id } from '@/core/db/ids';
@@ -11,10 +12,11 @@ import { AppError } from '@/core/http/errors';
 import { routes } from '@/core/routes';
 import type { HomeSection } from '@/core/modules/server-manifest';
 import { dayAt, addDays, bandOf } from '@/core/time/notes';
-import { getPerson } from '@/modules/people';
+import { aiPeople, getPerson } from '@/modules/people';
 import en from '@/core/i18n/messages/en.json';
 import ar from '@/core/i18n/messages/ar.json';
 import {
+  ManageTags, Tags,
   Note,
   NoteDetail,
   Counts,
@@ -108,6 +110,7 @@ export async function getNote(ctx: Context, noteId: string, deleted = false) {
   return NoteDetail.parse({ ...row, tasks: await repo.selectNoteTasks(ctx.db, noteId) });
 }
 export async function createNote(ctx: Context, input: NoteCreate) {
+  await requireCommittee(ctx, input.committeeId);
   const types = await noteTypes(ctx);
   const type = input.type ?? (await defaultType(ctx, types));
   requireType(types, type);
@@ -136,6 +139,7 @@ async function setParticipants(ctx: Context, noteId: string, personIds: string[]
 }
 export async function patchNote(ctx: Context, noteId: string, input: NotePatch) {
   const note = await requireRevision(ctx, ops, noteId, input.revision);
+  await requireCommittee(ctx, input.committeeId, note.committeeId);
   if (input.type !== undefined) requireType(await noteTypes(ctx), input.type);
   const { revision, participantIds, ...fields } = input;
   void revision;
@@ -238,4 +242,40 @@ export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
         .map((item) => ({ ...item, href: routes.notes({ view: 'all', id: item.id }) })),
     },
   ];
+}
+
+export function peopleForAi(ctx: Context) {
+  return aiPeople(ctx);
+}
+
+
+function requireAdmin(ctx: Context) {
+  if (ctx.user.role !== 'admin') throw new AppError('forbidden', { reason: 'role' });
+}
+export async function listManagedTags(ctx: Context) {
+  requireAdmin(ctx);
+  return { data: await repo.selectTags(ctx.db, true) };
+}
+// NOTES-B21: atomic, revision-stamped edits preserve unrelated tags and invalidate AI drafts.
+export async function manageTags(ctx: Context, input: ManageTags) {
+  requireAdmin(ctx);
+  const change = ManageTags.parse(input);
+  const sources = new Set(change.tags.map((tag) => tag.toLowerCase()));
+  return ctx.db.transaction(async (database) => {
+    const rows = await repo.lockTaggedNotes(database, change.tags);
+    let updatedCount = 0;
+    for (const row of rows) {
+      const replaced = row.tags.flatMap((tag) => sources.has(tag.toLowerCase())
+        ? change.target === null ? [] : [change.target] : [tag]);
+      const canonical = replaced.map((tag) => change.target !== null && tag.toLowerCase() === change.target.toLowerCase() ? change.target : tag);
+      const tags = Tags.parse(canonical);
+      if (JSON.stringify(tags) === JSON.stringify(row.tags)) continue;
+      const updated = await repo.updateNote(database, row.id, row.revision, { tags }, ctx.user.id);
+      if (!updated) throw new AppError('conflict', { reason: 'revision' });
+      await writeAudit(database, ctx.user.id, change.target === null ? 'tags.delete' : 'tags.merge', 'note', row.id,
+        { before: row.tags, after: tags });
+      updatedCount += 1;
+    }
+    return { data: { updatedCount } };
+  });
 }

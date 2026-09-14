@@ -5,7 +5,7 @@ import { EntityCreateForm } from '@/ui/entity/EntityCreateForm';
 import type { CreateApi } from '@/ui/entity/types';
 import { TaskCreate, type TaskDetail } from '../schema/validation';
 import { TaskFields } from './TaskFields';
-export function CreateTask({ api }: { api: CreateApi<TaskCreate, TaskDetail> }) {
+export function CreateTask({ api, committeeId = null }: { api: CreateApi<TaskCreate, TaskDetail>; committeeId?: string | null }) {
   const t = useTranslations('tasks');
   const c = useTranslations('common');
   const [error, setError] = useState<Error | null>(null);
@@ -15,6 +15,7 @@ export function CreateTask({ api }: { api: CreateApi<TaskCreate, TaskDetail> }) 
       await api.submit(
         TaskCreate.parse({
           ...fields,
+          committeeId: fields.committeeId || null,
           priority: fields.priority || null,
           dueDate: fields.dueDate || null,
           ownerId: fields.ownerId || null,
@@ -33,7 +34,7 @@ export function CreateTask({ api }: { api: CreateApi<TaskCreate, TaskDetail> }) 
       cancel={api.cancel}
       onSubmit={submit}
     >
-      <TaskFields />
+      <TaskFields initial={{ committeeId }} />
     </EntityCreateForm>
   );
 }

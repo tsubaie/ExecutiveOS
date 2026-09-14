@@ -1,3 +1,4 @@
+import { manifest as committees } from '@/modules/committees/manifest';
 import type { ClientManifest, NavEntry } from './manifest';
 import { manifest as home } from '@/modules/home/manifest';
 import { manifest as tasks } from '@/modules/tasks/manifest';
@@ -10,6 +11,7 @@ export const clientModules: readonly ClientManifest[] = [
   home,
   tasks,
   notes,
+  committees,
   people,
   users,
   settings,

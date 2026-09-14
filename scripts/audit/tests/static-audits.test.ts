@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdtemp, cp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import {
@@ -35,6 +37,18 @@ describe('audit:structure', () => {
       ]),
     );
     expect(evaluateModule(await collectModule(root, 'good', [spec]), manifest)).toEqual([]);
+  });
+  it('recognizes jobs registered through the module server manifest', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'manifest-registration-'));
+    try {
+      await cp(fixture('structure'), root, { recursive: true });
+      await mkdir(join(root, 'src/core/modules'), { recursive: true });
+      await writeFile(join(root, 'src/core/modules/registry.ts'), "import { server } from '@/modules/good';\nexport const serverModules = [server];\n");
+      await writeFile(join(root, 'src/modules/good/index.ts'), "import { jobs } from './jobs';\nexport const server = { id: 'good', jobs: jobs };\n");
+      expect((await collectModule(root, 'good', [])).jobsRegistered).toBe(true);
+      await writeFile(join(root, 'src/core/modules/registry.ts'), 'export const serverModules = [];');
+      expect((await collectModule(root, 'good', [])).jobsRegistered).toBe(false);
+    } finally { await rm(root, { recursive: true, force: true }); }
   });
   it('rejects a top-level entry that is not in the repository layout', async () => {
     const allowed = parseTopLevel(

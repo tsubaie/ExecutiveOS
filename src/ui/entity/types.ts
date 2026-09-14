@@ -13,7 +13,8 @@ export type View = {
   label: string;
   icon?: LucideIcon;
   separated?: boolean;
-  featured?: boolean;
+  featured?: boolean | 'compact';
+  featuredOrder?: number;
   tone?: 'danger' | 'accent';
 };
 export type Facet = { key: string; label: string; options: { value: string; label: string }[] };
@@ -29,6 +30,7 @@ export type ListResult<T> = {
   defaultView?: string | undefined;
   items: T[];
   counts: Record<string, number>;
+  summaryCounts?: Record<string, number> | undefined;
   pending: boolean;
   error: Error | null;
   more: boolean;
@@ -93,6 +95,7 @@ export type EntityPageProps<T extends Entity, P, C> = {
     restore: (id: string, opId: string) => Promise<T>;
   };
   renderers: {
+    rowStyle?: 'card';
     row: (item: T) => ReactNode;
     // Rendered beside the row button rather than inside it, so it may hold its own control.
     rowTrail?: (item: T) => ReactNode;

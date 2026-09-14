@@ -102,6 +102,11 @@ export async function collectModule(
   const registry = (await exists(join(root, 'src/core/jobs/registry.ts')))
     ? await read(join(root, 'src/core/jobs/registry.ts'))
     : '';
+  const registryPath = join(root, 'src/core/modules/registry.ts');
+  const moduleRegistry = await exists(registryPath) ? await read(registryPath) : '';
+  const indexPath = join(dir, 'index.ts');
+  const moduleIndex = await exists(indexPath) ? await read(indexPath) : '';
+  const registeredManifest = moduleRegistry.includes(`@/modules/${name}`) && /jobs:\s*\w+/u.test(moduleIndex) && /from ['"]\.\/jobs['"]/u.test(moduleIndex);
   let schemaIndex: ModuleInput['schemaIndex'] = null;
   if (schemaEntries.includes('index.ts')) {
     const text = await read(join(dir, 'schema/index.ts'));
@@ -115,7 +120,7 @@ export async function collectModule(
     entries,
     schemaEntries,
     hasSpec: Boolean(specForModule(specs, name)),
-    jobsRegistered: registry.includes(`modules/${name}/jobs`),
+    jobsRegistered: registry.includes(`modules/${name}/jobs`) || registeredManifest,
     schemaIndex,
   };
 }

@@ -165,16 +165,19 @@ export async function publish(
       .where(and(eq(jobAttempts.jobId, job.id), eq(jobAttempts.attempt, job.attempt)));
   });
 }
-export async function fail(job: Claimed, error: string) {
+export async function fail(job: Claimed, error: string, retry = true, retryAfterMs?: number) {
   await db().transaction(async (database) => {
     const [current] = await database.select().from(jobs).where(fence(job));
     if (!current) return;
     const status = current.cancelRequested
       ? 'cancelled'
-      : job.attempt < job.maxAttempts
+      : retry && job.attempt < job.maxAttempts
         ? 'queued'
         : 'failed';
-    const delay = [30000, 120000, 480000][job.attempt - 1] ?? 480000;
+    const delay = Math.max(
+      [30000, 120000, 480000][job.attempt - 1] ?? 480000,
+      Number.isFinite(retryAfterMs) ? (retryAfterMs ?? 0) : 0,
+    );
     const rows = await database
       .update(jobs)
       .set({
@@ -233,4 +236,10 @@ export async function jobsHealth() {
     .from(jobs)
     .where(inArray(jobs.status, ['queued', 'running']))
     .groupBy(jobs.status);
+}
+
+export async function requestedCancellations(activeIds: string[]) {
+  if (!activeIds.length) return [];
+  return db().select({ id: jobs.id }).from(jobs)
+    .where(and(inArray(jobs.id, activeIds), eq(jobs.cancelRequested, true)));
 }

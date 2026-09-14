@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { AiCapability } from './ai-capabilities';
+import { ModelId } from './ai-model-schema';
 import { Locale, defaults } from './defaults';
 const Theme = z.enum(['dark', 'light']);
-const ModelId = z.string().regex(/^claude-[a-z0-9-]+$/u);
 const Timezone = z.string().refine((value) => {
   try {
     new Intl.DateTimeFormat(defaults.locale, { timeZone: value });
@@ -39,7 +40,7 @@ export const settingsRegistry = {
   'retention.backup_count': entry(z.number().int().min(1).max(100), 14),
   'ai.model.default': entry(ModelId, defaults.models.default),
   'ai.model.fast': entry(ModelId, defaults.models.fast),
-  'ai.enabled_capabilities': entry(z.array(z.string()).max(0), []),
+  'ai.enabled_capabilities': entry(z.array(AiCapability), AiCapability.options),
   'ai.monthly_token_budget': entry(z.number().int().positive().nullable(), null),
   'ai.fallbacks': entry(z.boolean(), true),
   'notes.types': entry(

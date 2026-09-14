@@ -6,6 +6,9 @@ import { useAdminResource, useAdminAction } from './queries';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import Loading from '@/ui/layout/Loading';
+import { AiControls } from './AiControls';
+import { AiModels } from './AiModels';
+import { AiCredentials } from './AiCredentials';
 import { useDateTime } from '@/ui/format';
 const Rows = z.array(
   z.object({
@@ -19,7 +22,11 @@ const Rows = z.array(
     diff: z.json().optional(),
   }),
 );
-const Connection = z.object({ state: z.string(), error: z.string().nullable() });
+const Connection = z.object({
+  state: z.string(),
+  checkedAt: z.string().nullable(),
+  error: z.string().nullable(),
+});
 type Resource = 'ai' | 'backups' | 'jobs' | 'audit';
 type ListResource = Exclude<Resource, 'ai'>;
 type Row = z.infer<typeof Rows>[number];
@@ -48,10 +55,17 @@ function AiPanel({
   const t = useTranslations('admin');
   return (
     <div className="max-w-2xl space-y-6">
+      <AiCredentials />
+      <AiModels />
+      <AiControls />
       <div className="rounded-xl border bg-surface p-6">
         <Sparkles className="mb-5 size-7 text-accent" />
         <h2 className="text-lg font-medium">
-          {connection.state === 'enabled' ? t('connected') : t('disabledAI')}
+          {connection.state === 'enabled'
+            ? t('connected')
+            : connection.error
+              ? t('aiConnectionFailed')
+              : t('aiNotTested')}
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-text-muted">{t('aiHelp')}</p>
         {connection.error && <p className="mt-3 text-danger">{connection.error}</p>}

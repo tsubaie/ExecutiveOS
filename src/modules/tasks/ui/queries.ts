@@ -67,7 +67,7 @@ export function useTaskMutations() {
   const client = useQueryClient();
   const refresh = async () => {
     await Promise.all(
-      ['tasks', 'people', 'home', 'notes'].map((key) =>
+      ['tasks', 'people', 'home', 'notes', 'committees'].map((key) =>
         client.invalidateQueries({ queryKey: [key] }),
       ),
     );

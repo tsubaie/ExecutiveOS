@@ -56,3 +56,27 @@ See `03-data-model.md` § committees. Invariants:
 ## Audit items
 
 - Tabs reuse other modules' exported row components; no duplicate row implementation.
+
+## Current development slice — Mission Control parity
+
+COMM-B01–B06 are being developed for Committees, Tasks and Notes using the existing entity
+framework. Verification results for this slice are recorded in `docs/work-items/github-publication.md`.
+
+- Shared horizontal cards retain rounded corners, scope groups, search, scope filtering,
+  ownership, task completion/overdue counts and the latest note date. Summary cards count linked
+  top-level tasks (open, completed, overdue, due today); due today means the current workspace date.
+- Task and note tabs reuse `RelatedEntities`, each module's row, create form and detail panel.
+  Creation starts with the committee selected; existing work is assigned or moved through the
+  shared committee picker in Tasks/Notes. Both list pages offer a committee facet and a linked chip.
+- The picker offers active committees and preserves an existing archived/trashed assignment.
+  Archive and soft delete never change linked work. Archived/trashed committees cannot receive
+  new assignments; their existing tasks and notes remain editable.
+- Name conflicts return COMM-I01 as a name field error. Writes use shared revision, audit,
+  idempotency and restore-operation handling. Activity includes committee and linked task/note actions.
+- Broad task/note cache invalidation refreshes both old/new committee detail, lists and activity.
+- The nullable indexed task/note foreign keys are introduced by migration `0008_committees.sql`.
+
+The accepted Meetings and contextual Linked tabs/facets await those modules. No placeholder tabs
+are displayed. The reorder API and manual sort are present; drag/keyboard reorder controls and
+full acceptance coverage remain part of the broader accepted spec, beyond the reference task/note
+workflow in this slice. Embedded tasks retain their shared due-date band grouping.

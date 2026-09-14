@@ -2,7 +2,7 @@
 
 An open-source operating surface for executives and their offices. One place to run tasks, meeting notes, committees, KPIs, and strategic initiatives, with AI assistance built in.
 
-ExecutiveOS is self-hosted, multi-user, and bilingual-ready (English and Arabic ship in the box, with full RTL support). It runs as a single web application plus a PostgreSQL database. There is no separate worker process and nothing to install besides Docker; AI features call the Claude API directly from inside the app with your own API key.
+ExecutiveOS is self-hosted, multi-user, and bilingual-ready (English and Arabic ship in the box, with full RTL support). It runs as a single web application plus a PostgreSQL database. There is no separate worker process and nothing to install besides Docker; AI connects to OpenRouter from inside the app with your own API key.
 
 ## Status
 
@@ -42,7 +42,7 @@ docker compose logs app
 # open APP_URL and complete first-run setup with the token
 ```
 
-The database password is required; Compose refuses an empty value. The database has no published port. The application binds to localhost port 3000; production needs a TLS reverse proxy and an HTTPS `APP_URL`. AI remains disabled when `ANTHROPIC_API_KEY` is empty.
+The database password is required; Compose refuses an empty value. The database has no published port. The application binds to localhost port 3000; production needs a TLS reverse proxy and an HTTPS `APP_URL`. Configure AI in **Admin → AI**: paste your OpenRouter API key, save, then test the connection. Saved keys are encrypted in the database and never displayed again. They override environment credentials without a restart. Removing a saved key restores the `OPENROUTER_API_KEY` environment fallback. Keep `SESSION_SECRET` stable and backed up separately: changing it requires re-entering saved API keys. Without a saved or environment key, AI remains disabled. AI generation capabilities are still planned.
 
 Development with bind-mounted source and hot reload:
 

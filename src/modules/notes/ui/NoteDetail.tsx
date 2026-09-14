@@ -2,12 +2,14 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
+import { CommitteeBadge } from '@/modules/committees/ui';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { useDateTime, useRelativeTime } from '@/ui/format';
 import type { DetailApi } from '@/ui/entity/types';
 import type { NoteDetail as Detail } from '../schema/validation';
 import { NoteFields, type Patch } from './NoteFields';
+import { NoteAi } from './NoteAi';
 import { NoteTasks } from './NoteTasks';
 import { useNoteMutations } from './queries';
 export function NoteDetail({ note, api }: { note: Detail; api: DetailApi<Patch> }) {
@@ -24,8 +26,11 @@ export function NoteDetail({ note, api }: { note: Detail; api: DetailApi<Patch> 
           </Button>
         </>
       ) : (
-        <NoteFields note={note} save={api.save} />
+        <NoteAi key={note.id} note={note}>
+          <NoteFields note={note} save={api.save} />
+        </NoteAi>
       )}
+      {note.committeeId && <div className="mt-3"><CommitteeBadge id={note.committeeId} /></div>}
       <NoteTasks note={note} />
       <NoteFooter note={note} remove={api.remove} />
     </div>

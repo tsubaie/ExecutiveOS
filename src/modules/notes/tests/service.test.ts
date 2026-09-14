@@ -11,6 +11,7 @@ import { tasks } from '@/modules/tasks/schema/db';
 import { notes, notePeople } from '../schema/db';
 import { NotePatch, NoteListQuery, BulkItems, BulkTag } from '../schema/validation';
 import * as service from '../service';
+import { listManagedTags, manageTags } from '../service';
 import { harness, actorId } from './fixtures';
 const { run, note, person, task } = harness;
 const list = (query: Record<string, string> = {}) =>
@@ -22,6 +23,33 @@ beforeAll(async () => {
 });
 beforeEach(() => harness.reset());
 afterAll(() => pool().end());
+it('NOTES-B21 ADMIN-B28 merges tags across active archived and trashed notes without changing content', async () => {
+  const active = await note('Active', { content: 'Keep this content', tags: ['Old', 'Other', 'Target'] });
+  const archived = await note('Archived', { tags: ['OLD'] });
+  await run((ctx) => service.archiveNote(ctx, archived.id, 1));
+  const trashed = await note('Trashed', { tags: ['Old'] });
+  await run((ctx) => service.removeNote(ctx, trashed.id, 1));
+  expect((await run((ctx) => manageTags(ctx, { tags: ['old'], target: 'Target' }))).data.updatedCount).toBe(3);
+  const updated = await run((ctx) => service.getNote(ctx, active.id));
+  expect(updated).toMatchObject({ tags: ['Target', 'Other'], content: 'Keep this content', revision: 2 });
+  expect((await run((ctx) => service.getNote(ctx, archived.id))).archivedAt).not.toBeNull();
+  expect(await run((ctx) => service.getNote(ctx, trashed.id, true))).toMatchObject({ tags: ['Target'], revision: 3 });
+  expect((await run((ctx) => listManagedTags(ctx))).data).toEqual([{ tag: 'Target', count: 3 }, { tag: 'Other', count: 1 }]);
+  expect((await run((ctx) => manageTags(ctx, { tags: ['old'], target: 'Target' }))).data.updatedCount).toBe(0);
+});
+it('NOTES-B21 deletes selected tags without deleting notes and supports case-only renaming', async () => {
+  const item = await note('Keep', { tags: ['Old', 'Other'] });
+  await run((ctx) => manageTags(ctx, { tags: ['old'], target: 'OLD' }));
+  expect((await run((ctx) => service.getNote(ctx, item.id))).tags).toEqual(['OLD', 'Other']);
+  await run((ctx) => manageTags(ctx, { tags: ['old'], target: null }));
+  expect((await run((ctx) => service.getNote(ctx, item.id))).tags).toEqual(['Other']);
+});
+it('ADMIN-B28 rejects member tag administration without changing notes', async () => {
+  const item = await note('Keep', { tags: ['Old'] });
+  await expect(run((ctx) => manageTags({ ...ctx, user: { ...ctx.user, role: 'member' } }, { tags: ['Old'], target: null }))).rejects.toMatchObject({ code: 'forbidden' });
+  await expect(run((ctx) => listManagedTags({ ...ctx, user: { ...ctx.user, role: 'member' } }))).rejects.toMatchObject({ code: 'forbidden' });
+  expect((await run((ctx) => service.getNote(ctx, item.id))).tags).toEqual(['Old']);
+});
 it('NOTES-B01 NOTES-A01 creates a note with no type, today in the workspace timezone, no participants and no tasks', async () => {
   const created = await note('Board pre-read');
   const timezone = await getSetting(db(), 'workspace.timezone');
@@ -291,6 +319,14 @@ it('NOTES-B13 lists distinct tags with counts over non-deleted notes', async () 
     { tag: 'Budget', count: 1 },
     { tag: 'budget', count: 1 },
     { tag: 'Risk', count: 1 },
+  ]);
+});
+it('NOTES-B13 removes a suggestion when its last use is removed', async () => {
+  const one = await note('One', { tags: ['Shared', 'Removed'] });
+  await note('Two', { tags: ['Shared'] });
+  await patch(one.id, { revision: 1, tags: [] });
+  expect((await run((ctx) => service.listTags(ctx))).data).toEqual([
+    { tag: 'Shared', count: 1 },
   ]);
 });
 it('NOTES-B14 NOTES-A11 HOME-B01 home summary lists recent notes and skips archived and older ones', async () => {

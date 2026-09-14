@@ -1,4 +1,5 @@
 'use client';
+import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import {
   NotebookPen,
@@ -15,6 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { View as ViewDef } from '@/ui/entity/types';
+import { useCommitteeOptions } from '@/modules/committees/ui';
 import { EntityPage } from '@/ui/entity/EntityPage';
 import { sortOptions } from '@/ui/entity/filters';
 import { Sort, type Note } from '../schema/validation';
@@ -27,13 +29,13 @@ import {
   useAllPeople,
 } from './queries';
 import { useTypeLabel } from './use-note-labels';
-import { NoteRow, ParticipantsTrail } from './NoteRow';
-import { NoteDetail } from './NoteDetail';
+import { NoteRow, NoteTrail } from './NoteRow';
+const NoteDetail = dynamic(() => import('./NoteDetail').then((module) => module.NoteDetail));
 import { CreateNote } from './CreateNote';
 import { AddTagDialog } from './AddTagDialog';
 const presentation: Record<string, Partial<ViewDef>> = {
   all: { icon: NotebookPen },
-  this_week: { icon: CalendarDays, featured: true, tone: 'accent' },
+  this_week: { icon: CalendarDays, featured: 'compact', tone: 'accent' },
   archived: { icon: Archive, separated: true },
   trash: { icon: Trash2 },
 };
@@ -47,6 +49,7 @@ const typeIcons: Record<string, LucideIcon> = {
 };
 // Rail: All, This week, one entry per enabled type, then Archived and Trash under a divider.
 function useNoteFilters() {
+  const committee = useCommitteeOptions();
   const t = useTranslations('notes');
   const c = useTranslations('common');
   const types = useNoteTypes();
@@ -69,6 +72,7 @@ function useNoteFilters() {
     ],
     sort: sortOptions(Sort.options, t),
     facets: [
+      committee,
       {
         key: 'type',
         label: t('type'),
@@ -131,9 +135,10 @@ export function NotesPage() {
         },
       ]}
       renderers={{
+        rowStyle: 'card',
         name: (note) => note.title,
         row: (note) => <NoteRow note={note} />,
-        rowTrail: (note) => <ParticipantsTrail participants={note.participants} />,
+        rowTrail: (note) => <NoteTrail note={note} />,
         detail: (note, api) => <NoteDetail note={note} api={api} />,
         create: (api) => <CreateNote api={api} />,
       }}

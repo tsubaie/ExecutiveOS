@@ -9,11 +9,12 @@ function withQuery(path: string, query: Query = {}) {
 }
 export type AdminPage = 'users' | 'settings' | 'notes' | 'ai' | 'backups' | 'jobs' | 'audit';
 export const routes = {
+  committees: (query?: Optional<'view' | 'id' | 'scope'>) => withQuery('/committees', query),
   root: () => '/',
   home: () => '/home',
-  tasks: (query?: Optional<'view' | 'id' | 'ownerId' | 'sort'>) => withQuery('/tasks', query),
+  tasks: (query?: Optional<'view' | 'id' | 'ownerId' | 'sort' | 'committeeId'>) => withQuery('/tasks', query),
   people: (query?: Optional<'view' | 'id'>) => withQuery('/people', query),
-  notes: (query?: Optional<'view' | 'id' | 'personId' | 'tag' | 'type'>) =>
+  notes: (query?: Optional<'view' | 'id' | 'personId' | 'tag' | 'type' | 'committeeId'>) =>
     withQuery('/notes', query),
   person: (personId: string) => withQuery('/people', { id: personId }),
   admin: (page: AdminPage) => `/admin/${page}`,

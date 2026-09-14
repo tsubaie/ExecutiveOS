@@ -19,5 +19,8 @@ One decision per file. Format: **Status**, **Context**, **Decision**, **Conseque
 | 0013 | Trusted client addresses, independent throttling buckets, and uniform login cost | accepted |
 | 0014 | Notes carry participants from mentions and link tasks by source note | accepted |
 | 0015 | Markdown rendering with react-markdown and a sanitizing schema | accepted |
+| 0016 | OpenRouter with encrypted in-app credentials | accepted |
+| 0017 | OpenRouter task and note capability execution | accepted |
+| 0018 | Configurable AI hourly admission limits | accepted |
 
 Open decisions awaiting an ADR: license (see roadmap); chart library confirmation (`recharts`).

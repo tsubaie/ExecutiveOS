@@ -26,6 +26,7 @@ import {
 } from '@/core/db/keyset';
 export type NameOf = (personId: AnyPgColumn) => SQL<string | null>;
 type Filters = {
+  committeeId?: string;
   view: string;
   q: string;
   ownerId: string;
@@ -43,6 +44,7 @@ const completed = sql<number>`(select count(*)::int from tasks c where c.parent_
 const sourceNote = sql`(select json_build_object('id', n.id, 'title', n.title, 'deletedAt', n.deleted_at, 'archivedAt', n.archived_at) from notes n where n.id = tasks.source_note_id)`;
 const columns = (ownerName: NameOf) => ({
   ...getTableColumns(tasks),
+  committee: sql`(select json_build_object('id', c.id, 'name', c.name, 'status', c.status, 'deleted', c.deleted_at is not null) from committees c where c.id = tasks.committee_id)`,
   subtaskCount: children,
   completedSubtaskCount: completed,
   ownerName: ownerName(tasks.ownerId),
@@ -50,6 +52,7 @@ const columns = (ownerName: NameOf) => ({
 });
 function noteFilters(f: Filters) {
   const predicates: SQL[] = [];
+  if (f.committeeId) predicates.push(eq(tasks.committeeId, f.committeeId));
   if (f.sourceNoteId) predicates.push(eq(tasks.sourceNoteId, f.sourceNoteId));
   if (f.hasSourceNote)
     predicates.push(
