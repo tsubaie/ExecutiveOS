@@ -80,6 +80,7 @@ function PersonTextFields({ editor }: { editor: Editor }) {
           error={form.formState.errors[key]?.message}
           quiet={Boolean(save)}
           empty={!form.getValues(key)}
+          row={Boolean(save)}
         >
           {(control) => (
             <Input
@@ -104,7 +105,7 @@ function PersonKind({ editor }: { editor: Editor }) {
   const c = useTranslations('common');
   const { form, save } = editor;
   return (
-    <Field label={t('kind')} quiet={Boolean(save)}>
+    <Field label={t('kind')} quiet={Boolean(save)} row={Boolean(save)}>
       {(control) => (
         <NativeSelect
           {...control}
