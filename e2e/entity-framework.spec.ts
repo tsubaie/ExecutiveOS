@@ -29,23 +29,17 @@ test('EP-B23 the page hands the open record the foreground @desktop', async ({ p
   const row = page.locator(`[data-row-id="${id}"]`);
   await expect(row).toBeVisible();
 
-  // Open the record with the pointer left where it will still be over the list once the list
-  // narrows, which is the situation the hold exists for: clicking a row is how a record is opened,
-  // so the hover escape would otherwise cancel the softening at that exact moment.
+  // The dim belongs to the open record, not to where the pointer is. It settles once focus has
+  // left the row for the panel, and then stays put with the pointer sitting on the list.
   await row.click();
   await page.waitForSelector('.entity-detail');
-  expect(
-    await page.evaluate(() => {
-      const list = document.querySelector('[data-entity-list]');
-      return list ? getComputedStyle(list).animationName : null;
-    }),
-  ).toBe('hold-dim');
-
-  // Soft straight away, before any pointer movement: this is the moment the hover escape used to
-  // cancel, because opening a record is a click on a row.
-  expect(
-    await page.evaluate(() => getComputedStyle(document.querySelector('[data-entity-list]')!).filter),
-  ).toContain('blur(');
+  const soft = () =>
+    page.evaluate(() => getComputedStyle(document.querySelector('[data-entity-list]')!).filter);
+  await expect.poll(soft).toContain('blur(');
+  const listBox = await page.locator('[data-entity-list]').boundingBox();
+  await page.mouse.move((listBox?.x ?? 0) + 60, (listBox?.y ?? 0) + 120);
+  await page.waitForTimeout(600);
+  expect(await soft()).toContain('blur(');
 
   // The rest is the resting state, read once the row's own colour transition has settled.
   await page.waitForTimeout(1500);
@@ -80,4 +74,18 @@ test('EP-B23 the page hands the open record the foreground @desktop', async ({ p
   expect(planes.currentBg).toBe('rgba(0, 0, 0, 0)');
   // The heading is focused so the record is announced, but it is not tabbable and draws no ring.
   expect(planes.focus).toEqual({ tag: 'H2', tabIndex: '-1', outline: 'none' });
+
+  // Closing the record is what clears it.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.entity-detail')).toHaveCount(0);
+  await expect.poll(soft).toBe('none');
+
+  // Keyboard focus is the one thing that lifts it: what a reader has tabbed to has to be readable.
+  await page.locator('[data-entity-list] [data-row-id]').nth(1).focus();
+  await expect.poll(soft).toBe('none');
+
+  // Closing the record clears it for good.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.entity-detail')).toHaveCount(0);
+  await expect.poll(soft).toBe('none');
 });

@@ -553,31 +553,15 @@
   [data-entity-list] {
     transition: filter 160ms ease;
   }
-  body:has(.entity-page-open) .app-sidebar:not(:hover):not(:focus-within),
-  .entity-page-open .entity-rail:not(:hover):not(:focus-within),
-  .entity-page-open [data-entity-list]:not(:hover):not(:focus-within),
-  .entity-page-creating [data-entity-list]:not(:hover):not(:focus-within) {
+  /* EP-B23: the softening lasts as long as the record is open. It used to lift under the pointer,
+     which made it flicker on the way to anything and cancelled it outright at the moment it was
+     for, since a record is opened by clicking a row. Keyboard focus is the one exception: tabbing
+     into the list has to leave it readable, and unlike a passing pointer that is a deliberate
+     move away from the record. */
+  body:has(.entity-page-open) .app-sidebar:not(:focus-within),
+  .entity-page-open .entity-rail:not(:focus-within),
+  .entity-page-open [data-entity-list]:not(:focus-within) {
     filter: blur(1.5px) saturate(0.7);
-  }
-  /* EP-B23: the softening above was defeated by the gesture that triggers it. A record is opened
-     by clicking a row, so the pointer is over the list and :hover suppressed the blur at the one
-     moment it existed for; it only appeared later, if the pointer happened to wander off. An
-     animation outranks a normal declaration in the cascade, so the surrounding surfaces hold the
-     dim for a beat after the panel opens whatever the pointer is doing, then release it and hand
-     back to the hover rule, which keeps a deliberate glance at the list working. */
-  body:has(.entity-page-open) .app-sidebar,
-  .entity-page-open .entity-rail,
-  .entity-page-open [data-entity-list] {
-    animation: hold-dim 1200ms var(--ease-rise);
-  }
-  @keyframes hold-dim {
-    0%,
-    70% {
-      filter: blur(1.5px) saturate(0.7);
-    }
-    100% {
-      filter: none;
-    }
   }
   /* EP-B23: while a record is open it is the only raised plane. The list and rail drop to the page
      ground rather than the panel rising above them, so the separation comes from the neutral
@@ -600,13 +584,6 @@
     .entity-rail,
     [data-entity-list] {
       transition: none;
-    }
-    /* The hold is hierarchy, not motion, so it stays; only the fade out of it goes. Stepping the
-       timing keeps the dim for the same beat and then drops it in one frame. */
-    body:has(.entity-page-open) .app-sidebar,
-    .entity-page-open .entity-rail,
-    .entity-page-open [data-entity-list] {
-      animation-timing-function: steps(1, end);
     }
   }
 }
