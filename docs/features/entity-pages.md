@@ -91,7 +91,11 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   above one, so every module's detail reads the same way whichever it uses and `Field` keeps
   owning the identifiers EP-B19 requires. One exception earns its chrome back: a picker with
   nothing set still says so in words, but an empty text field has no words at all, so it keeps its
-  outline rather than leaving a label standing over a void.
+  outline rather than leaving a label standing over a void. A detail's short values put the label
+  beside them, which is the shape a record reads in and which halves the height of a panel whose
+  fields are mostly unset; long-form fields (a description, a tag list) keep the label above,
+  because the value needs the width more than the row needs the alignment. A field's hint and
+  error stay under its control either way, so the column the reader scans holds only values.
 - EP-B24 A change the user caused is acknowledged where it shows. A count that changes is keyed on
   its own value so the new figure replaces the old rather than the element quietly redrawing; this
   covers the rail counts and the statistics strip, and Home states the same rule for its sections.

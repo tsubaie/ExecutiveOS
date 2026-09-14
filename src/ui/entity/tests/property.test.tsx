@@ -2,6 +2,7 @@
 import { afterEach, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { Property } from '@/ui/layout/Property';
+import { Field } from '@/ui/layout/Field';
 // The lint rule that keeps user-visible text in the catalog applies here too, so the sample
 // values come through identifiers rather than sitting in the markup.
 const sample = { value: 'value', blank: 'blank', set: 'Audit Committee', unset: 'No committee' };
@@ -36,4 +37,22 @@ it('EP-B25 a value nobody has set is marked so it can recede', () => {
   );
   expect(screen.getByText('Set').parentElement?.className).not.toContain('property-empty');
   expect(screen.getByText('Unset').parentElement?.className).toContain('property-empty');
+});
+
+it('EP-B25 a field carries the same signals as a property row, and keeps its identifiers', () => {
+  const problem = 'Enter an address';
+  render(
+    <Field label="Email" error={problem} quiet row>
+      {(control) => <input {...control} readOnly value={sample.blank} />}
+    </Field>,
+  );
+  const row = screen.getByText('Email').parentElement;
+  expect(row?.className).toContain('property-quiet');
+  // EP-B19 still holds: the control names its own error, and the error is announced.
+  const control = screen.getByRole('textbox');
+  const error = screen.getByRole('alert');
+  expect(control.getAttribute('aria-errormessage')).toBe(error.id);
+  expect(control.getAttribute('aria-invalid')).toBe('true');
+  // The message sits with the control, not out in the label column.
+  expect(control.parentElement?.contains(error)).toBe(true);
 });
