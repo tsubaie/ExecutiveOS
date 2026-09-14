@@ -152,7 +152,10 @@
     "daysLate": "{count, plural, one {# day late} other {# days late}}",
     "openWork": "{count, plural, one {# open} other {# open}}",
     "viewAll": "View all",
-    "today_headline": "{count, plural, =0 {Your day is clear} one {One item needs you today} other {# items need you today}}."
+    "today_headline": "{count, plural, =0 {Your day is clear} one {One item needs you today} other {# items need you today}}.",
+    "holding": "{count, plural, one {# item} other {# items}}",
+    "staleOverdue": "{count, plural, =0 {none over a month late} one {# over a month late} other {# over a month late}}",
+    "lateOpen": "{count, plural, one {# late} other {# late}}"
   },
   "admin": {
     "users": "Members",

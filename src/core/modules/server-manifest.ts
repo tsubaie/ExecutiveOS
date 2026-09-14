@@ -14,6 +14,8 @@ export type HomeSectionItem = {
   count?: number | null;
   // Present when the row can be acted on in place; the mutation needs the concurrency token.
   revision?: number | null;
+  // How much of `count` is already overdue, where the row aggregates other work.
+  overdue?: number | null;
 };
 export type HomeSection = {
   key: string;
@@ -21,6 +23,9 @@ export type HomeSection = {
   count: number;
   items: HomeSectionItem[];
   href: string | null;
+  // HOME-B09: how many of `count` are past the stale threshold, for sections that age. It answers
+  // whether a pile is a backlog or a crisis, which a bare total cannot.
+  stale?: number | null;
 };
 export type ServerManifest = {
   id: string;

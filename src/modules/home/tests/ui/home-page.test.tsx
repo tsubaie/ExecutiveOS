@@ -31,6 +31,7 @@ type Item = {
   committee: string | null;
   count: number | null;
   revision: number | null;
+  overdue: number | null;
 };
 type Section = {
   key: string;
@@ -38,6 +39,7 @@ type Section = {
   count: number;
   href: string | null;
   items: Item[];
+  stale: number | null;
 };
 type HomeQuery = {
   isPending: boolean;
@@ -56,6 +58,7 @@ const item = (title: string, facts: Partial<Item> = {}): Item => ({
   committee: null,
   count: null,
   revision: null,
+  overdue: null,
   ...facts,
 });
 const section = (key: string, enabled: boolean, count = 0, items: Item[] = []): Section => ({
@@ -64,6 +67,7 @@ const section = (key: string, enabled: boolean, count = 0, items: Item[] = []): 
   count,
   href: enabled ? `/${key}` : null,
   items,
+  stale: null,
 });
 // The completion control talks to the shared query client, so scenarios render inside one.
 const mount = (node: React.ReactNode) =>
@@ -123,16 +127,33 @@ it('HOME-B07 leads with the first section that actually has something in it', ()
   // An empty overdue section still gets a panel, but it does not take the lead slot.
   expect(panels[0]?.textContent).toBe('today');
 });
-it('HOME-B01 shows how late an overdue row is, who holds a waiting row, and what a committee carries', () => {
+it('HOME-B01 shows how late an overdue row is and what a committee carries', () => {
   show([
     section('overdue', true, 1, [item('Late letter', { date: '2026-09-02' })]),
-    section('waiting', true, 1, [item('Held', { owner: 'Leila Haddad' })]),
     section('committees', true, 1, [item('Audit Committee', { count: 3 })]),
   ]);
   expect(screen.getByText('daysLate=12')).toBeTruthy();
-  // The avatar also carries the name for assistive technology, so target the visible fact.
-  expect(screen.getByText('Leila Haddad', { selector: 'bdi' })).toBeTruthy();
   expect(screen.getByText('openWork=3')).toBeTruthy();
+});
+it('HOME-B10 makes waiting a chase list: one row per person with how much they hold', () => {
+  show([
+    section('waiting', true, 4, [
+      item('Leila Haddad', { owner: 'Leila Haddad', count: 3 }),
+      item('Omar Nasser', { owner: 'Omar Nasser', count: 1 }),
+    ]),
+  ]);
+  expect(screen.getByText('holding=3')).toBeTruthy();
+  expect(screen.getByText('holding=1')).toBeTruthy();
+});
+it('HOME-B09 states how much of the overdue pile is a month or more old', () => {
+  show([
+    { ...section('overdue', true, 5, [item('Late', { date: '2026-09-02' })]), stale: 2 },
+  ]);
+  expect(screen.getByText('staleOverdue=2')).toBeTruthy();
+});
+it('HOME-B09 shows a committee\'s late share beside its open work', () => {
+  show([section('committees', true, 1, [item('Audit', { count: 4, overdue: 2 })])]);
+  expect(screen.getByText('lateOpen=2')).toBeTruthy();
 });
 it('HOME-B01 keeps a truncated row identifiable through its title attribute', () => {
   show([

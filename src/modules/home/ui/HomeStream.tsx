@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Avatar } from '@/ui/layout/Avatar';
 import { TaskCheck } from '@/modules/tasks/ui';
+import { AgeingBar, LoadBar } from './HomeBar';
 import { useCount, usePlainDate, useToday } from '@/ui/format';
 import { alarming, daysBetween, type Item, type Section, type SectionKey } from './home-sections';
 
@@ -23,11 +24,14 @@ export function Stream({
   const c = useTranslations('common');
   const count = useCount();
   const danger = alarming(section);
+  const busiest = Math.max(1, ...section.items.map((item) => item.count ?? 0));
   return (
     <section className={lead ? 'mt-8 rounded-xl border bg-surface px-5 py-4 lg:px-6' : ''}>
       <div className="flex items-baseline justify-between gap-4 border-b pb-2">
         <div className="flex items-baseline gap-2.5">
-          <h2 className={`truncate ${quiet ? 'text-sm font-medium text-text-muted' : 'text-base font-semibold'}`}>
+          <h2
+            className={`truncate ${quiet ? 'text-sm font-medium text-text-muted' : 'text-base font-semibold'}`}
+          >
             {t(section.key)}
           </h2>
           <span
@@ -42,11 +46,12 @@ export function Stream({
           </Link>
         )}
       </div>
+      <Ageing section={section} />
       {section.items.length > 0 ? (
         <ul className={lead ? 'md:grid md:grid-cols-2 md:gap-x-10' : ''}>
           {section.items.map((item) => (
             <li key={item.id} className={lead ? '' : 'border-b last:border-b-0'}>
-              <Row item={item} sectionKey={section.key} lead={lead} />
+              <Row item={item} sectionKey={section.key} lead={lead} busiest={busiest} />
             </li>
           ))}
         </ul>
@@ -54,6 +59,24 @@ export function Stream({
         <p className="py-4 text-sm text-text-muted">{c('empty')}</p>
       )}
     </section>
+  );
+}
+
+// HOME-B09: the shape of the pile, stated in figures with the mark only ranking them.
+function Ageing({ section }: { section: Section }) {
+  const t = useTranslations('home');
+  if (section.stale === null || section.count === 0) return null;
+  return (
+    <p className="mt-3 flex items-center gap-3">
+      <span className="max-w-40 flex-1">
+        <AgeingBar count={section.count} stale={section.stale} />
+      </span>
+      <span
+        className={`text-xs tabular-nums ${section.stale > 0 ? 'font-medium text-danger' : 'text-text-muted'}`}
+      >
+        {t('staleOverdue', { count: section.stale })}
+      </span>
+    </p>
   );
 }
 
@@ -67,6 +90,9 @@ function useStatus(item: Item, sectionKey: SectionKey) {
     const late = daysBetween(item.date, today);
     return late > 0 ? { text: t('daysLate', { count: late }), alarming: true } : null;
   }
+  // A waiting row is a person, so the fact is how much of the principal's work they are holding.
+  if (sectionKey === 'waiting' && item.count !== null)
+    return { text: t('holding', { count: item.count }), alarming: false };
   if (sectionKey === 'committees' && item.count !== null)
     return { text: t('openWork', { count: item.count }), alarming: false };
   if (sectionKey === 'notes' && item.date) return { text: date(item.date), alarming: false };
@@ -85,8 +111,7 @@ function RowLead({ item, sectionKey }: { item: Item; sectionKey: SectionKey }) {
         task={{ id: item.id, title: item.title, revision: item.revision, completed: false }}
       />
     );
-  // The name is printed in the facts line below, so the avatar is decoration here and must not
-  // make assistive technology read the person twice.
+  // The row's title is the person's name, so the avatar repeats it and is decoration only.
   if (sectionKey === 'waiting' && item.owner)
     return (
       <span aria-hidden>
@@ -95,32 +120,57 @@ function RowLead({ item, sectionKey }: { item: Item; sectionKey: SectionKey }) {
     );
   return null;
 }
-function Row({ item, sectionKey, lead }: { item: Item; sectionKey: SectionKey; lead: boolean }) {
+// The facts line: what the row belongs to, then the one status fact its section calls for.
+function RowFacts({ item, sectionKey }: { item: Item; sectionKey: SectionKey }) {
+  const t = useTranslations('home');
   const status = useStatus(item, sectionKey);
-  const chasing = sectionKey === 'waiting' && item.owner;
   const facts = [item.committee, sectionKey === 'committees' ? item.owner : null].filter(Boolean);
+  const late = sectionKey === 'committees' ? (item.overdue ?? 0) : 0;
+  return (
+    <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-text-muted">
+      {facts.map((fact) => (
+        <bdi key={fact} className="truncate">
+          {fact}
+        </bdi>
+      ))}
+      {status && (
+        <bdi className={`tabular-nums ${status.alarming ? 'font-medium text-danger' : ''}`}>
+          {status.text}
+        </bdi>
+      )}
+      {late > 0 && (
+        <bdi className="font-medium tabular-nums text-danger">{t('lateOpen', { count: late })}</bdi>
+      )}
+    </span>
+  );
+}
+function Row({
+  item,
+  sectionKey,
+  lead,
+  busiest,
+}: {
+  item: Item;
+  sectionKey: SectionKey;
+  lead: boolean;
+  busiest: number;
+}) {
+  const load = sectionKey === 'committees' && item.count !== null ? item : null;
   return (
     <div className="group -mx-2 flex items-start gap-3 rounded-md px-2 py-3 hover:bg-surface-raised">
       <RowLead item={item} sectionKey={sectionKey} />
       <Link href={item.href} title={item.title} className="min-w-0 flex-1">
-        <bdi
-          className={`block truncate group-hover:text-accent ${lead ? 'text-[0.9375rem]' : 'text-sm'}`}
+        <span
+          className={`block truncate text-start group-hover:text-accent ${lead ? 'text-[0.9375rem]' : 'text-sm'}`}
         >
-          {item.title}
-        </bdi>
-        <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-text-muted">
-          {chasing && <bdi className="font-medium text-text">{item.owner}</bdi>}
-          {facts.map((fact) => (
-            <bdi key={fact} className="truncate">
-              {fact}
-            </bdi>
-          ))}
-          {status && (
-            <bdi className={`tabular-nums ${status.alarming ? 'font-medium text-danger' : ''}`}>
-              {status.text}
-            </bdi>
-          )}
+          <bdi>{item.title}</bdi>
         </span>
+        <RowFacts item={item} sectionKey={sectionKey} />
+        {load && (
+          <span className="mt-2 block max-w-56">
+            <LoadBar open={load.count ?? 0} overdue={load.overdue ?? 0} busiest={busiest} />
+          </span>
+        )}
       </Link>
     </div>
   );

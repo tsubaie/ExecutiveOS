@@ -20,6 +20,7 @@ export type Item = {
   committee: string | null;
   count: number | null;
   revision: number | null;
+  overdue: number | null;
 };
 export type Section = {
   key: SectionKey;
@@ -27,6 +28,7 @@ export type Section = {
   count: number;
   href: string | null;
   items: Item[];
+  stale: number | null;
 };
 export type StatKey =
   | 'statNextMeetings'

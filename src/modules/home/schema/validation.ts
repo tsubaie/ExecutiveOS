@@ -19,6 +19,7 @@ export const Home = z.object({
       enabled: z.boolean(),
       count: z.number(),
       href: z.string().nullable().default(null),
+      stale: z.number().nullable().default(null),
       items: z
         .array(
           z.object({
@@ -30,6 +31,7 @@ export const Home = z.object({
             committee: z.string().nullable().default(null),
             count: z.number().nullable().default(null),
             revision: z.number().nullable().default(null),
+            overdue: z.number().nullable().default(null),
           }),
         )
         .default([]),

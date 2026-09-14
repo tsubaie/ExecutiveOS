@@ -92,7 +92,7 @@ export async function reorderCommittees(ctx: Context, input: z.infer<typeof Reor
 }
 // HOME-B01: the home page consumes this through the module's server manifest (HOME-B03).
 export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
-  const row = await repo.selectHomeSummary(ctx.db);
+  const row = await repo.selectHomeSummary(ctx.db, await today(ctx));
   return [
     {
       key: 'committees',
@@ -100,7 +100,7 @@ export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
       count: z.number().parse(row.count),
       href: routes.committees({ view: 'open' }),
       items: z
-        .array(z.object({ id: z.uuid(), title: z.string(), count: z.number(), owner: z.string().nullable() }))
+        .array(z.object({ id: z.uuid(), title: z.string(), count: z.number(), owner: z.string().nullable(), overdue: z.number() }))
         .parse(row.items)
         .map((item) => ({ ...item, href: routes.committees({ view: 'all', id: item.id }) })),
     },

@@ -100,13 +100,17 @@ export function selectActivity(database: Database, committeeId: string, last: (s
 // HOME-B01: committees still carrying open top-level work, busiest first. One query, no cursor.
 const openWork = sql`(select count(*) from tasks t where t.committee_id = committees.id
   and t.deleted_at is null and t.parent_id is null and t.status <> 'completed')`;
-export async function selectHomeSummary(database: Database) {
+// HOME-B09: the late portion of each committee's open work, so the bars compare load and show how
+// much of it has already slipped.
+const lateWork = (today: string) => sql`(select count(*) from tasks t where t.committee_id = committees.id
+  and t.deleted_at is null and t.parent_id is null and t.status <> 'completed' and t.due_date < ${today}::date)`;
+export async function selectHomeSummary(database: Database, today: string) {
   const carrying = and(isNull(committees.deletedAt), eq(committees.status, 'active'), sql`${openWork} > 0`);
   const [row] = await database.select({
     count: sql<number>`count(*)::int`,
-    items: sql<{ id: string; title: string; count: number; owner: string }[]>`coalesce((select json_agg(item) from (
-      select id, name as title, nullif(ownership, '') as owner, ${openWork} as count from committees
-      where ${carrying} order by ${openWork} desc, lower(name), id limit 5) item), '[]'::json)`,
+    items: sql<{ id: string; title: string; count: number; owner: string; overdue: number }[]>`coalesce((select json_agg(item) from (
+      select id, name as title, nullif(ownership, '') as owner, ${openWork} as count, ${lateWork(today)} as overdue
+      from committees where ${carrying} order by ${openWork} desc, lower(name), id limit 5) item), '[]'::json)`,
   }).from(committees).where(carrying);
   return row ?? { count: 0, items: [] };
 }

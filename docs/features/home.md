@@ -39,6 +39,17 @@ The one screen the principal opens first. It is a set of queries over existing m
   block given one. Below it the sections are not equals: what the principal is accountable for
   carries the wide column, and reference material (recent notes) sits quieter and narrower beside
   it. Overdue is the only state that uses the danger token, and only above zero.
+- HOME-B09 Sections that aggregate say how the pile is shaped, not only how big it is. The overdue
+  section reports how much of it is a month or more past due, which separates a backlog from a mess,
+  and each committee row compares its open work against the busiest committee shown with the already
+  slipped portion marked. Both marks are neutral mass plus a danger portion: accent against danger is
+  indistinguishable under protanopia in the light theme and warning against danger is indistinguishable
+  even with normal vision, so neither may carry meaning. The neutral falls under 3:1 against the
+  surface, so every mark ships with its figures in text and is hidden from assistive technology; the
+  numbers carry the information and the mark only ranks it.
+- HOME-B10 Waiting on is a chase list, not a task list: one row per person holding the principal's
+  work, the heaviest holders first, each opening that person's waiting tasks. Who to chase is the
+  action; which individual task they hold is detail that belongs on the task list.
 - HOME-B08 A task the principal can finish is finished here. Overdue and due-today rows carry the
   same completion control as the task lists, including the confirmation when the task still has open
   subtasks, so the page is somewhere work gets done rather than only a set of links out. Completion
@@ -65,12 +76,13 @@ and no amount of layout work changes that. The remaining sections are built arou
 - HOME-A05 An overdue row states how many days late it is, a waiting row names the person holding it, and a
   committee row states how much open work it carries. (en, ar)
 - HOME-A06 Completing a due-today row from Home removes it and lowers the day's count without a reload. (en)
+- HOME-A07 Waiting on shows one row per holder with their count, and a committee carrying late work shows that share. (en, ar)
 
 ## Required scenarios
 
 - api: `/home` shape; query counter; disabled modules; duplicate and unknown section ownership (B06).
 - ui: omission of uninstalled sections; zero-item sections kept; empty state; links; headline states the day
   and not the deficit; lead selection; section ranking; per-section status fact; completion control only on
-  task rows; skeleton holds the layout.
+  task rows; chase-list aggregation; ageing split; skeleton holds the layout.
 - e2e `home.spec.ts`: A01–A03.
 - Mutation targets: `homeSummary` aggregators for tasks and meetings.

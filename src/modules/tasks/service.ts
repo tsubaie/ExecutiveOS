@@ -265,25 +265,44 @@ export async function reorderTasks(ctx: Context, input: z.infer<typeof Reorder>)
 export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
   const timezone = await getSetting(ctx.db, 'workspace.timezone');
   const row = await repo.selectHomeSummary(ctx.db, dayAt(timezone));
-  return ['overdue', 'today', 'waiting'].map((key) => ({
+  const task = z.array(
+    z.object({
+      id: z.uuid(),
+      title: z.string(),
+      revision: z.number(),
+      date: z.string().nullable(),
+      owner: z.string().nullable(),
+      committee: z.string().nullable(),
+    }),
+  );
+  const sections = ['overdue', 'today'].map((key) => ({
     key,
     enabled: true,
     count: z.number().parse(row[key + 'Count']),
     href: routes.tasks({ view: key }),
-    items: z
-      .array(
-        z.object({
-          id: z.uuid(),
-          title: z.string(),
-          revision: z.number(),
-          date: z.string().nullable(),
-          owner: z.string().nullable(),
-          committee: z.string().nullable(),
-        }),
-      )
+    stale: key === 'overdue' ? z.number().parse(row['overdueStale']) : null,
+    items: task
       .parse(row[key + 'Items'])
       .map((item) => ({ ...item, href: routes.tasks({ view: 'all', id: item.id }) })),
   }));
+  // HOME-B10: one row per person holding work, not one per task.
+  const holders = z
+    .array(z.object({ id: z.uuid(), title: z.string(), count: z.number() }))
+    .parse(row['waitingPeople']);
+  return [
+    ...sections,
+    {
+      key: 'waiting',
+      enabled: true,
+      count: z.number().parse(row['waitingCount']),
+      href: routes.tasks({ view: 'waiting' }),
+      items: holders.map((holder) => ({
+        ...holder,
+        owner: holder.title,
+        href: routes.tasks({ view: 'waiting', ownerId: holder.id }),
+      })),
+    },
+  ];
 }
 
 export function peopleForAi(ctx: Context) {
