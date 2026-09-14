@@ -14,8 +14,16 @@ import { Check } from 'lucide-react';
 // line, so a column of them reads as one instrument. SVG content does not follow the document
 // direction, so it is mirrored in RTL to fill from the edge the reader starts at.
 const ROUND = 1.5;
-export function Meter({ done, total }: { done: number; total: number }) {
-  const filled = total > 0 ? (Math.min(done, total) / total) * 100 : 0;
+export function Meter({
+  filled,
+  total,
+  tone,
+}: {
+  filled: number;
+  total: number;
+  tone: 'accent' | 'danger';
+}) {
+  const part = total > 0 ? (Math.min(filled, total) / total) * 100 : 0;
   return (
     <svg
       viewBox="0 0 100 3"
@@ -24,11 +32,24 @@ export function Meter({ done, total }: { done: number; total: number }) {
       className="h-[3px] w-6 shrink-0 rtl:-scale-x-100"
     >
       <rect x={0} y={0} width={100} height={3} rx={ROUND} className="fill-border" />
-      {filled > 0 && (
-        <rect x={0} y={0} width={filled} height={3} rx={ROUND} className="fill-accent" />
+      {part > 0 && (
+        <rect
+          x={0}
+          y={0}
+          width={part}
+          height={3}
+          rx={ROUND}
+          className={tone === 'danger' ? 'fill-danger' : 'fill-accent'}
+        />
       )}
     </svg>
   );
+}
+// HOME-B09: work that has slipped. No tick: a tick reads as something achieved, and nothing here
+// has been. The meter is red and the count states it plainly.
+export function Late({ late, open }: { late: number; open: number }) {
+  if (late <= 0) return null;
+  return <Meter filled={late} total={open} tone="danger" />;
 }
 // HOME-B09: how far a committee has got, in the compact form the row's other facts already use.
 export function Progress({ done, open }: { done: number; open: number }) {
@@ -37,7 +58,7 @@ export function Progress({ done, open }: { done: number; open: number }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-text-muted">
       <Check className="size-3 shrink-0 text-accent" aria-hidden />
-      <Meter done={done} total={total} />
+      <Meter filled={done} total={total} tone="accent" />
       <span className="tabular-nums">
         {done}/{total}
       </span>

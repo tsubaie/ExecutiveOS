@@ -3,7 +3,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Avatar } from '@/ui/layout/Avatar';
 import { TaskCheck } from '@/modules/tasks/ui';
-import { AgeingBar, Progress } from './HomeBar';
+import { AgeingBar, Late, Progress } from './HomeBar';
 import { useCount, usePlainDate, useToday } from '@/ui/format';
 import { alarming, daysBetween, type Item, type Section, type SectionKey } from './home-sections';
 
@@ -137,7 +137,10 @@ function RowFacts({ item, sectionKey }: { item: Item; sectionKey: SectionKey }) 
         </bdi>
       )}
       {late > 0 && (
-        <bdi className="font-medium tabular-nums text-danger">{t('lateOpen', { count: late })}</bdi>
+        <span className="inline-flex items-center gap-1.5 font-medium text-danger">
+          <Late late={late} open={item.count ?? 0} />
+          <bdi className="tabular-nums">{t('lateOpen', { count: late })}</bdi>
+        </span>
       )}
       {sectionKey === 'committees' && item.done !== null && (
         <Progress done={item.done} open={item.count ?? 0} />
