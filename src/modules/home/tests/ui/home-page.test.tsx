@@ -174,6 +174,36 @@ it('HOME-B04 renders a shaped skeleton rather than collapsing the layout while l
   expect(screen.getByRole('status')).toBeTruthy();
   expect(screen.queryByText('greeting')).toBeNull();
 });
+it('HOME-B08 a count that changes is replaced rather than swapped in silence', () => {
+  // The figure is keyed on its own value, so a change remounts it and the stylesheet plays the
+  // replacement. Identity across the rerender is the observable half of that.
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const data = (count: number) => ({
+    isPending: false as const,
+    error: null,
+    data: {
+      data: {
+        name: 'Preview Administrator',
+        principal: null,
+        peopleCount: 4,
+        sections: [section('today', true, count, [item('Approve the catalogue', { revision: 3 })])],
+      },
+    },
+  });
+  query.current = data(2);
+  // A fresh element each time: React bails out of re-rendering one it is handed back by identity.
+  const tree = () => (
+    <QueryClientProvider client={client}>
+      <HomePage />
+    </QueryClientProvider>
+  );
+  const view = render(tree());
+  const before = screen.getByText('2');
+  expect(before.className).toContain('count-tick');
+  query.current = data(1);
+  view.rerender(tree());
+  expect(screen.getByText('1')).not.toBe(before);
+});
 it('HOME-B12 hands every block that arrives the entrance, in reading order', () => {
   // The delays are CSS steps keyed off each block's position, so what the page has to get right is
   // which elements are in the cascade and which container they sit in. jsdom applies no stylesheet,

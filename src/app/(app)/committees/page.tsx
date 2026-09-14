@@ -1,2 +1,9 @@
 import { CommitteesPage } from '@/modules/committees/ui/CommitteesPage';
-export default function Page() { return <CommitteesPage />; }
+import { PageBody } from '@/ui/layout/PageTransition';
+export default function Page() {
+  return (
+    <PageBody>
+      <CommitteesPage />
+    </PageBody>
+  );
+}

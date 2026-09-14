@@ -8,7 +8,10 @@ export function TaskCountBadge() {
   const open = useTaskCount();
   if (!open) return null;
   return (
-    <span className="rounded-full bg-surface-raised px-2 py-0.5 text-xs tabular-nums text-text-muted group-aria-[current=page]/nav:bg-accent-soft group-aria-[current=page]/nav:text-accent">
+    <span
+      key={open}
+      className="count-tick rounded-full bg-surface-raised px-2 py-0.5 text-xs tabular-nums text-text-muted group-aria-[current=page]/nav:bg-accent-soft group-aria-[current=page]/nav:text-accent"
+    >
       {format(open)}
     </span>
   );

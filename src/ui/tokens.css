@@ -368,7 +368,7 @@
    an inline style needs a documented reason here and a cascade is not one. */
 .home-rise,
 .home-column > * {
-  animation: home-rise 420ms var(--ease-rise) backwards;
+  animation: rise 420ms var(--ease-rise) backwards;
 }
 .home-rise:nth-child(2) {
   animation-delay: var(--step-rise);
@@ -391,7 +391,7 @@
 .home-column-quiet > *:nth-child(n) {
   animation-delay: calc(var(--step-rise) * 5);
 }
-@keyframes home-rise {
+@keyframes rise {
   from {
     opacity: 0;
     translate: 0 0.5rem;
@@ -420,7 +420,7 @@
 /* Only the lead's own rows cascade. Doing it in every section would turn a dense page into a
    ticker; here it walks the eye through the five things that are actually late. */
 .home-lead-rows > * {
-  animation: home-rise 320ms var(--ease-rise) backwards;
+  animation: rise 320ms var(--ease-rise) backwards;
 }
 .home-lead-rows > *:nth-child(1) {
   animation-delay: calc(var(--step-rise) * 2);
@@ -455,6 +455,89 @@
   .home-column > *,
   .home-lead-rows > *,
   .meter-fill {
+    animation: none;
+  }
+}
+/* ADR 0019: replacing one screen with another. The old one leaves quickly so it stops competing
+   for attention, the new one arrives more gently and waits for the old to clear. The shell does
+   not take part: the sidebar and top bar persist across a navigation, so the root group is
+   silenced and only the named page groups animate. Nothing here is directional, because the
+   destinations are siblings rather than a hierarchy, which also keeps it correct in both
+   directions without a mirror. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(.page-out) {
+  animation: 140ms ease-in both page-fade reverse;
+}
+::view-transition-new(.page-in) {
+  animation:
+    220ms var(--ease-rise) 140ms both page-fade,
+    340ms var(--ease-rise) both page-slide;
+}
+@keyframes page-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes page-slide {
+  from {
+    translate: 0 0.5rem;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(.page-out),
+  ::view-transition-new(.page-in) {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}
+/* Anything that appears in place rather than arriving with the page: the bulk bar when selection
+   starts, a row created into a list already on screen. Same gesture as the page's own entrance, in
+   the shorter time a single element earns. */
+.rise-in {
+  animation: rise 220ms var(--ease-rise) backwards;
+}
+/* EP-B12: a row that arrives is the mirror of one that leaves. The list keys these off identity,
+   so only rows genuinely new to a list already on screen animate; a first load or a view change
+   replaces everything at once and is not an arrival. */
+.entity-row-entering {
+  animation: rise 260ms var(--ease-rise) backwards;
+}
+/* A figure that changes without saying so is a figure nobody notices. The count is remounted on
+   its own value, so the new number replaces the old rather than the element redrawing: the reading
+   is that something was counted again, which is what happened. */
+.count-tick {
+  display: inline-block;
+  animation: count-tick 240ms var(--ease-rise);
+}
+@keyframes count-tick {
+  from {
+    opacity: 0;
+    translate: 0 -0.3em;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+/* The save pill already changes colour; the tick inside it arrives the same way the completion
+   tick does, so "saved" reads as an event rather than a substitution. */
+.save-tick {
+  animation: check-in 200ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise-in,
+  .entity-row-entering,
+  .count-tick,
+  .save-tick {
     animation: none;
   }
 }

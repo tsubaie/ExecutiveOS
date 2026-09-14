@@ -1,4 +1,9 @@
 import { AdminDataPage } from '@/modules/users/ui';
+import { PageBody } from '@/ui/layout/PageTransition';
 export default function Page() {
-  return <AdminDataPage resource="ai" />;
+  return (
+    <PageBody>
+      <AdminDataPage resource="ai" />
+    </PageBody>
+  );
 }

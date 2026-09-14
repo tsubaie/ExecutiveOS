@@ -38,7 +38,8 @@ export function Stream({
             {t(section.key)}
           </h2>
           <span
-            className={`shrink-0 text-sm tabular-nums ${danger ? 'rounded-md bg-danger-soft px-1.5 text-danger' : 'text-text-muted'}`}
+            key={section.count}
+            className={`count-tick shrink-0 text-sm tabular-nums ${danger ? 'rounded-md bg-danger-soft px-1.5 text-danger' : 'text-text-muted'}`}
           >
             {count(section.count)}
           </span>

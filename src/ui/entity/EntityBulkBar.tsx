@@ -32,7 +32,7 @@ export function EntityBulkBar<T extends Entity>({ items, actions, clear }: Props
     }
   }
   return (
-    <div data-entity-bulk className="grid gap-2 border-t pt-3 text-xs text-text-muted">
+    <div data-entity-bulk className="rise-in grid gap-2 border-t pt-3 text-xs text-text-muted">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span>{t('selectedCount', { count: count(items.length) })}</span>
         <div className="flex flex-wrap gap-1">

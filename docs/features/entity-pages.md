@@ -70,7 +70,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 
 - EP-B10 `api.save(patch)` queues per entity: one request in flight; newer patches coalesce; each request sends the latest known `revision`. State `idle → saving → saved (2 s) → idle`, or `error` with Retry (same idempotency key) and, on 409, `conflict` with "Reload and reapply" that refetches, shows the diff of the user's pending patch, and reapplies on confirm.
 - EP-B11 Navigating away (close, next, prev, view change, same-origin links) while a save is pending waits for it; while a save is in `error`, a dialog asks to retry or discard. Guards are registered through the framework's navigation context and scoped to the active panel, so an entity surface embedded in another module guards only itself; an invalid autosaved field (inside a `data-autosave` container) blocks navigation and reports its validity message; secondary forms in the panel do not.
-- EP-B12 Optimistic updates apply to the list row and detail; on error they roll back. A row that leaves the loaded list after a mutation (completed, trashed, restored) stays rendered and inert for one 300 ms fade-and-collapse; a full replacement of the list (view, filter or search change) is not animated. Under reduced motion the exit is immediate.
+- EP-B12 Optimistic updates apply to the list row and detail; on error they roll back. A row that leaves the loaded list after a mutation (completed, trashed, restored) stays rendered and inert for one 300 ms fade-and-collapse, and a row that arrives into a list already on screen rises in as its mirror. Both are keyed off identity against the previous render and both are skipped when the list is replaced wholesale (view, filter or search change), when it is loading its first page, or when more rows move at once than one event's worth: a screen that redraws entirely is a new screen, not a set of arrivals. Under reduced motion neither runs.
 
 ## Lists
 
@@ -80,6 +80,13 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - EP-B16 Errors: list error panel with retry and request id; detail error inline.
 - EP-B17 Focus: opening detail moves focus to the title; closing returns focus to the row; create returns focus to the new row after submit.
 - EP-B18 Query client is recreated on login and logout; list refetch on focus and every 60 seconds while visible.
+- EP-B24 A change the user caused is acknowledged where it shows. A count that changes is keyed on
+  its own value so the new figure replaces the old rather than the element quietly redrawing; this
+  covers the rail counts and the statistics strip, and Home states the same rule for its sections.
+  A control that appears in place, the bulk action bar when selection starts, arrives rather than
+  popping in. The save pill's tick lands the way the completion tick does, so a save reads as an
+  event rather than a substitution. None of these is a loop: motion here marks something that
+  happened and then stops, and none of it runs under reduced motion.
 - EP-B23 Opening a record makes that record the subject of the page, and the page has to say so
   without recolouring anything. Four things carry it. The softening of the surrounding surfaces is
   held for a beat after the panel opens regardless of the pointer, because the gesture that opens a
@@ -111,6 +118,8 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - `mobile.test.tsx`: B08, B09.
 - `autosave.test.tsx`: B10–B12 with fake timers, overlapping saves, 409 path, navigate-while-pending.
 - `list.test.tsx`: B13–B18.
+- `row-motion.test.ts`: B12 arrivals and exits, the batch cap, the wholesale replacement and the first load.
+- `feedback.test.tsx`: B24 the save tick only once saved, the bulk bar's arrival.
 
 - `row-trail.test.tsx`: B20 the trailing control renders outside the row button, never nested inside it.
 - `field.test.tsx`: B19 label, hint, error and invalid associations; first invalid field focused on submit.

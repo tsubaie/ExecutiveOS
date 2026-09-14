@@ -62,7 +62,8 @@ The one screen the principal opens first. It is a set of queries over existing m
 - HOME-B08 A task the principal can finish is finished here. Overdue and due-today rows carry the
   same completion control as the task lists, including the confirmation when the task still has open
   subtasks, so the page is somewhere work gets done rather than only a set of links out. Completion
-  refreshes the page's own counts. Rows the principal cannot act on directly carry no control.
+  refreshes the page's own counts, and a count that changes is replaced rather than swapped in
+  silence, so the effect of finishing something is visible where it is stated. Rows the principal cannot act on directly carry no control.
 - HOME-B03 One aggregated endpoint `GET /home` returns all sections in one round trip; each module exposes a `homeSummary(ctx)` function through its `server` manifest that runs ≤ 2 queries. Every section and item carries its own `href`; the page never composes module URLs.
 - HOME-B04 Refetch on focus and every 60 seconds.
 - HOME-B05 Greeting uses the user's name and the principal's name when they differ ("Preparing for <principal>").
