@@ -9,6 +9,7 @@
 - **Density:** base 16px (readable for a 40+ audience on tablets); list rows 44px single-line; form controls 36px with a pointer and 44px on touch (`pointer: coarse`), so hit areas never drop below 44px where fingers are used; 8px grid. Tinted surfaces for emphasis come from `--color-accent-soft`, `--color-warning-soft`, `--color-danger-soft`; the foreground on each is its matching solid token and both pairs meet 4.5:1 in both themes.
 - **Icons:** Lucide only. Icon buttons have `aria-label` from i18n.
 - **Theme:** `next-themes`, class attribute, pre-hydration script; per-user setting. Dialog and sheet backdrops use `--color-scrim`, a dark translucent ground in both themes.
+- **Motion:** one deceleration curve (`--ease-rise`) and one cascade step (`--step-rise`), both in `tokens.css`. Entrances run 300-450 ms, state changes 120-220 ms; anything longer reads as a wait. Keyframes live in `tokens.css`, never in TSX, so a per-element delay is an `nth-child` step and not an inline style. Anything that animates on arrival uses `backwards` fill, so it is never painted at rest and then moved. Only `opacity`, `translate`, `scale` and colour are animated; never a property that reflows. Every animation and transition is switched off under `prefers-reduced-motion: reduce` and must leave the element at its resting appearance, which the home entrance test asserts.
 
 ## Layout shell
 

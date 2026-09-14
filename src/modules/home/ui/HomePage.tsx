@@ -36,13 +36,13 @@ export function HomePage() {
           {lead && <Stream section={lead} lead />}
           {rest.length > 0 && (
             <div className="mt-10 grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-              <div className="flex flex-col gap-10">
+              <div className="home-column flex flex-col gap-10">
                 {carrying.map((section) => (
                   <Stream key={section.key} section={section} />
                 ))}
               </div>
               {reference.length > 0 && (
-                <div className="flex flex-col gap-10">
+                <div className="home-column home-column-quiet flex flex-col gap-10">
                   {reference.map((section) => (
                     <Stream key={section.key} section={section} quiet />
                   ))}

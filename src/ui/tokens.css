@@ -49,6 +49,11 @@
   --danger: #b63c3c;
   --danger-soft: #f6e1e1;
   --scrim: #202a2899;
+  /* Motion (docs/05 § Motion). One deceleration curve for anything that arrives, and one step that
+     sets the cascade's rhythm: every entrance delay is a multiple of it, so the whole page is
+     retimed from this single number. Both are theme-independent, so the dark block leaves them. */
+  --ease-rise: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --step-rise: 70ms;
 }
 .dark {
   /* Catppuccin Mocha: mantle ground, base surfaces, surface0/1 for raised and borders, green as
@@ -341,6 +346,104 @@
     .hover-reveal-target {
       transition: none;
     }
+  }
+}
+/* Home arrives in the order it is meant to be read (HOME-B12): the day, then the one block that
+   must not be missed, then the sections below it. The cascade is short and one-directional — it
+   paces the first read of a dense page, it does not perform. `backwards` holds each block at its
+   start state through its own delay, so nothing is painted in place and then moved.
+   The delays are literal steps of --step-rise rather than a per-element custom property, because
+   an inline style needs a documented reason here and a cascade is not one. */
+.home-rise,
+.home-column > * {
+  animation: home-rise 420ms var(--ease-rise) backwards;
+}
+.home-rise:nth-child(2) {
+  animation-delay: var(--step-rise);
+}
+.home-column > *:nth-child(1) {
+  animation-delay: calc(var(--step-rise) * 2);
+}
+.home-column > *:nth-child(2) {
+  animation-delay: calc(var(--step-rise) * 3);
+}
+.home-column > *:nth-child(3) {
+  animation-delay: calc(var(--step-rise) * 4);
+}
+.home-column > *:nth-child(n + 4) {
+  animation-delay: calc(var(--step-rise) * 5);
+}
+/* Reference material settles after the column it sits beside, rather than racing it. The
+   :nth-child(n) is not decoration: it matches the specificity of the step rules above so that
+   source order decides, which is what makes this an override rather than a coin toss. */
+.home-column-quiet > *:nth-child(n) {
+  animation-delay: calc(var(--step-rise) * 5);
+}
+@keyframes home-rise {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+/* The lead block is the page's one raised surface, so it settles rather than only rising. */
+.home-lead {
+  animation-name: home-lead;
+}
+@keyframes home-lead {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+    scale: 0.99;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+/* Only the lead's own rows cascade. Doing it in every section would turn a dense page into a
+   ticker; here it walks the eye through the five things that are actually late. */
+.home-lead-rows > * {
+  animation: home-rise 320ms var(--ease-rise) backwards;
+}
+.home-lead-rows > *:nth-child(1) {
+  animation-delay: calc(var(--step-rise) * 2);
+}
+.home-lead-rows > *:nth-child(2) {
+  animation-delay: calc(var(--step-rise) * 2.6);
+}
+.home-lead-rows > *:nth-child(3) {
+  animation-delay: calc(var(--step-rise) * 3.2);
+}
+.home-lead-rows > *:nth-child(n + 4) {
+  animation-delay: calc(var(--step-rise) * 3.8);
+}
+/* A meter draws itself from the edge the reader starts at. The fill is a percentage-width rect, so
+   the growth is a scale of its own box (fill-box), which leaves the RTL mirror on the parent svg
+   free to point it the right way. */
+.meter-fill {
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: meter-fill 520ms var(--ease-rise) calc(var(--step-rise) * 3) backwards;
+}
+@keyframes meter-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-rise,
+  .home-column > *,
+  .home-lead-rows > *,
+  .meter-fill {
+    animation: none;
   }
 }
 @media (min-width: 1024px) {

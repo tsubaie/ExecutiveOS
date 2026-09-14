@@ -25,7 +25,11 @@ export function Stream({
   const count = useCount();
   const danger = alarming(section);
   return (
-    <section className={lead ? 'mt-8 rounded-xl border bg-surface px-5 py-4 lg:px-6' : ''}>
+    <section
+      className={
+        lead ? 'home-rise home-lead mt-8 rounded-xl border bg-surface px-5 py-4 lg:px-6' : ''
+      }
+    >
       <div className="flex items-baseline justify-between gap-4 border-b pb-2">
         <div className="flex items-baseline gap-2.5">
           <h2
@@ -47,7 +51,7 @@ export function Stream({
       </div>
       <Ageing section={section} />
       {section.items.length > 0 ? (
-        <ul className={lead ? 'md:grid md:grid-cols-2 md:gap-x-10' : ''}>
+        <ul className={lead ? 'home-lead-rows md:grid md:grid-cols-2 md:gap-x-10' : ''}>
           {section.items.map((item) => (
             <li key={item.id} className={lead ? '' : 'border-b last:border-b-0'}>
               <Row item={item} sectionKey={section.key} lead={lead} />
@@ -150,11 +154,11 @@ function RowFacts({ item, sectionKey }: { item: Item; sectionKey: SectionKey }) 
 }
 function Row({ item, sectionKey, lead }: { item: Item; sectionKey: SectionKey; lead: boolean }) {
   return (
-    <div className="group -mx-2 flex items-start gap-3 rounded-md px-2 py-3 hover:bg-surface-raised">
+    <div className="group -mx-2 flex items-start gap-3 rounded-md px-2 py-3 transition-colors duration-150 hover:bg-surface-raised">
       <RowLead item={item} sectionKey={sectionKey} />
       <Link href={item.href} title={item.title} className="min-w-0 flex-1">
         <span
-          className={`block truncate text-start group-hover:text-accent ${lead ? 'text-[0.9375rem]' : 'text-sm'}`}
+          className={`block truncate text-start transition-colors duration-150 group-hover:text-accent ${lead ? 'text-[0.9375rem]' : 'text-sm'}`}
         >
           <bdi>{item.title}</bdi>
         </span>

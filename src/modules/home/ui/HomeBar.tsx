@@ -39,7 +39,7 @@ export function Meter({
           width={part}
           height={3}
           rx={ROUND}
-          className={tone === 'danger' ? 'fill-danger' : 'fill-accent'}
+          className={`meter-fill ${tone === 'danger' ? 'fill-danger' : 'fill-accent'}`}
         />
       )}
     </svg>
@@ -77,7 +77,9 @@ export function AgeingBar({ count, stale }: { count: number; stale: number }) {
       className="h-[3px] w-6 shrink-0 rtl:-scale-x-100"
     >
       <rect x={0} y={0} width={100} height={3} rx={ROUND} className="fill-border" />
-      {late > 0 && <rect x={0} y={0} width={late} height={3} rx={ROUND} className="fill-danger" />}
+      {late > 0 && (
+        <rect x={0} y={0} width={late} height={3} rx={ROUND} className="meter-fill fill-danger" />
+      )}
     </svg>
   );
 }
