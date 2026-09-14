@@ -148,7 +148,20 @@
     "overview": "Overview",
     "notes": "Recent notes",
     "empty": "No modules are enabled yet.",
-    "emptyHint": "Enable a module in Administration to fill this screen."
+    "emptyHint": "Enable a module in Administration to fill this screen.",
+    "statNextMeetings": "Meetings",
+    "statPrep": "Prep",
+    "statOverdue": "Overdue",
+    "statToday": "Due today",
+    "statWaiting": "Waiting",
+    "statCommittees": "Committees",
+    "statKpis": "KPIs",
+    "statInitiatives": "Initiatives",
+    "statNotes": "Notes",
+    "statPeople": "People",
+    "daysLate": "{count, plural, one {# day late} other {# days late}}",
+    "openWork": "{count, plural, one {# open} other {# open}}",
+    "viewAll": "View all"
   },
   "admin": {
     "users": "Members",

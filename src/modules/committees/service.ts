@@ -100,7 +100,7 @@ export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
       count: z.number().parse(row.count),
       href: routes.committees({ view: 'open' }),
       items: z
-        .array(z.object({ id: z.uuid(), title: z.string() }))
+        .array(z.object({ id: z.uuid(), title: z.string(), count: z.number() }))
         .parse(row.items)
         .map((item) => ({ ...item, href: routes.committees({ view: 'all', id: item.id }) })),
     },

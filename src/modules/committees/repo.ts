@@ -104,7 +104,8 @@ export async function selectHomeSummary(database: Database) {
   const carrying = and(isNull(committees.deletedAt), eq(committees.status, 'active'), sql`${openWork} > 0`);
   const [row] = await database.select({
     count: sql<number>`count(*)::int`,
-    items: sql<{ id: string; title: string }[]>`coalesce((select json_agg(item) from (select id, name as title from committees
+    items: sql<{ id: string; title: string; count: number }[]>`coalesce((select json_agg(item) from (
+      select id, name as title, ${openWork} as count from committees
       where ${carrying} order by ${openWork} desc, lower(name), id limit 5) item), '[]'::json)`,
   }).from(committees).where(carrying);
   return row ?? { count: 0, items: [] };

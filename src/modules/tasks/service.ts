@@ -271,7 +271,15 @@ export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
     count: z.number().parse(row[key + 'Count']),
     href: routes.tasks({ view: key }),
     items: z
-      .array(z.object({ id: z.uuid(), title: z.string() }))
+      .array(
+        z.object({
+          id: z.uuid(),
+          title: z.string(),
+          date: z.string().nullable(),
+          owner: z.string().nullable(),
+          committee: z.string().nullable(),
+        }),
+      )
       .parse(row[key + 'Items'])
       .map((item) => ({ ...item, href: routes.tasks({ view: 'all', id: item.id }) })),
   }));

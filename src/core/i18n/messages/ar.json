@@ -148,7 +148,20 @@
     "overview": "نظرة عامة",
     "notes": "ملاحظات حديثة",
     "empty": "لا توجد وحدات مفعّلة بعد.",
-    "emptyHint": "فعّل وحدة من الإدارة لتعبئة هذه الشاشة."
+    "emptyHint": "فعّل وحدة من الإدارة لتعبئة هذه الشاشة.",
+    "statNextMeetings": "اجتماعات",
+    "statPrep": "تحضير",
+    "statOverdue": "متأخرة",
+    "statToday": "اليوم",
+    "statWaiting": "بانتظار",
+    "statCommittees": "اللجان",
+    "statKpis": "مؤشرات",
+    "statInitiatives": "مبادرات",
+    "statNotes": "ملاحظات",
+    "statPeople": "أشخاص",
+    "daysLate": "{count, plural, zero {متأخرة} one {متأخرة يومًا} two {متأخرة يومين} few {متأخرة # أيام} many {متأخرة # يومًا} other {متأخرة # يوم}}",
+    "openWork": "{count, plural, zero {لا مهام مفتوحة} one {مهمة مفتوحة} two {مهمتان مفتوحتان} few {# مهام مفتوحة} many {# مهمة مفتوحة} other {# مهمة مفتوحة}}",
+    "viewAll": "عرض الكل"
   },
   "admin": {
     "users": "الأعضاء",

@@ -219,8 +219,14 @@ export async function selectHomeSummary(database: Database, today: string) {
   const columns: Record<string, SQL> = {};
   for (const [key, predicate] of Object.entries(predicates)) {
     columns[key + 'Count'] = sql`count(*) filter (where ${predicate})::int`;
+    // HOME-B01: rows carry the facts the principal triages on, so the page never re-queries.
     columns[key + 'Items'] =
-      sql`coalesce((select json_agg(item) from (select id,title from tasks where ${predicate} order by due_date asc nulls last,id limit 5) item),'[]'::json)`;
+      sql`coalesce((select json_agg(item) from (select t.id, t.title, t.due_date::text as date,
+        p.full_name as owner, c.name as committee
+        from tasks t left join people p on p.id = t.owner_id and p.deleted_at is null
+        left join committees c on c.id = t.committee_id and c.deleted_at is null
+        where t.id in (select id from tasks where ${predicate})
+        order by t.due_date asc nulls last, t.id limit 5) item),'[]'::json)`;
   }
   const [row] = await database.select(columns).from(tasks);
   return row ?? {};
