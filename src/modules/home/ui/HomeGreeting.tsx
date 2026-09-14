@@ -26,7 +26,7 @@ export function Greeting({
   const count = useCount();
   const due = live.find((section) => section.key === 'today');
   return (
-    <header className="max-w-4xl">
+    <header className="home-rise max-w-4xl">
       <p className="text-sm text-text-muted">{date(today)}</p>
       <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance lg:text-4xl">
         {due ? t('today_headline', { count: due.count }) : t('title')}

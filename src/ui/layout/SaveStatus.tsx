@@ -20,7 +20,7 @@ export function SaveStatus({ state, className }: { state: SaveState; className?:
       )}
     >
       {state === 'saving' && <LoaderCircle className="size-3.5 animate-spin" aria-hidden />}
-      {state === 'saved' && <Check className="size-3.5" aria-hidden />}
+      {state === 'saved' && <Check className="save-tick size-3.5" aria-hidden />}
       {failed && <TriangleAlert className="size-3.5" aria-hidden />}
       {state === 'saving' && t('saving')}
       {state === 'saved' && t('saved')}

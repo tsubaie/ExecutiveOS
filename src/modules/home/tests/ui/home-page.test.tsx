@@ -174,6 +174,63 @@ it('HOME-B04 renders a shaped skeleton rather than collapsing the layout while l
   expect(screen.getByRole('status')).toBeTruthy();
   expect(screen.queryByText('greeting')).toBeNull();
 });
+it('HOME-B08 a count that changes is replaced rather than swapped in silence', () => {
+  // The figure is keyed on its own value, so a change remounts it and the stylesheet plays the
+  // replacement. Identity across the rerender is the observable half of that.
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const data = (count: number) => ({
+    isPending: false as const,
+    error: null,
+    data: {
+      data: {
+        name: 'Preview Administrator',
+        principal: null,
+        peopleCount: 4,
+        sections: [section('today', true, count, [item('Approve the catalogue', { revision: 3 })])],
+      },
+    },
+  });
+  query.current = data(2);
+  // A fresh element each time: React bails out of re-rendering one it is handed back by identity.
+  const tree = () => (
+    <QueryClientProvider client={client}>
+      <HomePage />
+    </QueryClientProvider>
+  );
+  const view = render(tree());
+  const before = screen.getByText('2');
+  expect(before.className).toContain('count-tick');
+  query.current = data(1);
+  view.rerender(tree());
+  expect(screen.getByText('1')).not.toBe(before);
+});
+it('HOME-B12 hands every block that arrives the entrance, in reading order', () => {
+  // The delays are CSS steps keyed off each block's position, so what the page has to get right is
+  // which elements are in the cascade and which container they sit in. jsdom applies no stylesheet,
+  // so the hooks are what is asserted; the resting state and the reduced-motion rule are CSS.
+  const { container } = show([
+    section('overdue', true, 2, [
+      item('Late letter', { date: '2026-09-02' }),
+      item('Late report', { date: '2026-09-03' }),
+    ]),
+    section('waiting', true, 1, [item('Leila Haddad', { owner: 'Leila Haddad', count: 2 })]),
+    section('committees', true, 1, [item('Audit Committee', { count: 3, overdue: 2 })]),
+    section('notes', true, 1, [item('Weekly briefing', { date: '2026-09-13' })]),
+  ]);
+  // The day leads, and the lead block rises with its rows behind it.
+  expect(container.querySelector('header')?.className).toContain('home-rise');
+  const lead = container.querySelector('.home-lead');
+  expect(lead?.className).toContain('home-rise');
+  expect(lead?.querySelector('.home-lead-rows')).toBeTruthy();
+  // Only the lead cascades its rows: a second list of them would make the page a ticker.
+  expect(container.querySelectorAll('.home-lead-rows')).toHaveLength(1);
+  // The sections below are staggered by their position inside their own column, and the column
+  // holding reference material is marked so it settles after the one beside it.
+  expect(container.querySelectorAll('.home-column')).toHaveLength(2);
+  expect(container.querySelector('.home-column-quiet')?.textContent).toContain('notes');
+  // A mark draws itself rather than appearing filled.
+  expect(container.querySelectorAll('.meter-fill').length).toBeGreaterThan(0);
+});
 it('HOME-B08 offers a completion control on task rows and nothing to complete elsewhere', () => {
   show([
     section('today', true, 1, [item('Approve the catalogue', { revision: 3 })]),

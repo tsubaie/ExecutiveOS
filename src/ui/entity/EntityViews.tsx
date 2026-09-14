@@ -36,7 +36,11 @@ export function EntityViews<T extends Entity, P extends object, C>({
               )}
               <span className="min-w-0 flex-1 truncate text-start">{view.label}</span>
               <span
-                className={cn('text-xs tabular-nums', active ? 'text-accent' : 'text-text-muted')}
+                key={c.list.counts[view.id] ?? 0}
+                className={cn(
+                  'count-tick text-xs tabular-nums',
+                  active ? 'text-accent' : 'text-text-muted',
+                )}
               >
                 {count(c.list.counts[view.id] ?? 0)}
               </span>
@@ -81,8 +85,9 @@ export function EntityStats<T extends Entity, P extends object, C>({
               <span className="truncate">{view.label}</span>
             </span>
             <span
+              key={value}
               className={cn(
-                'text-xl leading-none font-semibold tabular-nums @lg:text-2xl',
+                'count-tick text-xl leading-none font-semibold tabular-nums @lg:text-2xl',
                 value === 0 && 'text-text-muted',
                 value > 0 && view.tone === 'danger' && 'text-danger',
                 value > 0 && view.tone === 'accent' && 'text-accent',

@@ -62,10 +62,19 @@ The one screen the principal opens first. It is a set of queries over existing m
 - HOME-B08 A task the principal can finish is finished here. Overdue and due-today rows carry the
   same completion control as the task lists, including the confirmation when the task still has open
   subtasks, so the page is somewhere work gets done rather than only a set of links out. Completion
-  refreshes the page's own counts. Rows the principal cannot act on directly carry no control.
+  refreshes the page's own counts, and a count that changes is replaced rather than swapped in
+  silence, so the effect of finishing something is visible where it is stated. Rows the principal cannot act on directly carry no control.
 - HOME-B03 One aggregated endpoint `GET /home` returns all sections in one round trip; each module exposes a `homeSummary(ctx)` function through its `server` manifest that runs ≤ 2 queries. Every section and item carries its own `href`; the page never composes module URLs.
 - HOME-B04 Refetch on focus and every 60 seconds.
 - HOME-B05 Greeting uses the user's name and the principal's name when they differ ("Preparing for <principal>").
+- HOME-B12 The page arrives in the order it is meant to be read: the day, then the lead block, then
+  the sections under it, with reference material settling last. Each block rises a short distance as
+  it fades in and the lead's own rows follow it one after another, so the first read of a dense
+  screen is paced rather than dumped. Only the lead's rows cascade; doing it in every section turns
+  the page into a ticker. The aggregate marks draw themselves from the edge the reader starts at,
+  which is the same statement the meter already makes, made once on arrival. The motion is
+  decoration over a page that is already correct: under `prefers-reduced-motion: reduce` none of it
+  runs and every block is at its resting position and full opacity on the first frame.
 - HOME-B06 Section ownership is exclusive and checked centrally when the providers are collected: a key claimed by two modules, or a key no section list declares, fails the request with the owning key named. Collapsing to the first match would make the page depend on module import order and let a section disappear silently.
 
 ## Known gap
@@ -92,6 +101,7 @@ and no amount of layout work changes that. The remaining sections are built arou
 - api: `/home` shape; query counter; disabled modules; duplicate and unknown section ownership (B06).
 - ui: omission of uninstalled sections; zero-item sections kept; empty state; links; headline states the day
   and not the deficit; lead selection; section ranking; per-section status fact; completion control only on
-  task rows; chase-list aggregation; ageing split; skeleton holds the layout.
+  task rows; chase-list aggregation; ageing split; skeleton holds the layout; the entrance cascade
+  reaches the lead, the columns and the marks (B12).
 - e2e `home.spec.ts`: A01–A03.
 - Mutation targets: `homeSummary` aggregators for tasks and meetings.

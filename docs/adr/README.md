@@ -22,5 +22,6 @@ One decision per file. Format: **Status**, **Context**, **Decision**, **Conseque
 | 0016 | OpenRouter with encrypted in-app credentials | accepted |
 | 0017 | OpenRouter task and note capability execution | accepted |
 | 0018 | Configurable AI hourly admission limits | accepted |
+| 0019 | Page transitions with React's `<ViewTransition>` | accepted |
 
 Open decisions awaiting an ADR: license (see roadmap); chart library confirmation (`recharts`).

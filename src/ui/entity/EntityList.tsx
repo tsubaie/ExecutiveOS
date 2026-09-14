@@ -8,11 +8,11 @@ import { useCount } from '@/ui/format';
 import { cn } from '@/ui/cn';
 import type { Entity } from './types';
 import type { Surface } from './EntityControls';
-import { useLeavingRows, type Rendered } from './use-leaving-rows';
+import { useRowMotion, rowMotionClass, type Rendered } from './use-row-motion';
 export function EntityList<T extends Entity, P extends object, C>(props: Surface<T, P, C>) {
   const t = useTranslations('common');
   const { list } = props.controller;
-  const rows = useLeavingRows(list.items, list.pending);
+  const rows = useRowMotion(list.items, list.pending);
   if (list.pending) return <EntityListSkeleton />;
   if (list.error) return <ErrorPanel error={list.error} retry={list.refetch} />;
   if (!rows.length) return <EntityEmpty {...props} />;
@@ -96,7 +96,7 @@ function EntityListRow<T extends Entity, P extends object, C>({
   const current = !leaving && c.state.id === item.id;
   const card = config.renderers.rowStyle === 'card';
   return (
-    <li className={cn(leaving && 'entity-row-leaving')} inert={leaving || undefined}>
+    <li className={rowMotionClass(row)} inert={leaving || undefined}>
       <EntityGroupHeading config={config} rows={rows} index={index} />
       <div
         className={cn(

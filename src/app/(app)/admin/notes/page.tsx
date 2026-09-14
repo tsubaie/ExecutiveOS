@@ -1,4 +1,12 @@
 import { NoteTypesAdmin, TagsAdmin } from '@/modules/notes/ui';
+import { PageBody } from '@/ui/layout/PageTransition';
 export default function Page() {
-  return <div className="space-y-8"><TagsAdmin /><NoteTypesAdmin /></div>;
+  return (
+    <PageBody>
+      <div className="space-y-8">
+        <TagsAdmin />
+        <NoteTypesAdmin />
+      </div>
+    </PageBody>
+  );
 }

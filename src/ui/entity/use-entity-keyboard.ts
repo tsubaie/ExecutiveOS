@@ -39,6 +39,15 @@ export function useEntityKeyboard(root: RefObject<HTMLElement | null>, options: 
       else options.clear();
     }
   });
+  // EP-B06: opening a record takes focus off the row before the panel exists to receive it, so
+  // for a short stretch while the record loads focus sits on the document body, outside this
+  // surface, where a delegated listener never sees the key and Escape did nothing. Escape is the
+  // one shortcut that has to survive that, so it is also handled from the document, and only
+  // under the two conditions that describe the gap: this surface has a panel open, and focus is
+  // nowhere at all. Anything focused inside the surface still goes through the listener below.
+  const escapeFromNowhere = useEffectEvent(() => {
+    if (options.panel) options.close();
+  });
   // Capture phase, so a picker trigger that stops propagation of Escape cannot hide it.
   // sync: delegated DOM keyboard events belong to the entity surface, not individual modules.
   useEffect(() => {
@@ -47,6 +56,17 @@ export function useEntityKeyboard(root: RefObject<HTMLElement | null>, options: 
     element?.addEventListener('keydown', listener, true);
     return () => element?.removeEventListener('keydown', listener, true);
   }, [root]);
+  // sync: DOM keyboard events that no element inside the surface can receive.
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      if (document.activeElement !== document.body) return;
+      event.preventDefault();
+      escapeFromNowhere();
+    };
+    document.addEventListener('keydown', listener, true);
+    return () => document.removeEventListener('keydown', listener, true);
+  }, []);
 }
 
 // Shortcuts stay out of fields and dialogs, except Escape: from a field or a closed picker it

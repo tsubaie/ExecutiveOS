@@ -49,6 +49,12 @@
   --danger: #b63c3c;
   --danger-soft: #f6e1e1;
   --scrim: #202a2899;
+  --shadow-panel: 0 10px 30px -14px #202a2840;
+  /* Motion (docs/05 § Motion). One deceleration curve for anything that arrives, and one step that
+     sets the cascade's rhythm: every entrance delay is a multiple of it, so the whole page is
+     retimed from this single number. Both are theme-independent, so the dark block leaves them. */
+  --ease-rise: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --step-rise: 70ms;
 }
 .dark {
   /* Catppuccin Mocha: mantle ground, base surfaces, surface0/1 for raised and borders, green as
@@ -67,6 +73,7 @@
   --warning-soft: #413d43;
   --danger: #f38ba8;
   --danger-soft: #402f42;
+  --shadow-panel: 0 12px 36px -16px #11111bcc;
   --scrim: #11111bcc;
   color-scheme: dark;
 }
@@ -101,6 +108,12 @@
     outline: 2px solid var(--accent);
     outline-offset: 3px;
   }
+  /* EP-B17 focuses the record's heading on open so assistive technology announces it. The heading
+     is not tabbable, so the ring buys a sighted user nothing and makes an editable title read as a
+     selected input; the focus itself stays. */
+  [tabindex='-1']:focus-visible {
+    outline: none;
+  }
   /* Controls are 36px with a pointer and 44px on touch (docs/05 § Density and § Mobile). */
   input,
   textarea,
@@ -124,13 +137,15 @@
   }
 }
 .entity-detail {
-  animation: enter-detail 160ms ease-out;
+  animation: enter-detail 220ms var(--ease-rise);
 }
 @keyframes enter-detail {
   from {
+    opacity: 0;
     translate: 1rem;
   }
   to {
+    opacity: 1;
     translate: 0;
   }
 }
@@ -139,9 +154,11 @@
 }
 @keyframes enter-detail-rtl {
   from {
+    opacity: 0;
     translate: -1rem;
   }
   to {
+    opacity: 1;
     translate: 0;
   }
 }
@@ -343,6 +360,187 @@
     }
   }
 }
+/* Home arrives in the order it is meant to be read (HOME-B12): the day, then the one block that
+   must not be missed, then the sections below it. The cascade is short and one-directional — it
+   paces the first read of a dense page, it does not perform. `backwards` holds each block at its
+   start state through its own delay, so nothing is painted in place and then moved.
+   The delays are literal steps of --step-rise rather than a per-element custom property, because
+   an inline style needs a documented reason here and a cascade is not one. */
+.home-rise,
+.home-column > * {
+  animation: rise 420ms var(--ease-rise) backwards;
+}
+.home-rise:nth-child(2) {
+  animation-delay: var(--step-rise);
+}
+.home-column > *:nth-child(1) {
+  animation-delay: calc(var(--step-rise) * 2);
+}
+.home-column > *:nth-child(2) {
+  animation-delay: calc(var(--step-rise) * 3);
+}
+.home-column > *:nth-child(3) {
+  animation-delay: calc(var(--step-rise) * 4);
+}
+.home-column > *:nth-child(n + 4) {
+  animation-delay: calc(var(--step-rise) * 5);
+}
+/* Reference material settles after the column it sits beside, rather than racing it. The
+   :nth-child(n) is not decoration: it matches the specificity of the step rules above so that
+   source order decides, which is what makes this an override rather than a coin toss. */
+.home-column-quiet > *:nth-child(n) {
+  animation-delay: calc(var(--step-rise) * 5);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+/* The lead block is the page's one raised surface, so it settles rather than only rising. */
+.home-lead {
+  animation-name: home-lead;
+}
+@keyframes home-lead {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+    scale: 0.99;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+/* Only the lead's own rows cascade. Doing it in every section would turn a dense page into a
+   ticker; here it walks the eye through the five things that are actually late. */
+.home-lead-rows > * {
+  animation: rise 320ms var(--ease-rise) backwards;
+}
+.home-lead-rows > *:nth-child(1) {
+  animation-delay: calc(var(--step-rise) * 2);
+}
+.home-lead-rows > *:nth-child(2) {
+  animation-delay: calc(var(--step-rise) * 2.6);
+}
+.home-lead-rows > *:nth-child(3) {
+  animation-delay: calc(var(--step-rise) * 3.2);
+}
+.home-lead-rows > *:nth-child(n + 4) {
+  animation-delay: calc(var(--step-rise) * 3.8);
+}
+/* A meter draws itself from the edge the reader starts at. The fill is a percentage-width rect, so
+   the growth is a scale of its own box (fill-box), which leaves the RTL mirror on the parent svg
+   free to point it the right way. */
+.meter-fill {
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: meter-fill 520ms var(--ease-rise) calc(var(--step-rise) * 3) backwards;
+}
+@keyframes meter-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-rise,
+  .home-column > *,
+  .home-lead-rows > *,
+  .meter-fill {
+    animation: none;
+  }
+}
+/* ADR 0019: replacing one screen with another. The old one leaves quickly so it stops competing
+   for attention, the new one arrives more gently and waits for the old to clear. The shell does
+   not take part: the sidebar and top bar persist across a navigation, so the root group is
+   silenced and only the named page groups animate. Nothing here is directional, because the
+   destinations are siblings rather than a hierarchy, which also keeps it correct in both
+   directions without a mirror. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(.page-out) {
+  animation: 140ms ease-in both page-fade reverse;
+}
+::view-transition-new(.page-in) {
+  animation:
+    220ms var(--ease-rise) 140ms both page-fade,
+    340ms var(--ease-rise) both page-slide;
+}
+@keyframes page-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes page-slide {
+  from {
+    translate: 0 0.5rem;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(.page-out),
+  ::view-transition-new(.page-in) {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}
+/* Anything that appears in place rather than arriving with the page: the bulk bar when selection
+   starts, a row created into a list already on screen. Same gesture as the page's own entrance, in
+   the shorter time a single element earns. */
+.rise-in {
+  animation: rise 220ms var(--ease-rise) backwards;
+}
+/* EP-B12: a row that arrives is the mirror of one that leaves. The list keys these off identity,
+   so only rows genuinely new to a list already on screen animate; a first load or a view change
+   replaces everything at once and is not an arrival. */
+.entity-row-entering {
+  animation: rise 260ms var(--ease-rise) backwards;
+}
+/* A figure that changes without saying so is a figure nobody notices. The count is remounted on
+   its own value, so the new number replaces the old rather than the element redrawing: the reading
+   is that something was counted again, which is what happened. */
+.count-tick {
+  display: inline-block;
+  animation: count-tick 240ms var(--ease-rise);
+}
+@keyframes count-tick {
+  from {
+    opacity: 0;
+    translate: 0 -0.3em;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+/* The save pill already changes colour; the tick inside it arrives the same way the completion
+   tick does, so "saved" reads as an event rather than a substitution. */
+.save-tick {
+  animation: check-in 200ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise-in,
+  .entity-row-entering,
+  .count-tick,
+  .save-tick {
+    animation: none;
+  }
+}
 @media (min-width: 1024px) {
   .entity-page {
     height: calc(100dvh - 63px);
@@ -361,11 +559,54 @@
   .entity-page-creating [data-entity-list]:not(:hover):not(:focus-within) {
     filter: blur(1.5px) saturate(0.7);
   }
+  /* EP-B23: the softening above was defeated by the gesture that triggers it. A record is opened
+     by clicking a row, so the pointer is over the list and :hover suppressed the blur at the one
+     moment it existed for; it only appeared later, if the pointer happened to wander off. An
+     animation outranks a normal declaration in the cascade, so the surrounding surfaces hold the
+     dim for a beat after the panel opens whatever the pointer is doing, then release it and hand
+     back to the hover rule, which keeps a deliberate glance at the list working. */
+  body:has(.entity-page-open) .app-sidebar,
+  .entity-page-open .entity-rail,
+  .entity-page-open [data-entity-list] {
+    animation: hold-dim 1200ms var(--ease-rise);
+  }
+  @keyframes hold-dim {
+    0%,
+    70% {
+      filter: blur(1.5px) saturate(0.7);
+    }
+    100% {
+      filter: none;
+    }
+  }
+  /* EP-B23: while a record is open it is the only raised plane. The list and rail drop to the page
+     ground rather than the panel rising above them, so the separation comes from the neutral
+     surface scale and nothing has to gain a colour (docs/05 § Density). Hover does not restore the
+     surface: a glance at the list should clear the blur, not undo the page's hierarchy. */
+  .entity-page-open .entity-rail,
+  .entity-page-open [data-entity-list] {
+    background: var(--color-bg);
+  }
+  .entity-detail {
+    box-shadow: var(--shadow-panel);
+  }
+  /* EP-B14: with the panel open the record itself answers "which one is this", so the row only has
+     to hold the reader's place. The tinted ground goes and the start-edge bar stays. */
+  .entity-page-open .entity-row[data-current] {
+    background: transparent;
+  }
   @media (prefers-reduced-motion: reduce) {
     .app-sidebar,
     .entity-rail,
     [data-entity-list] {
       transition: none;
+    }
+    /* The hold is hierarchy, not motion, so it stays; only the fade out of it goes. Stepping the
+       timing keeps the dim for the same beat and then drops it in one frame. */
+    body:has(.entity-page-open) .app-sidebar,
+    .entity-page-open .entity-rail,
+    .entity-page-open [data-entity-list] {
+      animation-timing-function: steps(1, end);
     }
   }
 }
