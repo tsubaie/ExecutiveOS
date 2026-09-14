@@ -2,9 +2,9 @@
 import { useTranslations } from 'next-intl';
 import { useHome } from './queries';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
-import { Greeting, StatBand } from './HomeStats';
+import { Greeting } from './HomeGreeting';
 import { Stream } from './HomeStream';
-import type { Section } from './home-sections';
+import { ambient, type Section } from './home-sections';
 const page = 'mx-auto max-w-[1400px] px-6 py-8 lg:px-10 lg:py-10';
 export function HomePage() {
   const t = useTranslations('home');
@@ -18,19 +18,31 @@ export function HomePage() {
   // HOME-B07: the first section that actually has something in it leads, at full width. The section
   // order is the product's urgency order, so the lead is whatever is most pressing today.
   const lead = live.find((section) => section.count > 0);
+  // What the principal is accountable for carries the wide column; reference material sits quieter
+  // beside it rather than claiming the same weight.
   const rest = live.filter((section) => section !== lead);
+  const carrying = rest.filter((section) => !ambient(section));
+  const reference = rest.filter(ambient);
   return (
     <div className={page}>
-      <Greeting name={data.name} principal={data.principal} />
+      <Greeting name={data.name} principal={data.principal} live={live} />
       {live.length > 0 ? (
         <>
-          <StatBand live={live} peopleCount={data.peopleCount} />
           {lead && <Stream section={lead} lead />}
           {rest.length > 0 && (
-            <div className="mt-10 grid items-start gap-x-14 gap-y-10 xl:grid-cols-2">
-              {rest.map((section) => (
-                <Stream key={section.key} section={section} />
-              ))}
+            <div className="mt-10 grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+              <div className="flex flex-col gap-10">
+                {carrying.map((section) => (
+                  <Stream key={section.key} section={section} />
+                ))}
+              </div>
+              {reference.length > 0 && (
+                <div className="flex flex-col gap-10">
+                  {reference.map((section) => (
+                    <Stream key={section.key} section={section} quiet />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>
@@ -51,16 +63,9 @@ function HomeSkeleton() {
   return (
     <div role="status" aria-label={c('loading')} className={page}>
       <div className={`h-4 w-28 ${block}`} />
-      <div className={`mt-3 h-9 w-80 max-w-full ${block} lg:h-10`} />
-      <div className="mt-8 grid grid-cols-2 gap-x-5 gap-y-6 border-y py-5 sm:grid-cols-3 lg:grid-cols-6">
-        {[0, 1, 2, 3, 4, 5].map((tile) => (
-          <div key={tile}>
-            <div className={`h-9 w-12 ${block}`} />
-            <div className={`mt-2 h-4 w-20 ${block}`} />
-          </div>
-        ))}
-      </div>
-      <div className={`mt-10 h-32 ${block}`} />
+      <div className={`mt-3 h-9 w-[32rem] max-w-full ${block} lg:h-10`} />
+      <div className={`mt-3 h-4 w-48 ${block}`} />
+      <div className={`mt-8 h-44 ${block}`} />
       <div className="mt-10 grid items-start gap-x-14 gap-y-10 xl:grid-cols-2">
         <div className={`h-32 ${block}`} />
         <div className={`h-32 ${block}`} />

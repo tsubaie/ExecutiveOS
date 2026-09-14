@@ -221,7 +221,7 @@ export async function selectHomeSummary(database: Database, today: string) {
     columns[key + 'Count'] = sql`count(*) filter (where ${predicate})::int`;
     // HOME-B01: rows carry the facts the principal triages on, so the page never re-queries.
     columns[key + 'Items'] =
-      sql`coalesce((select json_agg(item) from (select t.id, t.title, t.due_date::text as date,
+      sql`coalesce((select json_agg(item) from (select t.id, t.title, t.revision, t.due_date::text as date,
         p.full_name as owner, c.name as committee
         from tasks t left join people p on p.id = t.owner_id and p.deleted_at is null
         left join committees c on c.id = t.committee_id and c.deleted_at is null

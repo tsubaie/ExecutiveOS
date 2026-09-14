@@ -12,6 +12,8 @@ export type HomeSectionItem = {
   owner?: string | null;
   committee?: string | null;
   count?: number | null;
+  // Present when the row can be acted on in place; the mutation needs the concurrency token.
+  revision?: number | null;
 };
 export type HomeSection = {
   key: string;

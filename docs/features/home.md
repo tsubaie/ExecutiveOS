@@ -31,15 +31,29 @@ The one screen the principal opens first. It is a set of queries over existing m
   the live ones. An installed section stays visible at zero items, collapsed to its single heading line,
   because zero overdue actions is an answer. When no section is installed the page shows one empty state
   pointing at Administration rather than an empty box.
-- HOME-B07 The page opens with the workspace date, because "overdue" and "due today" only mean something
-  against it, then one band of counts across every installed section plus the people directory. The first
-  section carrying anything leads at full width; the rest follow in two columns. The section order is the
-  product's urgency order, so the lead is whatever is most pressing that day. Overdue is the only state that
-  uses the danger token, and only when its count is above zero.
+- HOME-B07 The page opens on the day ahead: the workspace date, then how much needs the principal
+  today. It never opens on how far behind they are. Leading with the overdue count turns the first
+  thing they read every morning into a reprimand, and on a clear day it makes a headline out of
+  nothing being wrong; the lateness warning belongs in the overdue block, where it is already
+  unmissable. The first section carrying anything leads at full width on a raised surface, the only
+  block given one. Below it the sections are not equals: what the principal is accountable for
+  carries the wide column, and reference material (recent notes) sits quieter and narrower beside
+  it. Overdue is the only state that uses the danger token, and only above zero.
+- HOME-B08 A task the principal can finish is finished here. Overdue and due-today rows carry the
+  same completion control as the task lists, including the confirmation when the task still has open
+  subtasks, so the page is somewhere work gets done rather than only a set of links out. Completion
+  refreshes the page's own counts. Rows the principal cannot act on directly carry no control.
 - HOME-B03 One aggregated endpoint `GET /home` returns all sections in one round trip; each module exposes a `homeSummary(ctx)` function through its `server` manifest that runs ≤ 2 queries. Every section and item carries its own `href`; the page never composes module URLs.
 - HOME-B04 Refetch on focus and every 60 seconds.
 - HOME-B05 Greeting uses the user's name and the principal's name when they differ ("Preparing for <principal>").
 - HOME-B06 Section ownership is exclusive and checked centrally when the providers are collected: a key claimed by two modules, or a key no section list declares, fails the request with the owning key named. Collapsing to the first match would make the page depend on module import order and let a section disappear silently.
+
+## Known gap
+
+The two sections an executive orients a day around, **Next meetings** and **Prep not ready**, have no
+provider: the meetings module does not exist yet, so HOME-B02 omits them and the page cannot yet answer
+"what does today look like". Until that module ships this screen is an obligations list, not a day view,
+and no amount of layout work changes that. The remaining sections are built around what exists.
 
 ## Acceptance criteria
 
@@ -50,11 +64,13 @@ The one screen the principal opens first. It is a set of queries over existing m
   opens Committees in the open view. (en, ar)
 - HOME-A05 An overdue row states how many days late it is, a waiting row names the person holding it, and a
   committee row states how much open work it carries. (en, ar)
+- HOME-A06 Completing a due-today row from Home removes it and lowers the day's count without a reload. (en)
 
 ## Required scenarios
 
 - api: `/home` shape; query counter; disabled modules; duplicate and unknown section ownership (B06).
-- ui: omission of uninstalled sections; zero-item sections kept; empty state; links; stat band covers every
-  installed section; lead selection; per-section status fact; skeleton holds the layout.
+- ui: omission of uninstalled sections; zero-item sections kept; empty state; links; headline states the day
+  and not the deficit; lead selection; section ranking; per-section status fact; completion control only on
+  task rows; skeleton holds the layout.
 - e2e `home.spec.ts`: A01–A03.
 - Mutation targets: `homeSummary` aggregators for tasks and meetings.

@@ -29,6 +29,7 @@ export const Home = z.object({
             owner: z.string().nullable().default(null),
             committee: z.string().nullable().default(null),
             count: z.number().nullable().default(null),
+            revision: z.number().nullable().default(null),
           }),
         )
         .default([]),

@@ -275,6 +275,7 @@ export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
         z.object({
           id: z.uuid(),
           title: z.string(),
+          revision: z.number(),
           date: z.string().nullable(),
           owner: z.string().nullable(),
           committee: z.string().nullable(),

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // The page is exercised without its network layer: the query hook is the only seam, so each
 // scenario supplies the aggregated payload directly. The translator echoes its key plus the count
 // it was given, so a scenario can assert which fact a row chose to show.
@@ -11,6 +12,7 @@ vi.mock('next-intl', () => ({
 }));
 vi.mock('@/ui/format', () => ({
   useCount: () => (value: number) => String(value),
+  initials: (name: string) => name.slice(0, 2).toUpperCase(),
   usePlainDate: () => (value: string) => value,
   useToday: () => '2026-09-14',
   plainDateValue: (day: string) => {
@@ -28,6 +30,7 @@ type Item = {
   owner: string | null;
   committee: string | null;
   count: number | null;
+  revision: number | null;
 };
 type Section = {
   key: string;
@@ -52,6 +55,7 @@ const item = (title: string, facts: Partial<Item> = {}): Item => ({
   owner: null,
   committee: null,
   count: null,
+  revision: null,
   ...facts,
 });
 const section = (key: string, enabled: boolean, count = 0, items: Item[] = []): Section => ({
@@ -61,13 +65,20 @@ const section = (key: string, enabled: boolean, count = 0, items: Item[] = []): 
   href: enabled ? `/${key}` : null,
   items,
 });
+// The completion control talks to the shared query client, so scenarios render inside one.
+const mount = (node: React.ReactNode) =>
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      {node}
+    </QueryClientProvider>,
+  );
 function show(sections: Section[]) {
   query.current = {
     isPending: false,
     error: null,
     data: { data: { name: 'Preview Administrator', principal: null, peopleCount: 4, sections } },
   };
-  return render(<HomePage />);
+  return mount(<HomePage />);
 }
 afterEach(() => cleanup());
 it('HOME-B02 omits sections whose module is not installed and keeps an installed section at zero', () => {
@@ -90,16 +101,17 @@ it('HOME-B02 shows one empty state instead of an empty box when no module is ins
   expect(screen.getByText('empty')).toBeTruthy();
   expect(screen.getByText('emptyHint')).toBeTruthy();
 });
-it('HOME-B01 counts every installed section in the stat strip, including the ones at zero', () => {
+it('HOME-B07 opens on the day ahead rather than on how far behind the principal is', () => {
   show([
     section('overdue', true, 2, [item('Late', { date: '2026-09-02' })]),
-    section('today', true, 0),
-    section('waiting', true, 5, [item('Held', { owner: 'Leila Haddad' })]),
+    section('today', true, 4, [item('Due now')]),
   ]);
-  expect(screen.getByText('statOverdue')).toBeTruthy();
-  expect(screen.getByText('statToday')).toBeTruthy();
-  expect(screen.getByText('statWaiting')).toBeTruthy();
-  expect(screen.getByText('statPeople')).toBeTruthy();
+  // The lateness warning stays in the overdue block; the headline states the day.
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('today_headline=4');
+});
+it('HOME-B07 falls back to the standing subtitle when the due-today section is not installed', () => {
+  show([section('committees', true, 1, [item('Audit Committee', { count: 2 })])]);
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('title');
 });
 it('HOME-B07 leads with the first section that actually has something in it', () => {
   show([
@@ -118,7 +130,8 @@ it('HOME-B01 shows how late an overdue row is, who holds a waiting row, and what
     section('committees', true, 1, [item('Audit Committee', { count: 3 })]),
   ]);
   expect(screen.getByText('daysLate=12')).toBeTruthy();
-  expect(screen.getByText('Leila Haddad')).toBeTruthy();
+  // The avatar also carries the name for assistive technology, so target the visible fact.
+  expect(screen.getByText('Leila Haddad', { selector: 'bdi' })).toBeTruthy();
   expect(screen.getByText('openWork=3')).toBeTruthy();
 });
 it('HOME-B01 keeps a truncated row identifiable through its title attribute', () => {
@@ -131,7 +144,14 @@ it('HOME-B01 keeps a truncated row identifiable through its title attribute', ()
 });
 it('HOME-B04 renders a shaped skeleton rather than collapsing the layout while loading', () => {
   query.current = { isPending: true, error: null };
-  render(<HomePage />);
+  mount(<HomePage />);
   expect(screen.getByRole('status')).toBeTruthy();
   expect(screen.queryByText('greeting')).toBeNull();
+});
+it('HOME-B08 offers a completion control on task rows and nothing to complete elsewhere', () => {
+  show([
+    section('today', true, 1, [item('Approve the catalogue', { revision: 3 })]),
+    section('committees', true, 1, [item('Audit Committee', { count: 2 })]),
+  ]);
+  expect(screen.getAllByRole('checkbox')).toHaveLength(1);
 });
