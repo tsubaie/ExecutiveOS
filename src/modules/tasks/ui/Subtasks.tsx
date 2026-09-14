@@ -5,6 +5,7 @@ import { CirclePlus, GripVertical } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
+import { Meter } from '@/ui/layout/Meter';
 import { TaskCreate, type TaskDetail, type Task } from '../schema/validation';
 import { TaskToggle } from './TaskToggle';
 import { useTaskMutations } from './queries';
@@ -26,8 +27,11 @@ export function Subtasks({ task }: { task: TaskDetail }) {
           {t('subtasks')}
         </h3>
         {task.subtasks.length > 0 && (
-          <span className="text-xs text-text-muted tabular-nums">
-            {t('progressShort', { done, total: task.subtasks.length })}
+          <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+            <Meter filled={done} total={task.subtasks.length} tone="accent" />
+            <span className="tabular-nums">
+              {t('progressShort', { done, total: task.subtasks.length })}
+            </span>
           </span>
         )}
       </div>
@@ -93,11 +97,10 @@ function SubtaskTitle({ task }: { task: Task }) {
           defaultValue={task.title}
           disabled={Boolean(task.deletedAt)}
           maxLength={500}
-          className={
-            task.status === 'completed'
-              ? 'plaintext border-transparent px-2 text-text-muted line-through hover:border-border'
-              : 'plaintext border-transparent px-2 hover:border-border'
-          }
+          className={cn(
+            'plaintext border-transparent bg-transparent px-2 hover:border-border dark:bg-transparent',
+            task.status === 'completed' && 'text-text-muted line-through',
+          )}
           onBlur={(event) => void rename(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') event.currentTarget.blur();

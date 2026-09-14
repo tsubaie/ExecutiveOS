@@ -71,10 +71,19 @@ export async function getTask(ctx: Context, taskId: string, deleted = false) {
   const row = await repo.selectTask(ctx.db, taskId, personNameSql);
   if (!row || (!deleted && row.deletedAt)) throw new AppError('not_found', { entityType: 'task' });
   const children = await repo.selectChildren(ctx.db, taskId, personNameSql, true);
+  // TASKS-B03: the band is computed, not stored, and the detail used to skip the computation and
+  // fall through to the schema default. The same task then read `overdue` in a list and `null` in
+  // its own record, so the panel could not say how late it was while the row it was opened from
+  // could. One `today` for the task and its children, the same one the list uses.
+  const today = dayAt(await getSetting(ctx.db, 'workspace.timezone'));
+  const banded = <T extends { status: string; dueDate: string | null }>(task: T) => ({
+    ...task,
+    band: bandOf(task, today),
+  });
   return TaskDetail.parse({
-    ...row,
-    subtasks: deleted ? children : children.filter((child) => !child.deletedAt),
-    deletedSubtasks: deleted ? [] : children.filter((child) => child.deletedAt),
+    ...banded(row),
+    subtasks: (deleted ? children : children.filter((child) => !child.deletedAt)).map(banded),
+    deletedSubtasks: (deleted ? [] : children.filter((child) => child.deletedAt)).map(banded),
   });
 }
 async function owner(ctx: Context, ownerId: string | null | undefined) {

@@ -56,7 +56,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 
 ## Layout
 
-- EP-B07 Desktop (≥ 1024 px): rail 208 px (collapsible, ≥ 1280 px), list, detail inline at `clamp(480px, 46%, 880px)` of the workspace (rail included, so it reads as roughly 55/45 against the list); the list takes the remainder and resizes, never shifts. The open record carries the wider of the two columns (EP-B23): 480 px stays the floor, so no width loses room against the fixed panel it replaces. The list column opens with one sticky bar that carries the page title, the current view and its count (a button into the filter sheet where the rail is hidden), search, Filter, selection mode and the primary Create action; the page description is exposed to assistive technology only. Card lists place Create above the desktop views rail and use a compact search/sort/action toolbar; without a visible rail, the title/view and Create remain above it (EP-B22). Rows are 44 px single-line by default; group headers are 28 px; rail items 32 px with a divider before views marked `separated`. Views marked `featured` also show their count in a strip under the bar (tinted by `tone` when the count is above zero); views may carry an `icon` for the rail. While a panel or the create form is open the shell sidebar, the rail and the list soften with a light blur so only the open record reads sharp; hovering or focusing an element restores it, colours do not change, and the effect is skipped under reduced motion transitions. The blur is held for the first beat after the panel opens whatever the pointer is doing (EP-B23), because a record is opened by clicking a row and the pointer is therefore already on the list. The panel bar shows the item's position in the loaded list ("3 of 11") when no save is in flight; it carries no previous/next controls, moving between items is done from the list.
+- EP-B07 Desktop (≥ 1024 px): rail 208 px (collapsible, ≥ 1280 px), list, detail inline at `clamp(480px, 46%, 880px)` of the workspace (rail included, so it reads as roughly 55/45 against the list); the list takes the remainder and resizes, never shifts. The open record carries the wider of the two columns (EP-B23): 480 px stays the floor, so no width loses room against the fixed panel it replaces. The list column opens with one sticky bar that carries the page title, the current view and its count (a button into the filter sheet where the rail is hidden), search, Filter, selection mode and the primary Create action; the page description is exposed to assistive technology only. Card lists place Create above the desktop views rail and use a compact search/sort/action toolbar; without a visible rail, the title/view and Create remain above it (EP-B22). Rows are 44 px single-line by default; group headers are 28 px; rail items 32 px with a divider before views marked `separated`. Views marked `featured` also show their count in a strip under the bar (tinted by `tone` when the count is above zero); views may carry an `icon` for the rail. While a panel or the create form is open the shell sidebar, the rail and the list soften with a light blur so only the open record reads sharp, and they stay soft for as long as the record is open (EP-B23). Colours do not change. Keyboard focus is the single exception: focus within one of those surfaces restores it, because tabbing into the list has to leave it readable. The pointer does not, so passing over the list on the way to something else does not flicker it back and forth. The panel bar shows the item's position in the loaded list ("3 of 11") when no save is in flight, as a control: previous and next move through the loaded list from the panel. This reverses the earlier rule that moving between items is done from the list alone. The list is the narrower column while a record is open and, since EP-B23, stays softened, so sending the reader back to it for the commonest move in triage is the wrong cost. The bar also carries the record's name once the heading has scrolled out of view, so a long record always says which one it is.
 - EP-B08 Mobile: views `list` → `detail` → `create`, full screen, slide from the end side (`dir`-aware); rail as a bottom sheet with active-filter count. Back gesture and browser back both go to the previous view.
 - EP-B09 Direction: all animation and column order derive from `dir`.
 
@@ -80,6 +80,18 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - EP-B16 Errors: list error panel with retry and request id; detail error inline.
 - EP-B17 Focus: opening detail moves focus to the title; closing returns focus to the row; create returns focus to the new row after submit.
 - EP-B18 Query client is recreated on login and logout; list refetch on focus and every 60 seconds while visible.
+- EP-B25 A detail panel is a record before it is a form. A property renders as a fact and takes
+  its control's chrome on hover or focus-within, so the panel reads as something written rather
+  than as a page of inputs; the control keeps its shape and hit area, so nothing moves when the
+  chrome returns. Where there is no pointer to hover with the chrome stays, because on touch it is
+  the only thing saying a value can be changed. A value nobody has set is muted, so the eye
+  catches what the record says instead of filtering placeholders out of it. Create forms opt out:
+  there the job is to fill the fields in and every one of them should look ready. Both row
+  components carry the signal, `Property` for a label beside its value and `Field` for a label
+  above one, so every module's detail reads the same way whichever it uses and `Field` keeps
+  owning the identifiers EP-B19 requires. One exception earns its chrome back: a picker with
+  nothing set still says so in words, but an empty text field has no words at all, so it keeps its
+  outline rather than leaving a label standing over a void.
 - EP-B24 A change the user caused is acknowledged where it shows. A count that changes is keyed on
   its own value so the new figure replaces the old rather than the element quietly redrawing; this
   covers the rail counts and the statistics strip, and Home states the same rule for its sections.
@@ -88,11 +100,13 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   event rather than a substitution. None of these is a loop: motion here marks something that
   happened and then stops, and none of it runs under reduced motion.
 - EP-B23 Opening a record makes that record the subject of the page, and the page has to say so
-  without recolouring anything. Four things carry it. The softening of the surrounding surfaces is
-  held for a beat after the panel opens regardless of the pointer, because the gesture that opens a
-  record leaves the pointer on the list and the hover escape would otherwise cancel the effect at
-  the only moment it matters; after that beat the hover escape resumes so a glance back at the list
-  still clears it. The open panel is the only raised plane: the list and rail drop to the page
+  without recolouring anything. Four things carry it. The surrounding surfaces soften for as long
+  as the record is open: the dim belongs to the open record, not to where the pointer happens to
+  be. Lifting it on hover made it flicker on the way to anything else and cancelled it outright at
+  the moment it was for, since a record is opened by clicking a row and the pointer is therefore
+  already on the list. Keyboard focus still lifts it, because tabbing into the list is a
+  deliberate move away from the record and what is focused has to be readable. The open panel is
+  the only raised plane: the list and rail drop to the page
   ground and the panel keeps the surface tone and a tinted shadow, so the separation is read off
   the neutral scale rather than a tint. The selected row gives up its ground and keeps its edge
   bar. The heading the panel focuses on open (EP-B17) shows no focus ring, because it is not

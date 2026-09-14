@@ -499,6 +499,75 @@
     animation-delay: 0ms;
   }
 }
+/* EP-B25: a record is read far more often than it is edited, so the panel reads as a record and
+   becomes a form on contact. A property's control keeps its shape and its hit area and drops only
+   its chrome, so nothing moves when it comes back; the row restores on hover and on focus-within,
+   which covers the keyboard. Where there is no pointer to hover with, the chrome stays: on touch
+   an uncoloured control would be the only thing telling a reader the value can be changed. */
+@media (hover: hover) {
+  .property-quiet
+    :is(
+      [data-slot='select-trigger'],
+      [data-slot='popover-trigger'],
+      [data-slot='input'],
+      [data-slot='textarea'],
+      [data-slot='native-select']
+    ) {
+    border-color: transparent;
+    background: transparent;
+  }
+  .property-quiet:hover
+    :is(
+      [data-slot='select-trigger'],
+      [data-slot='popover-trigger'],
+      [data-slot='input'],
+      [data-slot='textarea'],
+      [data-slot='native-select']
+    ),
+  .property-quiet:focus-within
+    :is(
+      [data-slot='select-trigger'],
+      [data-slot='popover-trigger'],
+      [data-slot='input'],
+      [data-slot='textarea'],
+      [data-slot='native-select']
+    ) {
+    border-color: var(--color-border);
+  }
+  /* A picker with nothing set still says so in words ("No date", "Unassigned"), so it can lose its
+     chrome and stay readable. An empty text field has no words at all, and taking its outline away
+     would leave a label standing over a void. It keeps the outline, because that outline is the
+     affordance to add the value. */
+  .property-quiet.property-empty :is([data-slot='input'], [data-slot='textarea']) {
+    border-color: var(--color-border);
+  }
+  /* The chevron is an affordance, not information: it belongs to the hovered state. */
+  .property-quiet [data-slot='select-trigger'] > svg:last-child {
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+  .property-quiet:hover [data-slot='select-trigger'] > svg:last-child,
+  .property-quiet:focus-within [data-slot='select-trigger'] > svg:last-child {
+    opacity: 1;
+  }
+}
+/* A date reads as a fact, so at rest it is as wide as the date. The selects keep their column so
+   the values below them stay aligned. */
+.property-quiet [data-slot='popover-trigger'] {
+  width: auto;
+}
+/* A value nobody has set is not a value. It stays legible and reachable, and stops competing with
+   the facts the record does carry. */
+.property-empty
+  :is(
+    [data-slot='select-trigger'],
+    [data-slot='popover-trigger'],
+    [data-slot='input'],
+    [data-slot='textarea'],
+    [data-slot='native-select']
+  ) {
+  color: var(--color-text-muted);
+}
 /* Anything that appears in place rather than arriving with the page: the bulk bar when selection
    starts, a row created into a list already on screen. Same gesture as the page's own entrance, in
    the shorter time a single element earns. */
@@ -553,31 +622,15 @@
   [data-entity-list] {
     transition: filter 160ms ease;
   }
-  body:has(.entity-page-open) .app-sidebar:not(:hover):not(:focus-within),
-  .entity-page-open .entity-rail:not(:hover):not(:focus-within),
-  .entity-page-open [data-entity-list]:not(:hover):not(:focus-within),
-  .entity-page-creating [data-entity-list]:not(:hover):not(:focus-within) {
+  /* EP-B23: the softening lasts as long as the record is open. It used to lift under the pointer,
+     which made it flicker on the way to anything and cancelled it outright at the moment it was
+     for, since a record is opened by clicking a row. Keyboard focus is the one exception: tabbing
+     into the list has to leave it readable, and unlike a passing pointer that is a deliberate
+     move away from the record. */
+  body:has(.entity-page-open) .app-sidebar:not(:focus-within),
+  .entity-page-open .entity-rail:not(:focus-within),
+  .entity-page-open [data-entity-list]:not(:focus-within) {
     filter: blur(1.5px) saturate(0.7);
-  }
-  /* EP-B23: the softening above was defeated by the gesture that triggers it. A record is opened
-     by clicking a row, so the pointer is over the list and :hover suppressed the blur at the one
-     moment it existed for; it only appeared later, if the pointer happened to wander off. An
-     animation outranks a normal declaration in the cascade, so the surrounding surfaces hold the
-     dim for a beat after the panel opens whatever the pointer is doing, then release it and hand
-     back to the hover rule, which keeps a deliberate glance at the list working. */
-  body:has(.entity-page-open) .app-sidebar,
-  .entity-page-open .entity-rail,
-  .entity-page-open [data-entity-list] {
-    animation: hold-dim 1200ms var(--ease-rise);
-  }
-  @keyframes hold-dim {
-    0%,
-    70% {
-      filter: blur(1.5px) saturate(0.7);
-    }
-    100% {
-      filter: none;
-    }
   }
   /* EP-B23: while a record is open it is the only raised plane. The list and rail drop to the page
      ground rather than the panel rising above them, so the separation comes from the neutral
@@ -600,13 +653,6 @@
     .entity-rail,
     [data-entity-list] {
       transition: none;
-    }
-    /* The hold is hierarchy, not motion, so it stays; only the fade out of it goes. Stepping the
-       timing keeps the dim for the same beat and then drops it in one frame. */
-    body:has(.entity-page-open) .app-sidebar,
-    .entity-page-open .entity-rail,
-    .entity-page-open [data-entity-list] {
-      animation-timing-function: steps(1, end);
     }
   }
 }

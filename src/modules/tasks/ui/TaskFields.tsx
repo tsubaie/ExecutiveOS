@@ -18,12 +18,14 @@ export function TaskFields({
   disabled = false,
   heading = false,
   leading,
+  dueNote,
 }: {
   initial?: Initial;
   save?: (patch: Patch) => void;
   disabled?: boolean;
   heading?: boolean;
   leading?: ReactNode;
+  dueNote?: ReactNode;
 }) {
   const editor = useTaskText(
     { title: initial?.title ?? '', description: initial?.description ?? '' },
@@ -45,8 +47,7 @@ export function TaskFields({
       ) : (
         <TaskTitle editor={editor} />
       )}
-      <TaskProperties initial={initial} save={save} />
-      <TaskCommittee initial={initial} save={save} />
+      <TaskProperties initial={initial} save={save} quiet={heading} dueNote={dueNote} />
       <TaskDescription editor={editor} />
     </fieldset>
   );
@@ -99,23 +100,27 @@ function useDraftProperties(
 function TaskProperties({
   initial,
   save,
+  quiet,
+  dueNote,
 }: {
   initial: Initial | undefined;
   save: ((patch: Patch) => void) | undefined;
+  quiet: boolean;
+  dueNote?: ReactNode;
 }) {
   const t = useTranslations('tasks');
   const owners = useOwners();
   const { draft, change } = useDraftProperties(initial, save);
   return (
     <div className="grid gap-2">
-      <Property label={t('status')}>
+      <Property label={t('status')} quiet={quiet}>
         <StatusSelect
           name="status"
           value={draft.status}
           onChange={(next) => next !== 'completed' && change({ status: next }, { status: next })}
         />
       </Property>
-      <Property label={t('priority')}>
+      <Property label={t('priority')} quiet={quiet} empty={!draft.priority}>
         <PrioritySelect
           name="priority"
           value={draft.priority}
@@ -123,7 +128,7 @@ function TaskProperties({
         />
       </Property>
       <div className="min-w-0">
-        <Property label={t('owner')}>
+        <Property label={t('owner')} quiet={quiet} empty={!draft.ownerId}>
           <OwnerSelect
             name="ownerId"
             value={draft.ownerId}
@@ -134,18 +139,40 @@ function TaskProperties({
         </Property>
         {owners.error && <ErrorPanel error={owners.error} retry={() => void owners.refetch()} />}
       </div>
-      <Property label={t('dueDate')}>
-        <DueDateField
-          name="dueDate"
-          value={draft.dueDate}
-          onChange={(next) => change({ dueDate: next }, { dueDate: next })}
-        />
+      <Property label={t('dueDate')} quiet={quiet} empty={!draft.dueDate}>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="min-w-0">
+            <DueDateField
+              name="dueDate"
+              value={draft.dueDate}
+              onChange={(next) => change({ dueDate: next }, { dueDate: next })}
+            />
+          </span>
+          {dueNote}
+        </span>
       </Property>
+      <TaskCommittee initial={initial} save={save} quiet={quiet} />
     </div>
   );
 }
 
-function TaskCommittee({ initial, save }: { initial: Initial | undefined; save: ((patch: Patch) => void) | undefined }) {
+function TaskCommittee({
+  initial,
+  save,
+  quiet,
+}: {
+  initial: Initial | undefined;
+  save: ((patch: Patch) => void) | undefined;
+  quiet: boolean;
+}) {
   const committeeText = useTranslations('committees');
-  return <Property label={committeeText('committee')}><CommitteePicker value={initial?.committeeId ?? null} name="committeeId" onChange={(committeeId) => save?.({ committeeId })} /></Property>;
+  return (
+    <Property label={committeeText('committee')} quiet={quiet} empty={!initial?.committeeId}>
+      <CommitteePicker
+        value={initial?.committeeId ?? null}
+        name="committeeId"
+        onChange={(committeeId) => save?.({ committeeId })}
+      />
+    </Property>
+  );
 }

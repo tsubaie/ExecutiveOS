@@ -74,7 +74,13 @@ function PersonTextFields({ editor }: { editor: Editor }) {
   return (
     <>
       {textFields.options.map((key) => (
-        <Field key={key} label={t(key)} error={form.formState.errors[key]?.message}>
+        <Field
+          key={key}
+          label={t(key)}
+          error={form.formState.errors[key]?.message}
+          quiet={Boolean(save)}
+          empty={!form.getValues(key)}
+        >
           {(control) => (
             <Input
               dir="auto"
@@ -98,7 +104,7 @@ function PersonKind({ editor }: { editor: Editor }) {
   const c = useTranslations('common');
   const { form, save } = editor;
   return (
-    <Field label={t('kind')}>
+    <Field label={t('kind')} quiet={Boolean(save)}>
       {(control) => (
         <NativeSelect
           {...control}

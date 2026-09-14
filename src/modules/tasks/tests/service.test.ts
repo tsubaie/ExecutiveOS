@@ -33,6 +33,24 @@ beforeEach(async () => {
   user = User.parse(row);
 });
 afterAll(() => pool().end());
+it('TASKS-B03 a task reports the same band from its own record as it does from a list', async () => {
+  // The band is computed rather than stored, and the detail used to skip the computation and fall
+  // through to the schema default. The same task then read `overdue` in the list and `null` in its
+  // own record, so the panel could not say how late it was.
+  const { dayAt, addDays } = await import('@/core/time/tasks');
+  const today = dayAt('UTC');
+  const late = await create('Late', { dueDate: addDays(today, -3) });
+  await create('Due today', { dueDate: today, parentId: late.id });
+
+  const listed = await run((ctx) => service.listTasks(ctx, TaskListQuery.parse({ view: 'all' })));
+  const fromList = listed.data.find((task) => task.id === late.id);
+  const fromDetail = await run((ctx) => service.getTask(ctx, late.id));
+  expect(fromList?.band).toBe('overdue');
+  expect(fromDetail.band).toBe('overdue');
+  expect(fromDetail.band).toBe(fromList?.band);
+  // Children are records too, and the panel states their dates beside the parent's.
+  expect(fromDetail.subtasks[0]?.band).toBe('today');
+});
 it('TASKS-B05 lists tasks by source note and by whether they have one', async () => {
   const { createNote } = await import('@/modules/notes/service');
   const { NoteCreate } = await import('@/modules/notes/schema/validation');

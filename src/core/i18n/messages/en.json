@@ -36,6 +36,7 @@
     "outside": "This record is outside the current view.",
     "showAll": "Show in All",
     "next": "Next",
+    "previous": "Previous",
     "more": "Load more",
     "edit": "Edit",
     "back": "Back",
@@ -253,7 +254,7 @@
   },
   "tasks": {
     "title": "Task title",
-    "description": "Notes",
+    "description": "Description",
     "status": "Status",
     "priority": "Priority",
     "owner": "Assignee",
