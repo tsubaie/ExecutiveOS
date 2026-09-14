@@ -123,12 +123,17 @@ test('ADMIN-B04 last active administrator cannot be deactivated', async ({ page 
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(page.getByRole('alert')).toBeVisible();
 });
-test('HOME-B02 HOME-A03 disabled sections collapse and AI review section is absent', async ({
+test('HOME-B02 HOME-A03 uninstalled sections are omitted and AI review section is absent', async ({
   page,
 }) => {
   await loginAs(page, 'en');
-  await expect(page.getByText('Module not enabled', { exact: true })).toHaveCount(4);
+  // HOME-B02: a module the workspace never installed is left out rather than listed as empty.
+  await expect(page.getByText('Module not enabled', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Next meetings', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Attention KPIs', exact: true })).toHaveCount(0);
   await expect(page.getByText('Pending AI reviews', { exact: true })).toHaveCount(0);
+  // An installed section stays even with nothing in it.
+  await expect(page.getByRole('heading', { name: 'Overdue actions', exact: true })).toBeVisible();
   await page.getByRole('link', { name: /Your people directory/ }).click();
   await expect(page).toHaveURL(/people/);
 });

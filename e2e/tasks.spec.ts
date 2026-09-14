@@ -267,8 +267,10 @@ test('TASKS-B10 TASKS-B15 HOME-B01 assigned work appears in People and Home', as
   await expect(page.getByRole('link', { name: task.title, exact: true })).toBeVisible();
   await page.getByRole('link', { name: task.title, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`id=${task.id}`));
+  // HOME-B10: Home answers "who do I chase" rather than listing each held task, so the owner's row
+  // is what appears, opening their waiting queue.
   await page.goto('/home');
-  await expect(page.getByRole('link', { name: task.title, exact: true })).toBeVisible();
+  await expect(page.locator(`a[href*="ownerId=${owners[0].id}"]`)).toBeVisible();
 });
 
 for (const locale of ['en', 'ar']) {

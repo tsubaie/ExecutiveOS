@@ -6,6 +6,7 @@ import { insertUser } from '@/core/db/auth-repo';
 import { countQueries } from '@/core/db/query-log';
 import { id } from '@/core/db/ids';
 import { User } from '@/core/http/user-schema';
+import { dayAt } from '@/core/time/tasks';
 import { collectHomeSections, homeProviders, mergeJobs, serverModules } from '../registry';
 import type { Context } from '@/core/auth/session';
 import type { HomeSection, ServerManifest } from '../server-manifest';
@@ -40,7 +41,7 @@ describe('module registry', () => {
   it('HOME-B03 every home provider answers within two queries', async () => {
     for (const provide of homeProviders()) {
       const { queries, result } = await countQueries(() =>
-        db().transaction((tx) => provide({ db: tx, user, requestId: id() })),
+        db().transaction((tx) => provide({ db: tx, user, requestId: id() }, dayAt('UTC'))),
       );
       expect(queries).toBeLessThanOrEqual(2);
       expect(result.every((section) => section.href === null || section.href.startsWith('/'))).toBe(
@@ -83,15 +84,15 @@ describe('module registry', () => {
     });
     const ctx = { user, db: db(), requestId: id() } satisfies Context;
     const keys = ['today', 'overdue'];
-    const collected = await collectHomeSections(ctx, keys, [
+    const collected = await collectHomeSections(ctx, keys, dayAt('UTC'), [
       provider('today'),
       provider('overdue'),
     ]);
     expect([...collected.keys()]).toEqual(['today', 'overdue']);
     await expect(
-      collectHomeSections(ctx, keys, [provider('today'), provider('today')]),
+      collectHomeSections(ctx, keys, dayAt('UTC'), [provider('today'), provider('today')]),
     ).rejects.toThrow(/today is provided twice/u);
-    await expect(collectHomeSections(ctx, keys, [provider('kpis')])).rejects.toThrow(
+    await expect(collectHomeSections(ctx, keys, dayAt('UTC'), [provider('kpis')])).rejects.toThrow(
       /kpis is not a known section/u,
     );
   });

@@ -31,6 +31,6 @@ export type HomeSection = {
 };
 export type ServerManifest = {
   id: string;
-  homeSummary?: (ctx: Context) => Promise<HomeSection[]>;
+  homeSummary?: (ctx: Context, today: string) => Promise<HomeSection[]>;
   jobs?: Record<string, JobHandler>;
 };

@@ -72,7 +72,9 @@ const section = (key: string, enabled: boolean, count = 0, items: Item[] = []): 
 // The completion control talks to the shared query client, so scenarios render inside one.
 const mount = (node: React.ReactNode) =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       {node}
     </QueryClientProvider>,
   );
@@ -146,9 +148,7 @@ it('HOME-B10 makes waiting a chase list: one row per person with how much they h
   expect(screen.getByText('holding=1')).toBeTruthy();
 });
 it('HOME-B09 states how much of the overdue pile is a month or more old', () => {
-  show([
-    { ...section('overdue', true, 5, [item('Late', { date: '2026-09-02' })]), stale: 2 },
-  ]);
+  show([{ ...section('overdue', true, 5, [item('Late', { date: '2026-09-02' })]), stale: 2 }]);
   expect(screen.getByText('staleOverdue=2')).toBeTruthy();
 });
 it('HOME-B09 says nothing about ageing when nothing has aged', () => {
@@ -156,7 +156,7 @@ it('HOME-B09 says nothing about ageing when nothing has aged', () => {
   // An all-neutral mark carries no information, so the line is dropped rather than drawn empty.
   expect(screen.queryByText('staleOverdue=0')).toBeNull();
 });
-it('HOME-B09 shows a committee\'s late share beside its open work', () => {
+it("HOME-B09 shows a committee's late share beside its open work", () => {
   show([section('committees', true, 1, [item('Audit', { count: 4, overdue: 2 })])]);
   expect(screen.getByText('lateOpen=2')).toBeTruthy();
 });

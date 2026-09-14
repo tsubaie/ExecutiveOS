@@ -19,7 +19,9 @@ beforeAll(async () => {
   await migrateDatabase();
 });
 beforeEach(async () => {
-  await db().execute(sql`truncate tasks, notes, committees, people, users, settings, audit_log cascade`);
+  await db().execute(
+    sql`truncate tasks, notes, committees, people, users, settings, audit_log cascade`,
+  );
   user = User.parse(
     await insertUser(db(), {
       id: id(),
@@ -68,30 +70,50 @@ it('HOME-B02 HOME-B03 aggregates installed task sections, counts people, and col
 });
 
 it('COMM-B06 HOME-B01 lists active committees carrying open work, busiest first', async () => {
-  const busy = await run((ctx) => createCommittee(ctx, CommitteeCreate.parse({ name: 'Consumer protection' })));
-  const quiet = await run((ctx) => createCommittee(ctx, CommitteeCreate.parse({ name: 'Digital transactions' })));
-  const idle = await run((ctx) => createCommittee(ctx, CommitteeCreate.parse({ name: 'No open work' })));
-  const archived = await run((ctx) => createCommittee(ctx, CommitteeCreate.parse({ name: 'Archived committee' })));
+  const busy = await run((ctx) =>
+    createCommittee(ctx, CommitteeCreate.parse({ name: 'Consumer protection' })),
+  );
+  const quiet = await run((ctx) =>
+    createCommittee(ctx, CommitteeCreate.parse({ name: 'Digital transactions' })),
+  );
+  const idle = await run((ctx) =>
+    createCommittee(ctx, CommitteeCreate.parse({ name: 'No open work' })),
+  );
+  const archived = await run((ctx) =>
+    createCommittee(ctx, CommitteeCreate.parse({ name: 'Archived committee' })),
+  );
   const open = (title: string, committeeId: string) =>
     run((ctx) => createTask(ctx, TaskCreate.parse({ title, committeeId })));
   await open('First', busy.id);
   await open('Second', busy.id);
   await open('Third', quiet.id);
   await open('Archived work', archived.id);
-  await run((ctx) => patchCommittee(ctx, archived.id, { status: 'archived', revision: archived.revision }));
+  await run((ctx) =>
+    patchCommittee(ctx, archived.id, { status: 'archived', revision: archived.revision }),
+  );
   const home = await run((ctx) => homeSummary(ctx));
   const committees = home.sections.find((item) => item.key === 'committees');
   expect(committees).toMatchObject({ enabled: true, count: 2 });
-  expect(committees?.items.map((item) => item.title)).toEqual(['Consumer protection', 'Digital transactions']);
+  expect(committees?.items.map((item) => item.title)).toEqual([
+    'Consumer protection',
+    'Digital transactions',
+  ]);
   expect(committees?.items.some((item) => item.title === 'No open work')).toBe(false);
   expect(idle.id).toBeTruthy();
 });
 it('COMM-B06 drops a committee from the section once it is trashed', async () => {
-  const committee = await run((ctx) => createCommittee(ctx, CommitteeCreate.parse({ name: 'Temporary' })));
-  await run((ctx) => createTask(ctx, TaskCreate.parse({ title: 'Open item', committeeId: committee.id })));
+  const committee = await run((ctx) =>
+    createCommittee(ctx, CommitteeCreate.parse({ name: 'Temporary' })),
+  );
+  await run((ctx) =>
+    createTask(ctx, TaskCreate.parse({ title: 'Open item', committeeId: committee.id })),
+  );
   const before = await run((ctx) => homeSummary(ctx));
   expect(before.sections.find((item) => item.key === 'committees')).toMatchObject({ count: 1 });
   await run((ctx) => removeCommittee(ctx, committee.id, committee.revision));
   const after = await run((ctx) => homeSummary(ctx));
-  expect(after.sections.find((item) => item.key === 'committees')).toMatchObject({ count: 0, items: [] });
+  expect(after.sections.find((item) => item.key === 'committees')).toMatchObject({
+    count: 0,
+    items: [],
+  });
 });

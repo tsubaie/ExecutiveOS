@@ -39,6 +39,9 @@ The one screen the principal opens first. It is a set of queries over existing m
   block given one. Below it the sections are not equals: what the principal is accountable for
   carries the wide column, and reference material (recent notes) sits quieter and narrower beside
   it. Overdue is the only state that uses the danger token, and only above zero.
+- HOME-B11 The page carries one line into the people directory with the headcount. It used to be a
+  panel of its own beside the sections, which spent a column on a single number; the entry point and
+  the count are worth keeping, the panel was not.
 - HOME-B09 Sections that aggregate say how the pile is shaped, not only how big it is. The overdue
   section reports how much of it is a month or more past due, which separates a backlog from a mess,
   and each committee row shows how far along it is as a fixed-width meter with its fraction beside it,

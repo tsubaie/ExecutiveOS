@@ -25,7 +25,12 @@ export function HomePage() {
   const reference = rest.filter(ambient);
   return (
     <div className={page}>
-      <Greeting name={data.name} principal={data.principal} live={live} />
+      <Greeting
+        name={data.name}
+        principal={data.principal}
+        peopleCount={data.peopleCount}
+        live={live}
+      />
       {live.length > 0 ? (
         <>
           {lead && <Stream section={lead} lead />}

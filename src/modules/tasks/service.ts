@@ -236,7 +236,9 @@ export async function groupTasks(ctx: Context, input: z.infer<typeof Group>) {
     dueDate: null,
     ownerId: null,
     sourceNoteId: null,
-    committeeId: children.every((child) => child.committeeId === children[0]?.committeeId) ? children[0]?.committeeId ?? null : null,
+    committeeId: children.every((child) => child.committeeId === children[0]?.committeeId)
+      ? (children[0]?.committeeId ?? null)
+      : null,
     parentId: null,
   });
   for (const [sortOrder, child] of children.entries())
@@ -262,9 +264,8 @@ export async function reorderTasks(ctx: Context, input: z.infer<typeof Reorder>)
   });
   return getTask(ctx, input.parentId);
 }
-export async function homeSummary(ctx: Context): Promise<HomeSection[]> {
-  const timezone = await getSetting(ctx.db, 'workspace.timezone');
-  const row = await repo.selectHomeSummary(ctx.db, dayAt(timezone));
+export async function homeSummary(ctx: Context, today: string): Promise<HomeSection[]> {
+  const row = await repo.selectHomeSummary(ctx.db, today);
   const task = z.array(
     z.object({
       id: z.uuid(),
