@@ -4,16 +4,16 @@ import { useTranslations } from 'next-intl';
 import { EntityCreateForm } from '@/ui/entity/EntityCreateForm';
 import type { CreateApi } from '@/ui/entity/types';
 import { KpiCreate, type Kpi } from '../schema/validation';
-import { KpiFields, NO_OBJECTIVE, splitTeams } from './KpiFields';
+import { KpiFields, NO_OBJECTIVE, NO_OWNER } from './KpiFields';
 const blank: KpiCreate = {
   name: '',
-  unit: '',
+  unit: 'count',
   direction: 'higher',
+  frequency: 'quarterly',
   category: '',
   objectiveId: null,
-  teams: [],
+  ownerId: null,
   notes: '',
-  freshnessDays: 120,
 };
 export function CreateKpi({ api }: { api: CreateApi<KpiCreate, Kpi> }) {
   const t = useTranslations('kpis');
@@ -28,11 +28,11 @@ export function CreateKpi({ api }: { api: CreateApi<KpiCreate, Kpi> }) {
           name: text('name'),
           unit: text('unit'),
           direction: text('direction'),
+          frequency: text('frequency'),
           category: text('category'),
           objectiveId: text('objectiveId') === NO_OBJECTIVE ? null : text('objectiveId'),
-          teams: splitTeams(text('teams')),
+          ownerId: text('ownerId') === NO_OWNER ? null : text('ownerId'),
           notes: text('notes'),
-          freshnessDays: Number(text('freshnessDays')),
         }),
       );
     } catch (failure) {

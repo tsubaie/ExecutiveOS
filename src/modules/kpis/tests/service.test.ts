@@ -3,7 +3,7 @@ import { db, pool } from '@/core/db/client';
 import { migrateDatabase } from '@/core/db/migrate';
 import { writeSetting } from '@/core/db/settings-repo';
 import { addDays } from '@/core/time/days';
-import { quarterOf, previousQuarter, quarterLabel } from '@/core/time/kpis';
+import { periodOf, shiftPeriod } from '@/core/time/kpis';
 import { KpiListQuery } from '../schema/validation';
 import * as service from '../service';
 import { harness, workspaceToday } from './fixtures';
@@ -13,7 +13,7 @@ const list = (query: Partial<KpiListQuery> = {}) =>
 beforeAll(() => migrateDatabase());
 beforeEach(() => harness.reset());
 afterAll(() => pool().end());
-const quarterOfToday = async () => quarterOf(await workspaceToday());
+const periodOfToday = async () => periodOf(await workspaceToday(), 'quarterly');
 it('KPIS-I01 KPIS-B09 a second reading for the same day is a conflict that names the row to overwrite', async () => {
   const today = await workspaceToday();
   const kpi = await harness.kpi('Revenue');
@@ -44,7 +44,7 @@ it('KPIS-B05 KPIS-B04 KPIS-B08 the record carries the last eight readings, the p
   const kpi = await harness.kpi('Throughput');
   for (let index = 9; index >= 0; index -= 1)
     await harness.reading(kpi.id, addDays(today, -index * 3), 10 + index);
-  const before = previousQuarter(await quarterOfToday());
+  const before = shiftPeriod(await periodOfToday(), -1, 'quarterly');
   await harness.targets(kpi.id, [{ ...before, targetValue: 5 }]);
   const detail = await run((ctx) => service.getKpiDetail(ctx, kpi.id));
   expect(detail.meta.sparkline).toHaveLength(8);
@@ -52,18 +52,17 @@ it('KPIS-B05 KPIS-B04 KPIS-B08 the record carries the last eight readings, the p
   expect(detail.meta.current).toBe(10);
   expect(detail.meta.previous).toBe(11);
   expect(detail.meta.percentChange).toBeCloseTo(-1 / 11);
-  expect(detail.previousQuarter?.label).toBe(quarterLabel(before));
-  expect(detail.previousQuarter?.target).toBe(5);
+  expect(detail.previousPeriod).toMatchObject({ ...before, target: 5 });
   expect(detail.readings).toHaveLength(10);
 });
 it('KPIS-I02 KPIS-A05 setting a year writes four quarters and replaces the ones already there', async () => {
   const kpi = await harness.kpi('Margin');
-  const { year } = await quarterOfToday();
-  const items = [1, 2, 3, 4].map((quarter) => ({ year, quarter, targetValue: quarter * 10 }));
+  const { year } = await periodOfToday();
+  const items = [1, 2, 3, 4].map((period) => ({ year, period, targetValue: period * 10 }));
   const detail = await harness.targets(kpi.id, items);
   expect(detail.targets).toHaveLength(4);
-  const current = await quarterOfToday();
-  expect(detail.meta.effectiveTarget).toBe(current.quarter * 10);
+  const current = await periodOfToday();
+  expect(detail.meta.effectiveTarget).toBe(current.period * 10);
   const again = await harness.targets(kpi.id, [{ ...current, targetValue: 999 }]);
   expect(again.targets).toHaveLength(4);
   expect(again.meta.effectiveTarget).toBe(999);
@@ -77,7 +76,7 @@ it('KPIS-B11 KPIS-A05 a target changes the status on the next read without touch
   const kpi = await harness.kpi('Backlog', { direction: 'lower' });
   await harness.reading(kpi.id, today, 50);
   expect((await run((ctx) => service.getKpi(ctx, kpi.id))).meta.status).toBe('no_target');
-  const current = await quarterOfToday();
+  const current = await periodOfToday();
   const withTarget = await harness.targets(kpi.id, [{ ...current, targetValue: 60 }]);
   expect(withTarget.meta.status).toBe('on_target');
   // The status is derived, never stored: the entity itself was not written to.
@@ -87,7 +86,7 @@ it('KPIS-B10 changing the workspace thresholds changes statuses across the list'
   const today = await workspaceToday();
   const kpi = await harness.kpi('Adoption');
   await harness.reading(kpi.id, today, 90);
-  await harness.targets(kpi.id, [{ ...(await quarterOfToday()), targetValue: 100 }]);
+  await harness.targets(kpi.id, [{ ...(await periodOfToday()), targetValue: 100 }]);
   expect((await list()).data[0]?.meta.status).toBe('near_target');
   const actor = harness.user;
   if (!actor) throw new Error('expected an actor');
@@ -101,7 +100,7 @@ it('KPIS-B10 changing the workspace thresholds changes statuses across the list'
 });
 it('KPIS-B07 views, counts and the severity sort rank what needs attention first', async () => {
   const today = await workspaceToday();
-  const current = await quarterOfToday();
+  const current = await periodOfToday();
   const on = await harness.kpi('Zulu on target');
   await harness.reading(on.id, today, 100);
   await harness.targets(on.id, [{ ...current, targetValue: 100 }]);
@@ -177,7 +176,7 @@ it('KPIS-I03 deleting a KPI hides its readings and targets under one operation a
   const kpi = await harness.kpi('Retire me');
   const earlier = await harness.reading(kpi.id, addDays(today, -5), 1);
   await harness.reading(kpi.id, today, 2);
-  await harness.targets(kpi.id, [{ ...(await quarterOfToday()), targetValue: 9 }]);
+  await harness.targets(kpi.id, [{ ...(await periodOfToday()), targetValue: 9 }]);
   const [oldest] = earlier.readings;
   if (!oldest) throw new Error('expected a reading');
   await run((ctx) => service.removeReading(ctx, kpi.id, oldest.id));
@@ -238,14 +237,13 @@ it('KPIS-B07 facets narrow the list and the counts follow the narrowed set', asy
   const inside = await harness.kpi('Inside', {
     objectiveId: objective.id,
     category: 'Finance',
-    teams: ['Ops'],
   });
   await harness.reading(inside.id, today, 1);
   await harness.kpi('Outside', { category: 'People' });
   expect((await list({ view: 'all', category: 'Finance' })).data.map((row) => row.id)).toEqual([
     inside.id,
   ]);
-  expect((await list({ view: 'all', team: 'Ops' })).meta.counts.all).toBe(1);
+
   expect((await list({ view: 'all', objectiveId: objective.id })).meta.counts.no_data).toBe(0);
   expect((await list({ view: 'all', objectiveId: 'none' })).data.map((row) => row.name)).toEqual([
     'Outside',
@@ -253,12 +251,12 @@ it('KPIS-B07 facets narrow the list and the counts follow the narrowed set', asy
   expect((await list({ view: 'all', q: 'Outside' })).meta.counts.all).toBe(1);
   const facets = await run((ctx) => service.kpiFacets(ctx));
   expect(facets.categories).toEqual(['Finance', 'People']);
-  expect(facets.teams).toEqual(['Ops']);
+  expect(facets.owners).toEqual([]);
   expect(facets.objectives.map((row) => row.name)).toEqual(['Grow']);
 });
 it('KPIS-B12 HOME-B01 the home section carries the KPIs that need attention, worst first', async () => {
   const today = await workspaceToday();
-  const current = await quarterOfToday();
+  const current = await periodOfToday();
   const healthy = await harness.kpi('Healthy');
   await harness.reading(healthy.id, today, 100);
   await harness.targets(healthy.id, [{ ...current, targetValue: 100 }]);

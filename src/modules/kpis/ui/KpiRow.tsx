@@ -15,7 +15,7 @@ export function KpiRow({ kpi }: { kpi: Kpi }) {
       ? t('archivedObjective', { name: kpi.objectiveName })
       : kpi.objectiveName
     : null;
-  const context = [kpi.category, objective].filter(Boolean).join(' · ');
+  const context = [kpi.category, objective, kpi.ownerName].filter(Boolean).join(' · ');
   return (
     <span className="flex min-w-0 flex-1 items-center gap-3">
       <span
@@ -34,8 +34,8 @@ export function KpiRow({ kpi }: { kpi: Kpi }) {
       </span>
       <span
         className={cn(
-          'shrink-0 rounded-full bg-surface-raised px-2 py-1 text-xs font-normal',
-          labels.ink(kpi.meta.status),
+          'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium',
+          labels.chip(kpi.meta.status),
         )}
       >
         {labels.status(kpi.meta.status)}
@@ -51,11 +51,6 @@ export function KpiTrail({ kpi }: { kpi: Kpi }) {
   const { meta } = kpi;
   return (
     <span className="flex items-center gap-3 text-xs text-text-muted">
-      {meta.sparkline.length > 1 && (
-        <span className="hidden @2xl:inline">
-          <Sparkline points={meta.sparkline} label={t('trendOf', { name: kpi.name })} />
-        </span>
-      )}
       {meta.percentChange !== null && (
         <span
           className={cn(
@@ -76,15 +71,24 @@ export function KpiTrail({ kpi }: { kpi: Kpi }) {
         <span className="text-sm font-semibold tabular-nums text-text">
           {meta.current === null ? t('noReading') : labels.value(meta.current, kpi.unit)}
         </span>
-        {meta.effectiveTarget !== null && meta.effectiveTargetLabel && (
+        {meta.effectiveTarget !== null && meta.effectiveTargetPeriod && (
           <span className="tabular-nums">
             {t('targetOf', {
               value: labels.value(meta.effectiveTarget, kpi.unit),
-              quarter: labels.quarter(meta.effectiveTargetLabel),
+              quarter: labels.period(meta.effectiveTargetPeriod, kpi.frequency),
             })}
           </span>
         )}
       </span>
+      {meta.sparkline.length > 1 && (
+        <span className="hidden @2xl:inline">
+          <Sparkline
+            points={meta.sparkline}
+            tone={labels.tone(meta.status)}
+            label={t('trendOf', { name: kpi.name })}
+          />
+        </span>
+      )}
     </span>
   );
 }

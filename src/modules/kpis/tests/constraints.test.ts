@@ -10,9 +10,9 @@ const reading = (kpiId: string, day: string, value = 1) =>
   db().execute(
     sql`insert into kpi_readings (id, kpi_id, reading_date, value) values (gen_random_uuid(), ${kpiId}::uuid, ${day}::date, ${value})`,
   );
-const target = (kpiId: string, year: number, quarter: number, value = 1) =>
+const target = (kpiId: string, year: number, period: number, value = 1) =>
   db().execute(
-    sql`insert into kpi_targets (id, kpi_id, year, quarter, target_value) values (gen_random_uuid(), ${kpiId}::uuid, ${year}, ${quarter}, ${value})`,
+    sql`insert into kpi_targets (id, kpi_id, year, period, target_value) values (gen_random_uuid(), ${kpiId}::uuid, ${year}, ${period}, ${value})`,
   );
 it('KPIS-I01 the database keeps one live reading per KPI per date', async () => {
   const today = await workspaceToday();
@@ -27,15 +27,17 @@ it('KPIS-I01 the database keeps one live reading per KPI per date', async () => 
   );
   await expect(reading(kpi.id, today, 2)).resolves.toBeTruthy();
 });
-it('KPIS-I02 the database keeps one live target per KPI per quarter and rejects a fifth quarter', async () => {
+it('KPIS-I02 the database keeps one live target per KPI per period and rejects a thirteenth', async () => {
   const kpi = await harness.kpi('Targeted');
   await expect(target(kpi.id, 2026, 3)).resolves.toBeTruthy();
   await expect(target(kpi.id, 2026, 3, 2)).rejects.toMatchObject({
-    cause: { constraint: 'kpi_targets_quarter_unique' },
+    cause: { constraint: 'kpi_targets_period_unique' },
   });
-  await expect(target(kpi.id, 2026, 5)).rejects.toMatchObject({
-    cause: { constraint: 'kpi_targets_quarter_check' },
+  await expect(target(kpi.id, 2026, 13)).rejects.toMatchObject({
+    cause: { constraint: 'kpi_targets_period_check' },
   });
+  // Twelve is a month of a monthly KPI, so the column has to reach it.
+  await expect(target(kpi.id, 2026, 12)).resolves.toBeTruthy();
   await expect(target(kpi.id, 2026, 4, -5)).resolves.toBeTruthy();
 });
 it('KPIS-I01 KPIS-I02 values outside the documented magnitude are rejected by the database', async () => {
@@ -52,7 +54,7 @@ it('KPIS-I01 KPIS-I02 values outside the documented magnitude are rejected by th
   });
   await expect(target(kpi.id, 2026, 2, -9_999_999_999.9999)).resolves.toBeTruthy();
 });
-it('KPIS-B01 KPIS-B06 the database holds the direction, freshness and team limits a KPI is read by', async () => {
+it('KPIS-B01 KPIS-B06 the database holds the direction, cadence and unit a KPI is read by', async () => {
   const insert = (column: string, value: string) =>
     db().execute(
       sql.raw(
@@ -62,11 +64,11 @@ it('KPIS-B01 KPIS-B06 the database holds the direction, freshness and team limit
   await expect(insert('direction', `'sideways'`)).rejects.toMatchObject({
     cause: { constraint: 'kpis_direction_check' },
   });
-  await expect(insert('freshness_days', '0')).rejects.toMatchObject({
-    cause: { constraint: 'kpis_freshness_check' },
+  await expect(insert('frequency', `'weekly'`)).rejects.toMatchObject({
+    cause: { constraint: 'kpis_frequency_check' },
   });
-  await expect(insert('teams', `'{a,b,c,d,e,f,g,h,i,j,k}'::text[]`)).rejects.toMatchObject({
-    cause: { constraint: 'kpis_teams_check' },
+  await expect(insert('unit', `'widgets'`)).rejects.toMatchObject({
+    cause: { constraint: 'kpis_unit_check' },
   });
   await expect(insert('direction', `'lower'`)).resolves.toBeTruthy();
 });

@@ -8,14 +8,16 @@ import { Input } from '@/ui/primitives/input';
 import { Field } from '@/ui/layout/Field';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { useToday, useYear } from '@/ui/format';
-import { quarterOf } from '@/core/time/kpis';
+import { periodOf, periodsPerYear, type Frequency } from '@/core/time/kpis';
 import { useKpiLabels } from './use-kpi-labels';
 import { useTargetMutations } from './queries';
 import type { KpiDetail, Target } from '../schema/validation';
-const QUARTERS = [1, 2, 3, 4];
 type Remove = (targetId: string) => void;
+const periodsOf = (frequency: Frequency) =>
+  Array.from({ length: periodsPerYear(frequency) }, (_, index) => index + 1);
 // KPIS-B05 and KPIS-B08: targets are set a year at a time, because that is how a plan is written.
-// The four inputs are one row in quarter order, so the tab key walks Q1 to Q4.
+// The inputs run in period order — twelve months, four quarters or the year itself — so the tab key
+// walks the year the way the KPI is actually reported.
 export function KpiTargets({ kpi, editable }: { kpi: KpiDetail; editable: boolean }) {
   const t = useTranslations('kpis');
   const mutations = useTargetMutations(kpi.id);
@@ -42,15 +44,16 @@ function TargetsForm({ kpi }: { kpi: KpiDetail }) {
   const c = useTranslations('common');
   const today = useToday();
   const mutations = useTargetMutations(kpi.id);
-  const [chosen, setChosen] = useState(quarterOf(today).year);
-  const [draft, setDraft] = useState(() => valuesFor(kpi.targets, quarterOf(today).year));
+  const periods = periodsOf(kpi.frequency);
+  const [chosen, setChosen] = useState(periodOf(today, kpi.frequency).year);
+  const [draft, setDraft] = useState(() =>
+    valuesFor(kpi.targets, periodOf(today, kpi.frequency).year, periods),
+  );
   const save = useMutation({
     mutationFn: () => {
-      const items = QUARTERS.map((quarter) => ({
-        year: chosen,
-        quarter,
-        targetValue: Number(draft[quarter - 1]),
-      })).filter((item) => draft[item.quarter - 1] !== '' && Number.isFinite(item.targetValue));
+      const items = periods
+        .map((period) => ({ year: chosen, period, targetValue: Number(draft[period - 1]) }))
+        .filter((item) => draft[item.period - 1] !== '' && Number.isFinite(item.targetValue));
       if (!items.length) throw new Error(c('error'));
       return mutations.put({ items });
     },
@@ -63,7 +66,7 @@ function TargetsForm({ kpi }: { kpi: KpiDetail }) {
         save.mutate();
       }}
     >
-      <div className="grid items-end gap-3 @md:grid-cols-[7rem_repeat(4,minmax(0,1fr))_auto]">
+      <div className="flex flex-wrap items-end gap-3">
         <Field label={t('year')}>
           {(control) => (
             <Input
@@ -71,16 +74,17 @@ function TargetsForm({ kpi }: { kpi: KpiDetail }) {
               type="number"
               min={1900}
               max={2999}
+              className="w-24"
               value={chosen}
               onChange={(event) => {
                 const year = Number(event.target.value);
                 setChosen(year);
-                setDraft(valuesFor(kpi.targets, year));
+                setDraft(valuesFor(kpi.targets, year, periods));
               }}
             />
           )}
         </Field>
-        <QuarterInputs draft={draft} change={setDraft} />
+        <PeriodInputs frequency={kpi.frequency} periods={periods} draft={draft} change={setDraft} />
         <Button type="submit" disabled={save.isPending}>
           {t('setYear')}
         </Button>
@@ -89,28 +93,31 @@ function TargetsForm({ kpi }: { kpi: KpiDetail }) {
     </form>
   );
 }
-function QuarterInputs({
+function PeriodInputs({
+  frequency,
+  periods,
   draft,
   change,
 }: {
+  frequency: Frequency;
+  periods: number[];
   draft: string[];
   change: (next: (values: string[]) => string[]) => void;
 }) {
-  const t = useTranslations('kpis');
+  const labels = useKpiLabels();
   return (
     <>
-      {QUARTERS.map((quarter) => (
-        <Field key={quarter} label={t('quarterShort', { quarter })}>
+      {periods.map((period) => (
+        <Field key={period} label={labels.periodShort(period, frequency)}>
           {(control) => (
             <Input
               {...control}
               inputMode="decimal"
-              value={draft[quarter - 1]}
+              className="w-20"
+              value={draft[period - 1]}
               onChange={(event) =>
                 change((values) =>
-                  values.map((value, index) =>
-                    index === quarter - 1 ? event.target.value : value,
-                  ),
+                  values.map((value, index) => (index === period - 1 ? event.target.value : value)),
                 )
               }
             />
@@ -130,52 +137,56 @@ function TargetsTable({
   remove?: Remove | undefined;
 }) {
   const t = useTranslations('kpis');
+  const labels = useKpiLabels();
   const year = useYear();
+  const periods = periodsOf(kpi.frequency);
   return (
-    <table className="w-full text-sm">
-      <caption className="sr-only">{t('targetsCaption', { name: kpi.name })}</caption>
-      <thead className="text-xs text-text-muted">
-        <tr>
-          <th scope="col" className="py-2 text-start font-normal">
-            {t('year')}
-          </th>
-          {QUARTERS.map((quarter) => (
-            <th key={quarter} scope="col" className="py-2 text-end font-normal">
-              {t('quarterShort', { quarter })}
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <caption className="sr-only">{t('targetsCaption', { name: kpi.name })}</caption>
+        <thead className="text-xs text-text-muted">
+          <tr>
+            <th scope="col" className="py-2 text-start font-normal">
+              {t('year')}
             </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {years.map((row) => (
-          <tr key={row} className="border-t">
-            <th scope="row" className="py-2 text-start font-normal tabular-nums">
-              {year(row)}
-            </th>
-            {QUARTERS.map((quarter) => (
-              <TargetCell key={quarter} kpi={kpi} year={row} quarter={quarter} remove={remove} />
+            {periods.map((period) => (
+              <th key={period} scope="col" className="py-2 text-end font-normal">
+                {labels.periodShort(period, kpi.frequency)}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {years.map((row) => (
+            <tr key={row} className="border-t">
+              <th scope="row" className="py-2 text-start font-normal tabular-nums">
+                {year(row)}
+              </th>
+              {periods.map((period) => (
+                <TargetCell key={period} kpi={kpi} year={row} period={period} remove={remove} />
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 function TargetCell({
   kpi,
   year,
-  quarter,
+  period,
   remove,
 }: {
   kpi: KpiDetail;
   year: number;
-  quarter: number;
+  period: number;
   remove?: Remove | undefined;
 }) {
   const t = useTranslations('kpis');
   const labels = useKpiLabels();
   const digits = useYear();
-  const target = kpi.targets.find((item) => item.year === year && item.quarter === quarter);
+  const target = kpi.targets.find((item) => item.year === year && item.period === period);
   if (!target)
     return (
       <td className="py-2 text-end text-text-muted">
@@ -183,14 +194,17 @@ function TargetCell({
       </td>
     );
   return (
-    <td className="py-2 text-end tabular-nums">
+    <td className="py-2 text-end whitespace-nowrap tabular-nums">
       <span className="inline-flex items-center gap-1">
         {labels.value(target.targetValue, kpi.unit)}
         {remove && (
           <Button
             variant="ghost"
             size="sm"
-            aria-label={t('deleteTarget', { quarter, year: digits(year) })}
+            aria-label={t('deleteTarget', {
+              quarter: labels.periodShort(period, kpi.frequency),
+              year: digits(year),
+            })}
             onClick={() => remove(target.id)}
           >
             <Trash2 className="size-3.5" aria-hidden={true} />
@@ -200,9 +214,9 @@ function TargetCell({
     </td>
   );
 }
-function valuesFor(targets: Target[], year: number) {
-  return QUARTERS.map((quarter) => {
-    const match = targets.find((target) => target.year === year && target.quarter === quarter);
+function valuesFor(targets: Target[], year: number, periods: number[]) {
+  return periods.map((period) => {
+    const match = targets.find((target) => target.year === year && target.period === period);
     return match ? String(match.targetValue) : '';
   });
 }

@@ -143,13 +143,13 @@ function ReadingsTable({
       <caption className="sr-only">{t('readingsCaption', { name: kpi.name })}</caption>
       <thead className="text-xs text-text-muted">
         <tr>
-          <th scope="col" className="py-2 text-start font-normal">
+          <th scope="col" className="px-2 py-2 text-start font-normal">
             {t('date')}
           </th>
-          <th scope="col" className="py-2 text-end font-normal">
+          <th scope="col" className="px-2 py-2 text-end font-normal">
             {t('reading')}
           </th>
-          <th scope="col" className="py-2 text-start font-normal">
+          <th scope="col" className="px-2 py-2 text-start font-normal">
             {t('note')}
           </th>
           {editable && (
@@ -173,6 +173,35 @@ function ReadingsTable({
     </table>
   );
 }
+// The note is the only part of a reading that is edited in place, so it carries its own save.
+function ReadingNote({
+  kpiId,
+  reading,
+  editable,
+}: {
+  kpiId: string;
+  reading: Reading;
+  editable: boolean;
+}) {
+  const t = useTranslations('kpis');
+  const mutations = useReadingMutations(kpiId);
+  if (!editable) return <span dir="auto">{reading.note}</span>;
+  return (
+    <Input
+      aria-label={t('note')}
+      dir="auto"
+      maxLength={2000}
+      defaultValue={reading.note}
+      onBlur={(event) => {
+        if (event.target.value !== reading.note)
+          void mutations.patch(reading.id, {
+            revision: reading.revision,
+            note: event.target.value,
+          });
+      }}
+    />
+  );
+}
 function ReadingRow({
   kpi,
   reading,
@@ -187,10 +216,9 @@ function ReadingRow({
   const t = useTranslations('kpis');
   const labels = useKpiLabels();
   const date = usePlainDate();
-  const mutations = useReadingMutations(kpi.id);
   return (
     <tr className="border-t">
-      <td className="py-2 whitespace-nowrap">
+      <td className="px-2 py-2 whitespace-nowrap">
         <time dateTime={reading.readingDate}>{date(reading.readingDate)}</time>
         {reading.future && (
           <span className="ms-2 rounded-full bg-surface-raised px-1.5 py-0.5 text-xs text-text-muted">
@@ -198,28 +226,14 @@ function ReadingRow({
           </span>
         )}
       </td>
-      <td className="py-2 text-end tabular-nums">{labels.value(reading.value, kpi.unit)}</td>
-      <td className="py-2">
-        {editable ? (
-          <Input
-            aria-label={t('note')}
-            dir="auto"
-            maxLength={2000}
-            defaultValue={reading.note}
-            onBlur={(event) => {
-              if (event.target.value !== reading.note)
-                void mutations.patch(reading.id, {
-                  revision: reading.revision,
-                  note: event.target.value,
-                });
-            }}
-          />
-        ) : (
-          <span dir="auto">{reading.note}</span>
-        )}
+      <td className="px-2 py-2 text-end whitespace-nowrap tabular-nums">
+        {labels.value(reading.value, kpi.unit)}
+      </td>
+      <td className="px-2 py-2">
+        <ReadingNote kpiId={kpi.id} reading={reading} editable={editable} />
       </td>
       {editable && (
-        <td className="py-2 text-end">
+        <td className="px-2 py-2 text-end">
           <Button
             variant="ghost"
             size="sm"

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { StatusThresholds } from '@/core/config/settings';
 import { dayAt } from '@/core/time/days';
-import { quarterOf, quarterRange, previousQuarter, quarterLabel } from '@/core/time/kpis';
+import { periodOf, periodRange, periodsBehind, shiftPeriod } from '@/core/time/kpis';
 import { extremeZones } from '../../../../tests/fixtures/timezones';
 import {
   computeKpiStatus,
@@ -24,7 +24,7 @@ const status = (input: Partial<StatusInput> & { current: number | null; target: 
   computeKpiStatus({
     currentDate: TODAY,
     direction: 'higher',
-    freshnessDays: 120,
+    frequency: 'quarterly',
     thresholds,
     today: TODAY,
     ...input,
@@ -54,9 +54,20 @@ describe('KPIS-B01 KPIS-A01 the status bands run in the direction the KPI is mea
 it('KPIS-B01 KPIS-A02 a missing, stale or untargeted reading is named rather than scored', () => {
   expect(status({ current: null, target: 100 })).toBe('no_data');
   expect(status({ current: 100, currentDate: null, target: 100 })).toBe('no_data');
-  // "Older than freshness": a reading exactly that many days old is still current.
+  // One missed report is lag, two is nobody maintaining it: on 2026-09-10 a quarterly KPI read in
+  // Q2 is still current and one read in Q1 is not.
   expect(status({ current: 100, target: 100, currentDate: '2026-05-13' })).toBe('on_target');
-  expect(status({ current: 100, target: 100, currentDate: '2026-05-12' })).toBe('stale');
+  expect(status({ current: 100, target: 100, currentDate: '2026-03-31' })).toBe('stale');
+  // A monthly measure falls behind four times faster, an annual one four times slower.
+  const monthly = { frequency: 'monthly' as const, current: 100, target: 100 };
+  expect(status({ ...monthly, currentDate: '2026-08-01' })).toBe('on_target');
+  expect(status({ ...monthly, currentDate: '2026-07-31' })).toBe('stale');
+  expect(
+    status({ current: 100, target: 100, frequency: 'annual', currentDate: '2025-01-02' }),
+  ).toBe('on_target');
+  expect(
+    status({ current: 100, target: 100, frequency: 'annual', currentDate: '2024-12-31' }),
+  ).toBe('stale');
   expect(status({ current: 100, target: null })).toBe('no_target');
   // Freshness is checked before the target, so a stale reading never reads as "no target".
   expect(status({ current: 100, target: null, currentDate: '2026-01-01' })).toBe('stale');
@@ -71,48 +82,63 @@ it('KPIS-B01 KPIS-A03 a zero or opposite-signed target has no near band', () => 
   // Both negative: the ratio is meaningful again, so the bands apply.
   expect(status({ current: -99, target: -100, direction: 'higher' })).toBe('on_target');
 });
-it('KPIS-B02 the effective target is this quarter, else the earliest one after it', () => {
-  const quarter = { year: 2026, quarter: 3 };
+it('KPIS-B02 the effective target is this period, else the earliest one after it', () => {
+  const period = { year: 2026, period: 3 };
   const targets = [
-    { year: 2026, quarter: 2, value: 50 },
-    { year: 2026, quarter: 3, value: 100 },
-    { year: 2026, quarter: 4, value: 120 },
+    { year: 2026, period: 2, value: 50 },
+    { year: 2026, period: 3, value: 100 },
+    { year: 2026, period: 4, value: 120 },
   ];
-  expect(resolveEffectiveTarget(targets, quarter)).toEqual({ value: 100, label: '2026-Q3' });
-  expect(
-    resolveEffectiveTarget(
-      targets.filter((t) => t.quarter !== 3),
-      quarter,
-    ),
-  ).toEqual({
+  const pick = (rows: typeof targets) => resolveEffectiveTarget(rows, period, 'quarterly');
+  expect(pick(targets)).toEqual({ value: 100, year: 2026, period: 3 });
+  expect(pick(targets.filter((row) => row.period !== 3))).toEqual({
     value: 120,
-    label: '2026-Q4',
+    year: 2026,
+    period: 4,
   });
-  expect(resolveEffectiveTarget([{ year: 2027, quarter: 1, value: 7 }], quarter)).toEqual({
-    value: 7,
-    label: '2027-Q1',
-  });
-  expect(resolveEffectiveTarget([{ year: 2026, quarter: 2, value: 50 }], quarter)).toBeNull();
-  expect(resolveEffectiveTarget([], quarter)).toBeNull();
+  expect(pick([{ year: 2027, period: 1, value: 7 }])).toEqual({ value: 7, year: 2027, period: 1 });
+  expect(pick([{ year: 2026, period: 2, value: 50 }])).toBeNull();
+  expect(pick([])).toBeNull();
 });
-it('KPIS-B02 quarters follow the workspace timezone across quarter and year boundaries', () => {
+it('KPIS-B02 periods follow the workspace timezone and the KPI cadence across every boundary', () => {
   // The same instant is Q4 in the east and still Q3 in the west.
   const boundary = '2026-09-30T12:00:00Z';
-  expect(quarterOf(dayAt(extremeZones.east, boundary))).toEqual({ year: 2026, quarter: 4 });
-  expect(quarterOf(dayAt(extremeZones.west, boundary))).toEqual({ year: 2026, quarter: 3 });
+  expect(periodOf(dayAt(extremeZones.east, boundary), 'quarterly')).toEqual({
+    year: 2026,
+    period: 4,
+  });
+  expect(periodOf(dayAt(extremeZones.west, boundary), 'quarterly')).toEqual({
+    year: 2026,
+    period: 3,
+  });
   const newYear = '2026-12-31T12:00:00Z';
-  expect(quarterOf(dayAt(extremeZones.east, newYear))).toEqual({ year: 2027, quarter: 1 });
-  expect(quarterOf(dayAt(extremeZones.west, newYear))).toEqual({ year: 2026, quarter: 4 });
-  expect(previousQuarter({ year: 2026, quarter: 1 })).toEqual({ year: 2025, quarter: 4 });
-  expect(quarterRange({ year: 2026, quarter: 1 })).toEqual({
+  expect(periodOf(dayAt(extremeZones.east, newYear), 'monthly')).toEqual({ year: 2027, period: 1 });
+  expect(periodOf(dayAt(extremeZones.west, newYear), 'monthly')).toEqual({
+    year: 2026,
+    period: 12,
+  });
+  expect(periodOf('2026-09-10', 'annual')).toEqual({ year: 2026, period: 1 });
+  // A period steps and wraps at its own cadence.
+  expect(shiftPeriod({ year: 2026, period: 1 }, -1, 'quarterly')).toEqual({
+    year: 2025,
+    period: 4,
+  });
+  expect(shiftPeriod({ year: 2026, period: 12 }, 1, 'monthly')).toEqual({ year: 2027, period: 1 });
+  expect(shiftPeriod({ year: 2026, period: 1 }, 1, 'annual')).toEqual({ year: 2027, period: 1 });
+  expect(periodRange({ year: 2026, period: 1 }, 'quarterly')).toEqual({
     from: '2026-01-01',
     to: '2026-03-31',
   });
-  expect(quarterRange({ year: 2026, quarter: 4 })).toEqual({
-    from: '2026-10-01',
+  expect(periodRange({ year: 2026, period: 2 }, 'monthly')).toEqual({
+    from: '2026-02-01',
+    to: '2026-02-28',
+  });
+  expect(periodRange({ year: 2026, period: 1 }, 'annual')).toEqual({
+    from: '2026-01-01',
     to: '2026-12-31',
   });
-  expect(quarterLabel({ year: 2026, quarter: 2 })).toBe('2026-Q2');
+  expect(periodsBehind('2026-06-30', '2026-09-10', 'quarterly')).toBe(1);
+  expect(periodsBehind('2026-09-10', '2026-09-10', 'monthly')).toBe(0);
 });
 it('KPIS-B03 achievement reads 100 percent as on target in both directions and caps its display', () => {
   expect(achievementOf(80, 100, 'higher')).toBeCloseTo(0.8);
@@ -135,23 +161,23 @@ it('KPIS-B05 KPIS-B04 the derived meta carries the series, the change and the ch
   const meta = deriveMeta(
     {
       direction: 'higher',
-      freshnessDays: 120,
+      frequency: 'quarterly',
       current: { date: '2026-09-09', value: 90 },
       previous: 75,
       sparkline: [
         { date: '2026-08-09', value: 75 },
         { date: '2026-09-09', value: 90 },
       ],
-      targets: [{ year: 2026, quarter: 3, value: 100 }],
+      targets: [{ year: 2026, period: 3, value: 100 }],
     },
-    { today: TODAY, quarter: { year: 2026, quarter: 3 }, thresholds },
+    { today: TODAY, thresholds },
   );
   expect(meta).toMatchObject({
     current: 90,
     currentDate: '2026-09-09',
     previous: 75,
     effectiveTarget: 100,
-    effectiveTargetLabel: '2026-Q3',
+    effectiveTargetPeriod: { year: 2026, period: 3 },
     status: 'near_target',
   });
   expect(meta.percentChange).toBeCloseTo(0.2);
@@ -175,24 +201,31 @@ it('KPIS-B09 reading and target inputs hold the documented ranges', () => {
   expect(ReadingCreate.safeParse({ readingDate: TODAY, value: 1e10 }).success).toBe(false);
   expect(ReadingCreate.safeParse({ readingDate: '10-09-2026', value: 1 }).success).toBe(false);
   expect(
-    TargetsPut.safeParse({ items: [{ year: 2026, quarter: 5, targetValue: 1 }] }).success,
+    TargetsPut.safeParse({ items: [{ year: 2026, period: 13, targetValue: 1 }] }).success,
   ).toBe(false);
   expect(
     TargetsPut.safeParse({
       items: [
-        { year: 2026, quarter: 1, targetValue: 1 },
-        { year: 2026, quarter: 1, targetValue: 2 },
+        { year: 2026, period: 1, targetValue: 1 },
+        { year: 2026, period: 1, targetValue: 2 },
       ],
     }).success,
   ).toBe(false);
   expect(
-    TargetsPut.safeParse({ items: [{ year: 2026, quarter: 1, targetValue: -5 }] }).success,
+    TargetsPut.safeParse({ items: [{ year: 2026, period: 12, targetValue: -5 }] }).success,
   ).toBe(true);
 });
-it('KPIS-B07 a KPI draft normalizes its teams and keeps the first spelling', () => {
-  const draft = KpiCreate.parse({ name: '  Revenue  ', teams: ['Finance', 'finance', 'Ops'] });
-  expect(draft).toMatchObject({ name: 'Revenue', direction: 'higher', freshnessDays: 120 });
-  expect(draft.teams).toEqual(['Finance', 'Ops']);
+it('KPIS-B07 a KPI draft trims its name and defaults the rest of the definition', () => {
+  const draft = KpiCreate.parse({ name: '  Revenue  ' });
+  expect(draft).toMatchObject({
+    name: 'Revenue',
+    direction: 'higher',
+    unit: 'count',
+    frequency: 'quarterly',
+  });
+  expect(draft.ownerId).toBeNull();
   expect(KpiCreate.safeParse({ name: '   ' }).success).toBe(false);
-  expect(KpiCreate.safeParse({ name: 'x', freshnessDays: 0 }).success).toBe(false);
+  // Both are closed lists, so a value outside them never reaches the database.
+  expect(KpiCreate.safeParse({ name: 'x', unit: 'widgets' }).success).toBe(false);
+  expect(KpiCreate.safeParse({ name: 'x', frequency: 'weekly' }).success).toBe(false);
 });

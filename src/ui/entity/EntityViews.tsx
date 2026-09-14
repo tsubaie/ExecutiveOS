@@ -5,6 +5,13 @@ import { cn } from '@/ui/cn';
 import { useCount } from '@/ui/format';
 import type { Entity } from './types';
 import type { Surface } from './EntityControls';
+const toneInk: Record<string, string> = {
+  danger: 'text-danger',
+  accent: 'text-accent',
+  good: 'text-status-good-ink',
+  warn: 'text-status-warn-ink',
+  bad: 'text-status-bad-ink',
+};
 export function EntityViews<T extends Entity, P extends object, C>({
   config,
   controller: c,
@@ -57,11 +64,18 @@ export function EntityStats<T extends Entity, P extends object, C>({
   controller: c,
 }: Surface<T, P, C>) {
   const count = useCount();
-  const featured = config.filters.views.filter((view) => view.featured === true)
+  const featured = config.filters.views
+    .filter((view) => view.featured === true)
     .sort((a, b) => (a.featuredOrder ?? 1) - (b.featuredOrder ?? 1));
   if (!featured.length) return null;
   return (
-    <div data-entity-stats className={cn('grid grid-cols-2 gap-2 border-b px-3 py-3', featured.length === 5 ? '@lg:grid-cols-5' : '@lg:grid-cols-4')}>
+    <div
+      data-entity-stats
+      className={cn(
+        'grid grid-cols-2 gap-2 border-b px-3 py-3',
+        featured.length === 5 ? '@lg:grid-cols-5' : '@lg:grid-cols-4',
+      )}
+    >
       {featured.map((view) => {
         const value = c.list.summaryCounts?.[view.id] ?? c.list.counts[view.id] ?? 0;
         const active = c.state.view === view.id;
@@ -89,8 +103,7 @@ export function EntityStats<T extends Entity, P extends object, C>({
               className={cn(
                 'count-tick text-xl leading-none font-semibold tabular-nums @lg:text-2xl',
                 value === 0 && 'text-text-muted',
-                value > 0 && view.tone === 'danger' && 'text-danger',
-                value > 0 && view.tone === 'accent' && 'text-accent',
+                value > 0 && view.tone && toneInk[view.tone],
               )}
             >
               {count(value)}

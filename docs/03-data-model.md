@@ -24,7 +24,7 @@ Global rules:
 | Dates | `date` for business dates; interpreted in the workspace timezone. |
 | Numbers | `numeric(14,4)` for KPI values and targets; absolute value < 10^10 enforced by CHECK. Transported as JSON numbers; the range keeps every value exactly representable as a double. Percentages `numeric(5,2)`. |
 | Text | `text`; lengths enforced by Zod (`title` ≤ 500, `body` ≤ 50 000). |
-| Arrays | `text[]` for tags and teams only; ≤ 10 items, each ≤ 50 chars, deduplicated case-insensitively, first spelling kept. |
+| Arrays | `text[]` for tags only; ≤ 10 items, each ≤ 50 chars, deduplicated case-insensitively, first spelling kept. |
 | Search | Tables with `q` search declare `search_text text generated always as (…) stored` from the listed fields, normalized by `core/search` SQL function `eos_normalize(text)`, with a `gin (search_text gin_trgm_ops)` index. |
 | Indexes | Every FK indexed. Composite indexes listed per table below match the default list sorts. Partial indexes exclude `deleted_at is not null`. |
 | Foreign keys | `restrict` by default; `set null` for optional structural links; `cascade` only for owned children. |
@@ -126,13 +126,13 @@ Indexes: `(note_date, created_at, id) where deleted_at is null`, `(type)`, `(arc
 `name, description, sort_order` + entity columns.
 
 ### kpis
-`name, unit, direction (higher|lower), category, objective_id fk set null, teams, notes, sort_order, freshness_days int default 120, search_text` + entity columns.
+`name, unit (count|percent|sar|usd|points), direction (higher|lower), frequency (monthly|quarterly|annual), category, objective_id fk set null, owner_id fk people set null, notes, sort_order, search_text` + entity columns. The frequency is the cadence the KPI is reported on: it decides what a period is for its targets, its axis and its staleness. There are no team names — a KPI is held by an assignable person, the same owner identity a task uses (ADR 0011).
 
 ### kpi_readings
 `kpi_id fk cascade, reading_date date, value numeric(14,4), note` + child columns, `revision` and `updated_by`: KPIS-B08 edits a reading's note in place, so the row goes through the shared revision-checked update helper and records who last wrote it.  Unique `(kpi_id, reading_date) where deleted_at is null`. The magnitude CHECK restates the limit `numeric(14,4)` already imposes; a value past it is refused by the type before the constraint is reached.
 
 ### kpi_targets
-`kpi_id fk cascade, year int, quarter int check 1..4, target_value numeric(14,4)` + child columns. Unique `(kpi_id, year, quarter) where deleted_at is null`. Zero and negative targets allowed; status rules handle them (`features/kpis.md`).
+`kpi_id fk cascade, year int, period int check 1..12, target_value numeric(14,4)` + child columns. Unique `(kpi_id, year, period) where deleted_at is null`. A period is read at the owning KPI's frequency: 1..12 monthly, 1..4 quarterly, 1 annually. Zero and negative targets allowed; status rules handle them (`features/kpis.md`).
 
 ### initiatives
 `name, description, status (planning|in_progress|on_hold|completed|cancelled), objective_id fk set null, teams, start_date, target_date, notes, sort_order, search_text` + entity columns. Health and progress are computed from children (no denormalized columns).
@@ -199,7 +199,7 @@ Adding a relationship requires adding a row to this table in the same PR and, if
 - The runner applies each migration once, in order, under `pg_advisory_lock(7231)`, and records it in Drizzle's migrations table. Migrations are forward-only. Rollback is restore from backup (ADR 0008).
 - Never edit a committed migration.
 - `pnpm db:reset` produces a database identical to production migrations. The schema audit runs `drizzle-kit check`, applies migrations to an empty database, and compares `information_schema` and `pg_catalog` (triggers, indexes, constraints) with `schema/db.ts` and this document's relationship inventory.
-- Seed data (`scripts/db/seed.ts`) is for development and e2e only: one admin, six people (three assignable), two committees, one objective and seven KPIs whose readings and targets place one measure in each status the list separates (on, near, off, no data, stale, no target), in both directions and both scripts, two initiatives, three meetings (past with minutes and actions, today with a sample PDF and fixture brief, next week), links across them, twenty tasks. `--large` multiplies entities for performance checks. No real names.
+- Seed data (`scripts/db/seed.ts`) is for development and e2e only: one admin, six people (three assignable), two committees, one objective and seven KPIs whose readings and targets place one measure in each status the list separates (on, near, off, no data, stale, no target), across both directions, all three cadences, several units and both scripts, two initiatives, three meetings (past with minutes and actions, today with a sample PDF and fixture brief, next week), links across them, twenty tasks. `--large` multiplies entities for performance checks. No real names.
 
 ## Import from legacy Mission Control
 

@@ -31,6 +31,12 @@ export default getRequestConfig(async () => {
   const candidate = Locale.safeParse((await cookies()).get('eos_locale')?.value);
   const locale = candidate.success ? candidate.data : defaults.locale;
   const { timeZone, numberingSystem } = await preferences();
+  const monthYear: DateTimeFormatOptions = {
+    calendar: 'gregory',
+    numberingSystem,
+    month: 'short',
+    year: 'numeric',
+  };
   const day: DateTimeFormatOptions = {
     calendar: 'gregory',
     numberingSystem,
@@ -43,7 +49,12 @@ export default getRequestConfig(async () => {
     messages: locale === Locale.options[1] ? ar : en,
     timeZone,
     formats: {
-      dateTime: { day, dateTime: { ...day, hour: 'numeric', minute: '2-digit' } },
+      dateTime: {
+        day,
+        monthYear,
+        month: { calendar: 'gregory', numberingSystem, month: 'short' },
+        dateTime: { ...day, hour: 'numeric', minute: '2-digit' },
+      },
       number: {
         integer: { numberingSystem, maximumFractionDigits: 0 },
         // A KPI reading is a measured quantity rather than a count, so it keeps its decimals;

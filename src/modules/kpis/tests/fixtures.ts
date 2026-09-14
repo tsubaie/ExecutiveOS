@@ -44,7 +44,7 @@ export const harness = {
       service.addReading(ctx, kpiId, ReadingCreate.parse({ readingDate, value, note })),
     );
   },
-  targets(kpiId: string, items: { year: number; quarter: number; targetValue: number }[]) {
+  targets(kpiId: string, items: { year: number; period: number; targetValue: number }[]) {
     return harness.run((ctx) => service.putTargets(ctx, kpiId, { items }));
   },
 };

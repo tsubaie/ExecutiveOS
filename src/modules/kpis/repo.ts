@@ -4,19 +4,30 @@ import type { Database } from '@/core/db/client';
 import { normalize } from '@/core/search/normalize';
 import { updateEntity, restoreEntity, type EntityPatch } from '@/core/db/entity';
 import { kpis, kpiReadings, kpiTargets, objectives } from './schema/db';
-type ListQuery = { view: string; q: string; objectiveId: string; category: string; team: string };
+type ListQuery = {
+  view: string;
+  q: string;
+  objectiveId: string;
+  category: string;
+  ownerId: string;
+};
 type Reading = { date: string; value: number };
-type Target = { year: number; quarter: number; value: number };
-// The window a list or a record is read through: the day the workspace is on, the earliest quarter
-// index worth fetching a target for, and the previous quarter's range. The service works these out
-// (KPIS-B02); the repository only spends them, so no calendar rule lives in the SQL layer.
-export type Window = { today: string; earliest: number; previousFrom: string; previousTo: string };
+type Target = { year: number; period: number; value: number };
+// The window a list or a record is read through: the day the workspace is on and the earliest year
+// worth fetching a target for. Every KPI is on its own cadence, so the period boundaries themselves
+// are derived per row from `kpis.frequency` rather than passed in — one statement cannot carry one
+// set of dates for rows that are reported monthly, quarterly and annually.
+export type Window = { today: string; fromYear: number };
 // A scorecard is a bounded instrument: objectives, a category per KPI, a handful of readings each.
 // The list reads its candidates in one statement and ranks them in the service, because a KPI's
 // status is a function of the workspace's thresholds and today's date rather than of a column
 // (KPIS-B10, KPIS-B11). This is the ceiling on how many KPIs one page of that ranking considers.
 export const CANDIDATE_LIMIT = 500;
 const live = sql`r.deleted_at is null`;
+// The calendar unit and the step of one reporting period, read off the row's own frequency.
+const periodUnit = sql`case kpis.frequency when 'monthly' then 'month' when 'quarterly' then 'quarter' else 'year' end`;
+const periodStep = sql`case kpis.frequency when 'monthly' then interval '1 month' when 'quarterly' then interval '3 months' else interval '1 year' end`;
+const periodStart = (today: string) => sql`date_trunc(${periodUnit}, ${today}::date)`;
 const upTo = (today: string) =>
   sql`r.kpi_id = kpis.id and ${live} and r.reading_date <= ${today}::date`;
 function columns(window: Window) {
@@ -27,6 +38,7 @@ function columns(window: Window) {
       string | null
     >`(select o.name from objectives o where o.id = kpis.objective_id)`,
     objectiveDeleted: sql<boolean>`coalesce((select o.deleted_at is not null from objectives o where o.id = kpis.objective_id), false)`,
+    ownerName: sql<string | null>`(select p.full_name from people p where p.id = kpis.owner_id)`,
     current: sql<Reading | null>`(select json_build_object('date', r.reading_date, 'value', r.value::float8)
       from kpi_readings r where ${upTo(today)} order by r.reading_date desc, r.id desc limit 1)`,
     previous: sql<number | null>`(select r.value::float8 from kpi_readings r where ${upTo(today)}
@@ -40,14 +52,15 @@ function columns(window: Window) {
     // Only the quarters the status and the previous-quarter comparison can reach, newest last.
     targets: sql<
       Target[]
-    >`coalesce((select json_agg(json_build_object('year', s.year, 'quarter', s.quarter, 'value', s.target_value::float8)
-      order by s.year, s.quarter) from (select t.year, t.quarter, t.target_value from kpi_targets t
-      where t.kpi_id = kpis.id and t.deleted_at is null and (t.year * 4 + t.quarter) >= ${window.earliest}
-      order by t.year, t.quarter limit 16) s), '[]'::json)`,
-    previousQuarterValue: sql<
+    >`coalesce((select json_agg(json_build_object('year', s.year, 'period', s.period, 'value', s.target_value::float8)
+      order by s.year, s.period) from (select t.year, t.period, t.target_value from kpi_targets t
+      where t.kpi_id = kpis.id and t.deleted_at is null and t.year >= ${window.fromYear}
+      order by t.year, t.period limit 40) s), '[]'::json)`,
+    previousPeriodValue: sql<
       number | null
-    >`(select r.value::float8 from kpi_readings r where r.kpi_id = kpis.id
-      and ${live} and r.reading_date between ${window.previousFrom}::date and ${window.previousTo}::date
+    >`(select r.value::float8 from kpi_readings r where r.kpi_id = kpis.id and ${live}
+      and r.reading_date >= (${periodStart(today)} - ${periodStep})::date
+      and r.reading_date < ${periodStart(today)}::date
       order by r.reading_date desc, r.id desc limit 1)`,
   };
 }
@@ -61,7 +74,11 @@ function base(query: ListQuery) {
         ? sql`${kpis.objectiveId} = ${query.objectiveId}::uuid`
         : undefined,
     query.category ? eq(kpis.category, query.category) : undefined,
-    query.team ? sql`${query.team} = any(${kpis.teams})` : undefined,
+    query.ownerId === 'none'
+      ? isNull(kpis.ownerId)
+      : query.ownerId
+        ? sql`${kpis.ownerId} = ${query.ownerId}::uuid`
+        : undefined,
   );
 }
 // Deleted rows come back with the rest: the service partitions them into the trash view and counts
@@ -85,19 +102,12 @@ export async function selectFacets(database: Database) {
     .where(and(isNull(kpis.deletedAt), sql`${kpis.category} <> ''`))
     .groupBy(kpis.category)
     .orderBy(kpis.category);
-  const teams = await database.execute<{ value: string }>(
-    sql`select distinct unnest(teams) as value from kpis where deleted_at is null order by value`,
-  );
   const named = await database
     .select({ id: objectives.id, name: objectives.name })
     .from(objectives)
     .where(isNull(objectives.deletedAt))
     .orderBy(objectives.sortOrder, objectives.id);
-  return {
-    categories: categories.map((row) => row.value),
-    teams: teams.rows.map((row) => row.value),
-    objectives: named,
-  };
+  return { categories: categories.map((row) => row.value), objectives: named };
 }
 export function selectReadings(database: Database, kpiId: string) {
   return database
@@ -119,12 +129,12 @@ export function selectTargets(database: Database, kpiId: string) {
     .select({
       id: kpiTargets.id,
       year: kpiTargets.year,
-      quarter: kpiTargets.quarter,
+      period: kpiTargets.period,
       targetValue: kpiTargets.targetValue,
     })
     .from(kpiTargets)
     .where(and(eq(kpiTargets.kpiId, kpiId), isNull(kpiTargets.deletedAt)))
-    .orderBy(kpiTargets.year, kpiTargets.quarter);
+    .orderBy(kpiTargets.year, kpiTargets.period);
 }
 export async function lockKpi(database: Database, kpiId: string) {
   // docs/04 § Concurrency: a child write holds the parent row so derived values stay consistent.
@@ -228,13 +238,13 @@ export async function upsertTargets(
   database: Database,
   kpiId: string,
   actor: string,
-  items: { id: string; year: number; quarter: number; targetValue: number }[],
+  items: { id: string; year: number; period: number; targetValue: number }[],
 ) {
   await database
     .insert(kpiTargets)
     .values(items.map((item) => ({ ...item, kpiId, createdBy: actor })))
     .onConflictDoUpdate({
-      target: [kpiTargets.kpiId, kpiTargets.year, kpiTargets.quarter],
+      target: [kpiTargets.kpiId, kpiTargets.year, kpiTargets.period],
       targetWhere: isNull(kpiTargets.deletedAt),
       set: { targetValue: sql`excluded.target_value`, updatedAt: new Date() },
     });

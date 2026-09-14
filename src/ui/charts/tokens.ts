@@ -6,10 +6,17 @@ export const chartColor = {
   reference: 'var(--muted-text)',
   grid: 'var(--border)',
   surface: 'var(--surface)',
-  on_target: 'var(--success)',
-  near_target: 'var(--warning)',
-  off_target: 'var(--danger)',
+};
+// A tone, not a status: a chart stays a chart and the module keeps the vocabulary. The three
+// carrying tones are the scorecard status scale (docs/05 § Charts); neutral is the text grey, for
+// a mark that must not claim a state it does not have.
+export type ChartTone = 'positive' | 'caution' | 'negative' | 'neutral';
+export const toneColor: Record<ChartTone, string> = {
+  positive: 'var(--status-good)',
+  caution: 'var(--status-warn)',
+  negative: 'var(--status-bad)',
   neutral: 'var(--muted-text)',
 };
-// Marks are thin and the grid is a solid hairline one step off the surface (dataviz § Mark specs).
-export const chartMark = { line: 2, hairline: 1, dot: 4, ring: 2 };
+// Marks are thin and the chrome is recessive (dataviz § Mark specs). A column is capped well under
+// its slot so the band's leftover reads as air, and rounds only at the end away from the baseline.
+export const chartMark = { line: 2, hairline: 1, dot: 4, ring: 2, bar: 22, cap: 4 };

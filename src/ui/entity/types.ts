@@ -15,7 +15,9 @@ export type View = {
   separated?: boolean;
   featured?: boolean | 'compact';
   featuredOrder?: number;
-  tone?: 'danger' | 'accent';
+  // The ink a featured count takes once it is above zero. `danger` and `accent` are the app's own
+  // semantics; `good`, `warn` and `bad` are the status scale a scorecard reads in (docs/05 § Charts).
+  tone?: 'danger' | 'accent' | 'good' | 'warn' | 'bad';
 };
 export type Facet = { key: string; label: string; options: { value: string; label: string }[] };
 export type SortOption = { id: string; label: string };

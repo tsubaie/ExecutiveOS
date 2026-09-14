@@ -2,13 +2,15 @@
 // has to tell apart: on target, near target, off target, no data, stale, and no target at all,
 // in both directions and both scripts. Invented measures only (docs/03 § Seed data).
 export type SeedReading = { daysAgo: number; value: number };
-export type SeedTarget = { quartersAhead: number; value: number };
+export type SeedTarget = { periodsAhead: number; value: number };
 export type SeedKpi = {
   name: string;
-  unit: string;
+  unit: 'count' | 'percent' | 'sar' | 'usd' | 'points';
   direction: 'higher' | 'lower';
+  frequency: 'monthly' | 'quarterly' | 'annual';
   category: string;
-  teams: string[];
+  // Matched against the seeded directory by name; an owner nobody knows is simply left unassigned.
+  owner: string | null;
   notes: string;
   underObjective: boolean;
   readings: SeedReading[];
@@ -21,10 +23,11 @@ export const seedObjective = {
 export const seedKpis: SeedKpi[] = [
   {
     name: 'Board decisions implemented',
-    unit: '%',
+    unit: 'percent',
     direction: 'higher',
+    frequency: 'quarterly',
     category: 'Governance',
-    teams: ['Secretariat'],
+    owner: 'Leila Haddad',
     notes: 'Share of decisions closed within the cycle they were taken in.',
     underObjective: true,
     readings: [
@@ -33,14 +36,19 @@ export const seedKpis: SeedKpi[] = [
       { daysAgo: 42, value: 84 },
       { daysAgo: 17, value: 91 },
     ],
-    targets: [{ quartersAhead: 0, value: 90 }],
+    targets: [
+      { periodsAhead: -1, value: 85 },
+      { periodsAhead: 0, value: 90 },
+      { periodsAhead: 1, value: 92 },
+    ],
   },
   {
     name: 'Average days to close an action',
-    unit: 'days',
+    unit: 'count',
     direction: 'lower',
+    frequency: 'monthly',
     category: 'Delivery',
-    teams: ['Operations'],
+    owner: 'Omar Nasser',
     notes: '',
     underObjective: true,
     readings: [
@@ -49,14 +57,18 @@ export const seedKpis: SeedKpi[] = [
       { daysAgo: 42, value: 16 },
       { daysAgo: 17, value: 14 },
     ],
-    targets: [{ quartersAhead: 0, value: 12 }],
+    targets: [
+      { periodsAhead: -1, value: 15 },
+      { periodsAhead: 0, value: 12 },
+    ],
   },
   {
     name: 'Strategic budget committed',
-    unit: '%',
+    unit: 'percent',
     direction: 'higher',
+    frequency: 'quarterly',
     category: 'Finance',
-    teams: ['Finance'],
+    owner: 'سامر منصور',
     notes: '',
     underObjective: true,
     readings: [
@@ -65,36 +77,42 @@ export const seedKpis: SeedKpi[] = [
       { daysAgo: 42, value: 46 },
       { daysAgo: 17, value: 48 },
     ],
-    targets: [{ quartersAhead: 0, value: 75 }],
+    targets: [
+      { periodsAhead: 0, value: 75 },
+      { periodsAhead: 1, value: 90 },
+    ],
   },
   {
     name: 'رضا الشركاء',
-    unit: 'نقطة',
+    unit: 'points',
     direction: 'higher',
+    frequency: 'annual',
     category: 'External',
-    teams: ['Partnerships'],
+    owner: null,
     notes: 'لم تُسجَّل قراءة بعد؛ المسح السنوي قادم.',
     underObjective: true,
     readings: [],
-    targets: [{ quartersAhead: 0, value: 8 }],
+    targets: [{ periodsAhead: 0, value: 8 }],
   },
   {
     name: 'التغطية الإقليمية',
-    unit: 'موقعًا',
+    unit: 'count',
     direction: 'higher',
+    frequency: 'quarterly',
     category: 'Delivery',
-    teams: ['Operations'],
+    owner: 'Omar Nasser',
     notes: '',
     underObjective: true,
     readings: [{ daysAgo: 260, value: 12 }],
-    targets: [{ quartersAhead: 0, value: 20 }],
+    targets: [{ periodsAhead: 0, value: 20 }],
   },
   {
     name: 'Digital service uptake',
-    unit: '%',
+    unit: 'percent',
     direction: 'higher',
+    frequency: 'monthly',
     category: 'Delivery',
-    teams: ['Digital'],
+    owner: 'Leila Haddad',
     notes: 'Measured, but nobody has agreed what good looks like yet.',
     underObjective: true,
     readings: [
@@ -105,10 +123,11 @@ export const seedKpis: SeedKpi[] = [
   },
   {
     name: 'Cost per served case',
-    unit: 'SAR',
+    unit: 'sar',
     direction: 'lower',
+    frequency: 'quarterly',
     category: 'Finance',
-    teams: ['Finance', 'Operations'],
+    owner: 'Omar Nasser',
     notes: 'Filed under no objective on purpose, so the facet has something to exclude.',
     underObjective: false,
     readings: [
@@ -117,6 +136,6 @@ export const seedKpis: SeedKpi[] = [
       { daysAgo: 9, value: 442 },
     ],
     // Next quarter only: the effective target is the earliest one ahead, and the row says so.
-    targets: [{ quartersAhead: 1, value: 400 }],
+    targets: [{ periodsAhead: 1, value: 400 }],
   },
 ];

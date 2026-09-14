@@ -13,7 +13,7 @@ import {
   View,
   type PersonCreate,
   type PersonPatch,
-  type PersonListQuery,
+  PersonListQuery,
 } from './schema/validation';
 import * as repo from './repo';
 export { personNameSql } from './repo';
@@ -25,6 +25,12 @@ const ops: EntityOps<Person, PersonRow, Parameters<typeof repo.updatePerson>[3]>
     repo.updatePerson(ctx.db, personId, revision, patch, ctx.user.id),
   restore: (ctx, personId, opId) => repo.restorePerson(ctx.db, personId, opId, ctx.user.id),
 };
+// ADR 0011: people are the only owner identity, so the directory owns the answer to "who can hold
+// this". Other modules ask for the list rather than reassembling the query themselves.
+export async function assignablePeople(ctx: Context) {
+  const listed = await listPeople(ctx, PersonListQuery.parse({ view: 'assignable', limit: 200 }));
+  return listed.data.map((row) => ({ id: row.id, name: row.fullName }));
+}
 export async function listPeople(ctx: Context, query: PersonListQuery) {
   const { view, q, tag, organization, withTotal } = query;
   const hash = filtersHash({ view, q, tag, organization });

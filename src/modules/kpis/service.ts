@@ -6,14 +6,7 @@ import { id } from '@/core/db/ids';
 import { writeAudit, toJson } from '@/core/db/audit-repo';
 import { getSetting } from '@/core/db/settings-repo';
 import { dayAt } from '@/core/time/tasks';
-import {
-  quarterOf,
-  quarterLabel,
-  quarterIndex,
-  quarterRange,
-  previousQuarter,
-  type Quarter,
-} from '@/core/time/kpis';
+import { periodOf } from '@/core/time/kpis';
 import type { StatusThresholds } from '@/core/config/settings';
 import { requireRevision, applyUpdate, restoreByOp } from '@/core/entity/service';
 import {
@@ -26,6 +19,7 @@ import {
 import { AppError } from '@/core/http/errors';
 import { routes } from '@/core/routes';
 import type { HomeSection } from '@/core/modules/server-manifest';
+import { assignablePeople, getPerson } from '@/modules/people';
 import {
   Kpi,
   KpiDetail,
@@ -34,6 +28,8 @@ import {
   attentionStatuses,
   severityRank,
   deriveMeta,
+  derivePeriods,
+  Frequency,
   type KpiCreate,
   type KpiPatch,
   type KpiListQuery,
@@ -45,22 +41,11 @@ import {
 } from './schema/validation';
 import * as repo from './repo';
 type Row = Awaited<ReturnType<typeof repo.selectKpi>>;
-type Scope = { today: string; quarter: Quarter; thresholds: StatusThresholds };
-// KPIS-B02: the quarter arithmetic happens once per request and travels to the repository as plain
-// values, so no calendar rule is written twice.
-function windowOf(at: Scope): repo.Window {
-  const before = previousQuarter(at.quarter);
-  const { from, to } = quarterRange(before);
-  return { today: at.today, earliest: quarterIndex(before), previousFrom: from, previousTo: to };
-}
+type Scope = { today: string; thresholds: StatusThresholds };
 type Keyed = { item: Kpi; key: Tuple };
 async function scope(ctx: Context): Promise<Scope> {
   const today = dayAt(await getSetting(ctx.db, 'workspace.timezone'));
-  return {
-    today,
-    quarter: quarterOf(today),
-    thresholds: await getSetting(ctx.db, 'kpis.status_thresholds'),
-  };
+  return { today, thresholds: await getSetting(ctx.db, 'kpis.status_thresholds') };
 }
 const toKpi = (row: NonNullable<Row>, at: Scope) =>
   Kpi.parse({ ...row, meta: deriveMeta(row, at) });
@@ -85,7 +70,10 @@ function inView(item: Kpi, view: string) {
 const views = ['all', 'attention', ...KpiStatus.options, 'trash'];
 export async function listKpis(ctx: Context, query: KpiListQuery) {
   const at = await scope(ctx);
-  const rows = await repo.selectKpis(ctx.db, query, windowOf(at));
+  const rows = await repo.selectKpis(ctx.db, query, {
+    today: at.today,
+    fromYear: Number(at.today.slice(0, 4)) - 1,
+  });
   const all = rows.map((row) => toKpi(row, at));
   const { cursor, ...filters } = query;
   const hash = filtersHash({ ...filters, date: at.today });
@@ -110,9 +98,12 @@ export async function listKpis(ctx: Context, query: KpiListQuery) {
     },
   };
 }
-// The values the rail's facets offer, read once rather than inferred from the page on screen.
+// The values the rail's facets offer, read once rather than inferred from the page on screen. The
+// owners come from the directory rather than from the KPIs, so a measure can be handed to somebody
+// who does not hold one yet (ADR 0011: people are the only owner identity).
 export async function kpiFacets(ctx: Context) {
-  return repo.selectFacets(ctx.db);
+  const facets = await repo.selectFacets(ctx.db);
+  return { ...facets, owners: await assignablePeople(ctx) };
 }
 const kpiOps = {
   entityType: 'kpi',
@@ -128,7 +119,10 @@ const kpiOps = {
 };
 async function requireRow(ctx: Context, kpiId: string, includeDeleted: boolean) {
   const at = await scope(ctx);
-  const row = await repo.selectKpi(ctx.db, kpiId, windowOf(at));
+  const row = await repo.selectKpi(ctx.db, kpiId, {
+    today: at.today,
+    fromYear: Number(at.today.slice(0, 4)) - 1,
+  });
   if (!row || (row.deletedAt && !includeDeleted)) throw new AppError('not_found');
   return { row, at };
 }
@@ -142,22 +136,28 @@ export async function getKpiDetail(ctx: Context, kpiId: string, includeDeleted =
   const { row, at } = await requireRow(ctx, kpiId, includeDeleted);
   const readings = await repo.selectReadings(ctx.db, kpiId);
   const targets = await repo.selectTargets(ctx.db, kpiId);
-  const before = previousQuarter(at.quarter);
-  const match = row.targets.find((t) => t.year === before.year && t.quarter === before.quarter);
+  const meta = deriveMeta(row, at);
+  // The comparisons are centred on the period the KPI is actually measured against, so the middle
+  // one repeats the row's answer and the reader starts where the list left them.
+  const frequency = Frequency.parse(row.frequency);
+  const base = meta.effectiveTargetPeriod ?? periodOf(at.today, frequency);
   return KpiDetail.parse({
     ...row,
-    meta: deriveMeta(row, at),
+    meta,
     readings: readings.map((reading) => ({ ...reading, future: reading.readingDate > at.today })),
     targets,
-    previousQuarter: {
-      label: quarterLabel(before),
-      value: row.previousQuarterValue,
-      target: match?.value ?? null,
-    },
+    ...derivePeriods(row, at, base, meta.status, row.previousPeriodValue),
   });
 }
+async function requireOwner(ctx: Context, ownerId: string | null | undefined) {
+  if (!ownerId) return;
+  if (!(await getPerson(ctx, ownerId)).isAssignable) throw rejected('ownerId', 'not_assignable');
+}
+const rejected = (field: string, reason: string) =>
+  new AppError('rule_violation', { rule: 'KPIS-B06', fieldErrors: { [field]: [reason] } });
 export async function createKpi(ctx: Context, input: KpiCreate) {
   await requireObjective(ctx, input.objectiveId);
+  await requireOwner(ctx, input.ownerId);
   const row = await repo.insertKpi(ctx.db, {
     ...input,
     id: id(),
@@ -169,6 +169,7 @@ export async function createKpi(ctx: Context, input: KpiCreate) {
 }
 export async function patchKpi(ctx: Context, kpiId: string, input: KpiPatch) {
   if (input.objectiveId !== undefined) await requireObjective(ctx, input.objectiveId);
+  if (input.ownerId !== undefined) await requireOwner(ctx, input.ownerId);
   const row = await requireRevision(ctx, kpiOps, kpiId, input.revision);
   const { revision, ...fields } = input;
   void revision;
@@ -194,15 +195,12 @@ export async function restoreKpi(ctx: Context, kpiId: string, opId: string) {
   await repo.revealChildren(ctx.db, kpiId, opId);
   return getKpiDetail(ctx, kpiId);
 }
-// KPIS-B06: a deleted objective keeps its KPIs; only a live objective may be assigned.
+// KPIS-B06: a deleted objective keeps its KPIs, but only a live one may be assigned; and a KPI is
+// held by an assignable person, the same identity a task uses (ADR 0011).
 async function requireObjective(ctx: Context, objectiveId: string | null) {
   if (!objectiveId) return;
   const row = await repo.selectObjective(ctx.db, objectiveId);
-  if (!row || row.deletedAt)
-    throw new AppError('rule_violation', {
-      rule: 'KPIS-B06',
-      fieldErrors: { objectiveId: ['unknown'] },
-    });
+  if (!row || row.deletedAt) throw rejected('objectiveId', 'unknown');
 }
 const objectiveOps = {
   entityType: 'objective',
@@ -368,11 +366,11 @@ export async function removeTarget(ctx: Context, kpiId: string, targetId: string
 // HOME-B01 § Attention KPIs: the page consumes this through the module's server manifest.
 export async function homeSummary(ctx: Context, day: string): Promise<HomeSection[]> {
   const thresholds = await getSetting(ctx.db, 'kpis.status_thresholds');
-  const at: Scope = { today: day, quarter: quarterOf(day), thresholds };
+  const at: Scope = { today: day, thresholds };
   const rows = await repo.selectKpis(
     ctx.db,
-    { view: 'attention', q: '', objectiveId: '', category: '', team: '' },
-    windowOf(at),
+    { view: 'attention', q: '', objectiveId: '', category: '', ownerId: '' },
+    { today: at.today, fromYear: Number(at.today.slice(0, 4)) - 1 },
   );
   const attention = rows
     .map((row) => toKpi(row, at))

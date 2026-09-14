@@ -15,6 +15,12 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-info: var(--accent);
+  --color-status-good: var(--status-good);
+  --color-status-warn: var(--status-warn);
+  --color-status-bad: var(--status-bad);
+  --color-status-good-ink: var(--status-good-ink);
+  --color-status-warn-ink: var(--status-warn-ink);
+  --color-status-bad-ink: var(--status-bad-ink);
   --color-background: var(--bg);
   --color-foreground: var(--text);
   --color-primary: var(--accent);
@@ -49,6 +55,16 @@
   --danger: #b63c3c;
   --danger-soft: #f6e1e1;
   --scrim: #202a2899;
+  /* Scorecard status scale (features/kpis.md). The dark values are the predecessor's own three
+     colours, kept exactly. The light values are darker steps of the same hues: the originals were
+     chosen against a near-black ground and fall under the contrast floor on this one, where they
+     would carry a KPI's state as a dot, a chip and a mark. */
+  --status-good: #15803d;
+  --status-warn: #b45309;
+  --status-bad: #b91c1c;
+  --status-good-ink: #15803d;
+  --status-warn-ink: #b45309;
+  --status-bad-ink: #b91c1c;
   --shadow-panel: 0 10px 30px -14px #202a2840;
   /* Motion (docs/05 § Motion). One deceleration curve for anything that arrives, and one step that
      sets the cascade's rhythm: every entrance delay is a multiple of it, so the whole page is
@@ -73,6 +89,16 @@
   --warning-soft: #413d43;
   --danger: #f38ba8;
   --danger-soft: #402f42;
+  --status-good: #22c55e;
+  --status-warn: #f59e0b;
+  --status-bad: #ef4444;
+  /* A mark needs 3:1 and a word needs 4.5:1, and the predecessor's red clears the first but not
+     the second on this ground (4.1:1). The dot, the spark, the columns and the arc keep it exactly;
+     the word beside them takes the next step up the same hue, so the state is still one colour and
+     still legible. The other two pass as text unchanged. */
+  --status-good-ink: #22c55e;
+  --status-warn-ink: #f59e0b;
+  --status-bad-ink: #f87171;
   --shadow-panel: 0 12px 36px -16px #11111bcc;
   --scrim: #11111bcc;
   color-scheme: dark;

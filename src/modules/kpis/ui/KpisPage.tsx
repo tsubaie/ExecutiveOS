@@ -67,9 +67,13 @@ function useKpiFilters(): FiltersDef {
       options: [any, ...(facets.data?.categories ?? []).map((row) => ({ value: row, label: row }))],
     },
     {
-      key: 'team',
-      label: t('team'),
-      options: [any, ...(facets.data?.teams ?? []).map((row) => ({ value: row, label: row }))],
+      key: 'ownerId',
+      label: t('owner'),
+      options: [
+        any,
+        { value: 'none', label: t('noOwner') },
+        ...(facets.data?.owners ?? []).map((row) => ({ value: row.id, label: row.name })),
+      ],
     },
   ];
   return { views: useKpiViews(), facets: options, sort: sortOptions(Sort.options, t) };

@@ -40,6 +40,19 @@ export function useDecimal() {
   const format = useFormatter();
   return (value: number) => format.number(value, 'decimal');
 }
+// A reporting month, named rather than numbered: "Sep 2026" reads at a glance where "2026-09" has
+// to be decoded. The period index is 1-based, the way a KPI's periods are counted.
+export function useMonthYear() {
+  const format = useFormatter();
+  return (year: number, month: number) =>
+    format.dateTime(new Date(Date.UTC(year, month - 1, 1)), 'monthYear', { timeZone: 'UTC' });
+}
+// A month on its own, for a column header where the year is already said once.
+export function useMonth() {
+  const format = useFormatter();
+  return (month: number) =>
+    format.dateTime(new Date(Date.UTC(2000, month - 1, 1)), 'month', { timeZone: 'UTC' });
+}
 export function useYear() {
   const format = useFormatter();
   return (value: number) => format.number(value, 'year');
