@@ -53,7 +53,8 @@ export default function MarkdownEditor({
         autoFocus={Boolean(draft.trim())}
         value={draft}
         maxLength={maxLength}
-        className="min-h-40"
+        // An empty field should look writable, not reserve the room its content would need.
+        className={draft.trim() ? 'min-h-40' : 'min-h-20'}
         role={menu.open ? 'combobox' : undefined}
         aria-expanded={menu.open ? true : undefined}
         aria-controls={menu.open ? menu.id(id) : undefined}

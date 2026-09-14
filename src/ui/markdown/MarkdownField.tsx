@@ -49,7 +49,9 @@ export function MarkdownField({
         {label}
       </label>
       {editing ? (
-        <Suspense fallback={<div className="min-h-40 rounded-lg border" />}>
+        <Suspense
+          fallback={<div className={cn('rounded-lg border', draft.trim() ? 'min-h-40' : 'min-h-20')} />}
+        >
           <Editor
             id={id}
             name={name}
@@ -112,7 +114,12 @@ function Preview({
         id={id}
         aria-label={label}
         title={t('clickToWrite')}
-        className="min-h-40 w-full cursor-text rounded-lg border px-3 py-2 text-start hover:border-ring focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className={cn(
+          'w-full cursor-text rounded-lg border px-3 py-2 text-start hover:border-ring focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+          // An empty box claims the room its content would need; until there is content it only
+          // has to look writable, so it asks for a fraction of it.
+          draft.trim() ? 'min-h-40' : 'min-h-20',
+        )}
         onClick={click}
       >
         <Suspense fallback={<div className="h-20" />}>

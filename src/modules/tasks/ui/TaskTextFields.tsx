@@ -65,7 +65,7 @@ export function TaskTitle({
             maxLength={500}
             aria-label={t('title')}
             aria-invalid={Boolean(error)}
-            className="plaintext min-h-0 resize-none rounded-md border-transparent px-2 py-1 text-xl leading-snug font-semibold hover:border-border md:text-xl"
+            className="plaintext min-h-0 resize-none rounded-md border-transparent bg-transparent px-2 py-1 text-2xl leading-snug font-semibold hover:border-border dark:bg-transparent md:text-2xl"
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 event.preventDefault();

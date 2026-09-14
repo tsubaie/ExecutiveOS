@@ -21,6 +21,11 @@ export function EntityPage<T extends Entity, P extends object, C>(props: EntityP
 }
 // Rail, list and detail sit as rounded surfaces on the page ground from 1024 px; the list column
 // opens with one bar carrying the title, current view, search, filters and Create (EP-B07).
+// EP-B23: an open record is the subject of the page, so the detail carries the wider of the two
+// columns and the list becomes the index beside it. The share is of the whole workspace, rail
+// included, which is why 46 % reads as roughly 55/45 against the list. 480 px stays the floor, so
+// no window width loses room against the fixed panel this replaces, and 880 px is the ceiling
+// because a property form wider than that stops being readable.
 function EntitySurface<T extends Entity, P extends object, C>(props: EntityPageProps<T, P, C>) {
   const t = useTranslations('common');
   const root = useRef<HTMLElement>(null);
@@ -59,7 +64,7 @@ function EntitySurface<T extends Entity, P extends object, C>(props: EntityPageP
           <EntityList config={props} controller={c} />
         </div>
         {panel && (
-          <aside className="entity-detail min-w-0 flex-1 overflow-y-auto bg-surface lg:w-[min(480px,50%)] lg:flex-none lg:rounded-xl lg:border">
+          <aside className="entity-detail min-w-0 flex-1 overflow-y-auto bg-surface lg:w-[clamp(480px,46%,880px)] lg:flex-none lg:rounded-xl lg:border">
             <EntityOutside config={props} controller={c} />
             <EntityContent config={props} controller={c} />
           </aside>

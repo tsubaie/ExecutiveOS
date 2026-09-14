@@ -49,6 +49,7 @@
   --danger: #b63c3c;
   --danger-soft: #f6e1e1;
   --scrim: #202a2899;
+  --shadow-panel: 0 10px 30px -14px #202a2840;
   /* Motion (docs/05 § Motion). One deceleration curve for anything that arrives, and one step that
      sets the cascade's rhythm: every entrance delay is a multiple of it, so the whole page is
      retimed from this single number. Both are theme-independent, so the dark block leaves them. */
@@ -72,6 +73,7 @@
   --warning-soft: #413d43;
   --danger: #f38ba8;
   --danger-soft: #402f42;
+  --shadow-panel: 0 12px 36px -16px #11111bcc;
   --scrim: #11111bcc;
   color-scheme: dark;
 }
@@ -106,6 +108,12 @@
     outline: 2px solid var(--accent);
     outline-offset: 3px;
   }
+  /* EP-B17 focuses the record's heading on open so assistive technology announces it. The heading
+     is not tabbable, so the ring buys a sighted user nothing and makes an editable title read as a
+     selected input; the focus itself stays. */
+  [tabindex='-1']:focus-visible {
+    outline: none;
+  }
   /* Controls are 36px with a pointer and 44px on touch (docs/05 § Density and § Mobile). */
   input,
   textarea,
@@ -129,13 +137,15 @@
   }
 }
 .entity-detail {
-  animation: enter-detail 160ms ease-out;
+  animation: enter-detail 220ms var(--ease-rise);
 }
 @keyframes enter-detail {
   from {
+    opacity: 0;
     translate: 1rem;
   }
   to {
+    opacity: 1;
     translate: 0;
   }
 }
@@ -144,9 +154,11 @@
 }
 @keyframes enter-detail-rtl {
   from {
+    opacity: 0;
     translate: -1rem;
   }
   to {
+    opacity: 1;
     translate: 0;
   }
 }
@@ -464,11 +476,54 @@
   .entity-page-creating [data-entity-list]:not(:hover):not(:focus-within) {
     filter: blur(1.5px) saturate(0.7);
   }
+  /* EP-B23: the softening above was defeated by the gesture that triggers it. A record is opened
+     by clicking a row, so the pointer is over the list and :hover suppressed the blur at the one
+     moment it existed for; it only appeared later, if the pointer happened to wander off. An
+     animation outranks a normal declaration in the cascade, so the surrounding surfaces hold the
+     dim for a beat after the panel opens whatever the pointer is doing, then release it and hand
+     back to the hover rule, which keeps a deliberate glance at the list working. */
+  body:has(.entity-page-open) .app-sidebar,
+  .entity-page-open .entity-rail,
+  .entity-page-open [data-entity-list] {
+    animation: hold-dim 1200ms var(--ease-rise);
+  }
+  @keyframes hold-dim {
+    0%,
+    70% {
+      filter: blur(1.5px) saturate(0.7);
+    }
+    100% {
+      filter: none;
+    }
+  }
+  /* EP-B23: while a record is open it is the only raised plane. The list and rail drop to the page
+     ground rather than the panel rising above them, so the separation comes from the neutral
+     surface scale and nothing has to gain a colour (docs/05 § Density). Hover does not restore the
+     surface: a glance at the list should clear the blur, not undo the page's hierarchy. */
+  .entity-page-open .entity-rail,
+  .entity-page-open [data-entity-list] {
+    background: var(--color-bg);
+  }
+  .entity-detail {
+    box-shadow: var(--shadow-panel);
+  }
+  /* EP-B14: with the panel open the record itself answers "which one is this", so the row only has
+     to hold the reader's place. The tinted ground goes and the start-edge bar stays. */
+  .entity-page-open .entity-row[data-current] {
+    background: transparent;
+  }
   @media (prefers-reduced-motion: reduce) {
     .app-sidebar,
     .entity-rail,
     [data-entity-list] {
       transition: none;
+    }
+    /* The hold is hierarchy, not motion, so it stays; only the fade out of it goes. Stepping the
+       timing keeps the dim for the same beat and then drops it in one frame. */
+    body:has(.entity-page-open) .app-sidebar,
+    .entity-page-open .entity-rail,
+    .entity-page-open [data-entity-list] {
+      animation-timing-function: steps(1, end);
     }
   }
 }
