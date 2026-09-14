@@ -24,7 +24,6 @@ export function Stream({
   const c = useTranslations('common');
   const count = useCount();
   const danger = alarming(section);
-  const busiest = Math.max(1, ...section.items.map((item) => item.count ?? 0));
   return (
     <section className={lead ? 'mt-8 rounded-xl border bg-surface px-5 py-4 lg:px-6' : ''}>
       <div className="flex items-baseline justify-between gap-4 border-b pb-2">
@@ -51,7 +50,7 @@ export function Stream({
         <ul className={lead ? 'md:grid md:grid-cols-2 md:gap-x-10' : ''}>
           {section.items.map((item) => (
             <li key={item.id} className={lead ? '' : 'border-b last:border-b-0'}>
-              <Row item={item} sectionKey={section.key} lead={lead} busiest={busiest} />
+              <Row item={item} sectionKey={section.key} lead={lead} />
             </li>
           ))}
         </ul>
@@ -65,15 +64,16 @@ export function Stream({
 // HOME-B09: the shape of the pile, stated in figures with the mark only ranking them.
 function Ageing({ section }: { section: Section }) {
   const t = useTranslations('home');
-  if (section.stale === null || section.count === 0) return null;
+  // Nothing a month old means there is no shape to show: an all-neutral bar is a mark with no
+  // information in it, and saying "none" out loud is noise on a screen that is already dense.
+  // The absence is the message, so the whole line goes.
+  if (!section.stale) return null;
   return (
     <p className="mt-3 flex items-center gap-3">
       <span className="max-w-40 flex-1">
         <AgeingBar count={section.count} stale={section.stale} />
       </span>
-      <span
-        className={`text-xs tabular-nums ${section.stale > 0 ? 'font-medium text-danger' : 'text-text-muted'}`}
-      >
+      <span className="text-xs font-medium tabular-nums text-danger">
         {t('staleOverdue', { count: section.stale })}
       </span>
     </p>
@@ -144,17 +144,7 @@ function RowFacts({ item, sectionKey }: { item: Item; sectionKey: SectionKey }) 
     </span>
   );
 }
-function Row({
-  item,
-  sectionKey,
-  lead,
-  busiest,
-}: {
-  item: Item;
-  sectionKey: SectionKey;
-  lead: boolean;
-  busiest: number;
-}) {
+function Row({ item, sectionKey, lead }: { item: Item; sectionKey: SectionKey; lead: boolean }) {
   const load = sectionKey === 'committees' && item.count !== null ? item : null;
   return (
     <div className="group -mx-2 flex items-start gap-3 rounded-md px-2 py-3 hover:bg-surface-raised">
@@ -168,7 +158,7 @@ function Row({
         <RowFacts item={item} sectionKey={sectionKey} />
         {load && (
           <span className="mt-2 block max-w-56">
-            <LoadBar open={load.count ?? 0} overdue={load.overdue ?? 0} busiest={busiest} />
+            <LoadBar open={load.count ?? 0} overdue={load.overdue ?? 0} />
           </span>
         )}
       </Link>

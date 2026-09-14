@@ -151,6 +151,11 @@ it('HOME-B09 states how much of the overdue pile is a month or more old', () => 
   ]);
   expect(screen.getByText('staleOverdue=2')).toBeTruthy();
 });
+it('HOME-B09 says nothing about ageing when nothing has aged', () => {
+  show([{ ...section('overdue', true, 5, [item('Late', { date: '2026-09-02' })]), stale: 0 }]);
+  // An all-neutral mark carries no information, so the line is dropped rather than drawn empty.
+  expect(screen.queryByText('staleOverdue=0')).toBeNull();
+});
 it('HOME-B09 shows a committee\'s late share beside its open work', () => {
   show([section('committees', true, 1, [item('Audit', { count: 4, overdue: 2 })])]);
   expect(screen.getByText('lateOpen=2')).toBeTruthy();

@@ -36,20 +36,12 @@ function Segments({ safe, late }: { safe: number; late: number }) {
     </svg>
   );
 }
-// HOME-B09: one committee against the others. Length is its open work relative to the busiest
-// committee shown, and the danger portion is how much of that has already slipped.
-export function LoadBar({
-  open,
-  overdue,
-  busiest,
-}: {
-  open: number;
-  overdue: number;
-  busiest: number;
-}) {
-  const scale = 100 / Math.max(busiest, 1);
-  const late = Math.min(overdue, open) * scale;
-  const safe = Math.max(open * scale - late - (late > 0 ? GAP : 0), 0);
+// HOME-B09: every committee's mark is the same width so the column reads as one instrument instead
+// of a ragged set of stubs. Volume is already in the text beside it ("3 open"), so the mark is free
+// to carry the thing the text cannot show at a glance: how much of that committee's work has slipped.
+export function LoadBar({ open, overdue }: { open: number; overdue: number }) {
+  const late = (Math.min(overdue, open) / Math.max(open, 1)) * 100;
+  const safe = Math.max(100 - late - (late > 0 ? GAP : 0), 0);
   return <Segments safe={safe} late={late} />;
 }
 // HOME-B09: the shape of the overdue pile. A total says how much is late; the danger portion says
