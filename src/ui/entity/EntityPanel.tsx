@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronUp, X } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { SaveStatus } from '@/ui/layout/SaveStatus';
@@ -23,17 +23,8 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
   const t = useTranslations('common');
   const root = useRef<HTMLDivElement>(null);
   const c = usePanelController(props, root);
-  // sync: focus the selected entity's title after the detail surface mounts.
-  useEffect(() => {
-    root.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
-  }, []);
-  // A control that re-renders away during its own save leaves focus on the document body,
-  // outside the surface; take it back so Escape and the shortcuts keep working (EP-B06).
-  // sync: DOM focus follows the save queue's state.
-  useEffect(() => {
-    if (c.queue.state === 'saved' && document.activeElement === document.body)
-      root.current?.focus({ preventScroll: true });
-  }, [c.queue.state]);
+  const scrolled = useHeadingGone(root);
+  usePanelFocus(root, c.queue.state);
   const guarded = (action: () => void) => () => void c.navigate(action);
   return (
     <>
@@ -41,6 +32,8 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
         state={c.queue.state}
         neighbors={props.neighbors}
         close={guarded(props.close)}
+        name={scrolled ? props.name : null}
+        move={(direction: number) => guarded(() => props.move(direction))()}
       />
       <div ref={root} tabIndex={-1} className="p-4 outline-none lg:p-5">
         {c.queue.error && <ErrorPanel error={c.queue.error} />}
@@ -76,6 +69,37 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
       />
     </>
   );
+}
+// EP-B17: focus enters the panel on the record's heading so the record is announced, and comes
+// back to the panel when a control re-renders away during its own save and leaves focus on the
+// document body, outside the surface the shortcuts are delegated from (EP-B06).
+function usePanelFocus(root: RefObject<HTMLElement | null>, state: SaveState) {
+  // sync: focus the selected entity's title after the detail surface mounts.
+  useEffect(() => {
+    root.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+  }, [root]);
+  // sync: DOM focus follows the save queue's state.
+  useEffect(() => {
+    if (state === 'saved' && document.activeElement === document.body)
+      root.current?.focus({ preventScroll: true });
+  }, [root, state]);
+}
+// The bar only names the record once the heading it would repeat has scrolled away. An observer
+// rather than a scroll listener: it reports the crossing instead of every frame of the journey.
+function useHeadingGone(root: RefObject<HTMLElement | null>) {
+  const [gone, setGone] = useState(false);
+  // sync: the heading's visibility inside the panel's scroll container.
+  useEffect(() => {
+    const heading = root.current?.querySelector('h2');
+    if (!heading) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setGone(entry ? !entry.isIntersecting : false),
+      { threshold: 1 },
+    );
+    observer.observe(heading);
+    return () => observer.disconnect();
+  }, [root]);
+  return gone;
 }
 function usePanelController<T extends Entity, P extends object, C>(
   props: Props<T, P, C>,
@@ -140,14 +164,23 @@ function useUnloadGuard(state: SaveState) {
 }
 // On a phone the bar reads Back · status; beside the list it reads status · close, so the
 // dismiss control sits where each layout expects it. Moving between items is the list's job.
+// EP-B07: the bar used to carry a position and nothing else, so once the heading scrolled away
+// nothing on screen said which record was open, and the position named a sequence the reader could
+// not move through. It now carries the record's name once the heading has gone, and the position
+// is a control: the list is the narrower, softened column while a record is open, and sending the
+// reader back to it for every next item is the wrong cost for the commonest move in triage.
 function PanelToolbar({
   state,
   neighbors,
   close,
+  name,
+  move,
 }: {
   state: SaveState;
   neighbors: Neighbors;
   close: () => void;
+  name: string | null;
+  move: (direction: number) => void;
 }) {
   const t = useTranslations('common');
   return (
@@ -163,15 +196,44 @@ function PanelToolbar({
         <span className="lg:sr-only">{t('back')}</span>
         <X className="hidden size-4 lg:block" />
       </Button>
-      <div className="flex flex-1 items-center justify-center gap-2 text-xs text-text-muted tabular-nums">
-        {state === 'idle' ? (
-          neighbors.position > 0 && (
-            <span>{t('position', { position: neighbors.position, count: neighbors.count })}</span>
-          )
-        ) : (
-          <SaveStatus state={state} />
+      <div className="flex min-w-0 flex-1 items-center gap-2 ps-1 text-xs text-text-muted">
+        {name && (
+          <bdi className="min-w-0 truncate text-sm font-medium text-text lg:order-first">{name}</bdi>
         )}
       </div>
+      {state === 'idle' ? (
+        <PanelPosition neighbors={neighbors} move={move} />
+      ) : (
+        <SaveStatus state={state} />
+      )}
+    </div>
+  );
+}
+// The position states where the reader is in the loaded list and moves them through it.
+export function PanelPosition({ neighbors, move }: { neighbors: Neighbors; move: (d: number) => void }) {
+  const t = useTranslations('common');
+  if (neighbors.position <= 0) return null;
+  return (
+    <div className="flex shrink-0 items-center gap-0.5 text-xs text-text-muted tabular-nums">
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label={t('previous')}
+        disabled={!neighbors.previous}
+        onClick={() => move(-1)}
+      >
+        <ChevronUp className="size-4" />
+      </Button>
+      <span>{t('position', { position: neighbors.position, count: neighbors.count })}</span>
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label={t('next')}
+        disabled={!neighbors.next}
+        onClick={() => move(1)}
+      >
+        <ChevronDown className="size-4" />
+      </Button>
     </div>
   );
 }

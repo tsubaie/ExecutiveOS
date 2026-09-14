@@ -31,14 +31,14 @@ export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
     <fieldset data-autosave className="grid min-w-0 gap-4">
       <NoteTitle title={note.title} save={save} />
       <div className="grid gap-2">
-        <Property label={t('type')}>
+        <Property label={t('type')} quiet empty={!draft.type}>
           <TypeSelect
             value={draft.type}
             current={note.type ?? ''}
             onChange={(next) => change({ type: next })}
           />
         </Property>
-        <Property label={t('date')}>
+        <Property label={t('date')} quiet empty={!draft.noteDate}>
           <DatePicker
             value={draft.noteDate}
             label={t('date')}
@@ -46,7 +46,9 @@ export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
           />
         </Property>
       </div>
-<Property label={committees('committee')}><CommitteePicker value={note.committeeId} onChange={(committeeId) => save({ committeeId })} /></Property>
+<Property label={committees('committee')} quiet empty={!note.committeeId}>
+        <CommitteePicker value={note.committeeId} onChange={(committeeId) => save({ committeeId })} />
+      </Property>
       <ParticipantLinks participants={note.participants} />
       <TagsEditor tags={note.tags} save={(tags) => save({ tags })} />
       {mentions.error && <ErrorPanel error={mentions.error} />}

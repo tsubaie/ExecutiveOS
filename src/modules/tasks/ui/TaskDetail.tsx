@@ -2,13 +2,13 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Trash2, NotebookPen } from 'lucide-react';
-import { CommitteeBadge } from '@/modules/committees/ui';
 import { Button } from '@/ui/primitives/button';
 import { useDateTime, useRelativeTime } from '@/ui/format';
 import { routes } from '@/core/routes';
 import type { DetailApi } from '@/ui/entity/types';
 import type { TaskDetail as Detail, TaskPatch } from '../schema/validation';
 import { TaskFields } from './TaskFields';
+import { useDueLabel } from './use-due-label';
 import { TaskToggle } from './TaskToggle';
 import { TaskAi } from './TaskAi';
 import { Subtasks } from './Subtasks';
@@ -38,6 +38,7 @@ export function TaskDetail({
             <p className="mb-3 text-xs text-text-muted">{t('completedHint')}</p>
           )}
           <TaskFields
+            dueNote={<TaskDue task={task} />}
             initial={task}
             save={api.save}
             disabled={task.status === 'completed'}
@@ -46,11 +47,25 @@ export function TaskDetail({
           />
         </>
       )}
-      {task.committeeId && <div className="mt-3"><CommitteeBadge id={task.committeeId} /></div>}
       <TaskAi key={task.id} task={task} />
       <Subtasks task={task} />
       <TaskFooter task={task} remove={api.remove} />
     </div>
+  );
+}
+
+// TASKS-B03: the row states how late a task is in words and the panel used to state it only as a
+// red date, so the screen where the decision is made said less than the screen it was opened
+// from. Both now read the same wording out of the same helper.
+function TaskDue({ task }: { task: Detail }) {
+  const due = useDueLabel()(task);
+  if (!due || due.tone === 'muted') return null;
+  return (
+    <span
+      className={`shrink-0 text-sm font-medium ${due.tone === 'danger' ? 'text-danger' : 'text-accent'}`}
+    >
+      {due.label}
+    </span>
   );
 }
 
@@ -91,7 +106,7 @@ function TaskFooter({ task, remove }: { task: Detail; remove: () => void }) {
         <Button
           variant="ghost"
           size="sm"
-          className="text-danger hover:text-danger"
+          className="text-text-muted hover:text-danger focus-visible:text-danger"
           onClick={remove}
         >
           <Trash2 className="size-3.5" />
