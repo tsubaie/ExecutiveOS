@@ -199,7 +199,7 @@ Adding a relationship requires adding a row to this table in the same PR and, if
 - The runner applies each migration once, in order, under `pg_advisory_lock(7231)`, and records it in Drizzle's migrations table. Migrations are forward-only. Rollback is restore from backup (ADR 0008).
 - Never edit a committed migration.
 - `pnpm db:reset` produces a database identical to production migrations. The schema audit runs `drizzle-kit check`, applies migrations to an empty database, and compares `information_schema` and `pg_catalog` (triggers, indexes, constraints) with `schema/db.ts` and this document's relationship inventory.
-- Seed data (`scripts/db/seed.ts`) is for development and e2e only: one admin, six people (three assignable), two committees, one objective, three KPIs with readings and targets, two initiatives, three meetings (past with minutes and actions, today with a sample PDF and fixture brief, next week), links across them, twenty tasks. `--large` multiplies entities for performance checks. No real names.
+- Seed data (`scripts/db/seed.ts`) is for development and e2e only: one admin, six people (three assignable), two committees, one objective and seven KPIs whose readings and targets place one measure in each status the list separates (on, near, off, no data, stale, no target), in both directions and both scripts, two initiatives, three meetings (past with minutes and actions, today with a sample PDF and fixture brief, next week), links across them, twenty tasks. `--large` multiplies entities for performance checks. No real names.
 
 ## Import from legacy Mission Control
 

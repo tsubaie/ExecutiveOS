@@ -6,6 +6,7 @@ import { PersonCreate } from '../../src/modules/people/schema/validation';
 import { seedPeople } from '../../tests/fixtures/people';
 import { id } from '../../src/core/db/ids';
 import { seedLarge } from './large-data';
+import { seedScorecard } from './scorecard';
 const user = (await selectUsers(db())).find((user) => user.role === 'admin' && user.isActive);
 if (!user) throw new Error('Complete setup before loading preview people.');
 await db().transaction(async (database) => {
@@ -24,6 +25,7 @@ await db().transaction(async (database) => {
         userId: null,
       }),
     );
+  await seedScorecard(database, User.parse(user));
   // `--large` multiplies entities for performance checks (docs/03 § Seed data).
   if (process.argv.includes('--large'))
     await seedLarge(database, User.parse(user), { people: 200, tasks: 1500 });
