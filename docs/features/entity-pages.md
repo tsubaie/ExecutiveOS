@@ -52,7 +52,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 
 ## Keyboard
 
-- EP-B06 `↑/↓` (`k/j`) move focus; `Enter` opens; `Esc` closes detail, second `Esc` clears filters, third clears selection; `n` create; `x` toggles checkbox in multi mode; `Shift+↑/↓` extends selection; `a` with selection focuses the bulk action bar. Disabled while an input, textarea, contenteditable, or dialog has focus, except `Esc` in a plain field or on a closed picker, which leaves the field and closes the detail once pending saves settle (B11); an open picker keeps `Esc` for itself. The panel bar shows the save state as a pill: a spinner while saving, a tick for two seconds after, a warning until a failed save is retried.
+- EP-B06 `↑/↓` (`k/j`) move focus; `Enter` opens; `Esc` closes detail, second `Esc` clears filters, third clears selection; `n` create; `x` toggles checkbox in multi mode; `Shift+↑/↓` extends selection; `a` with selection focuses the bulk action bar. Disabled while an input, textarea, contenteditable, or dialog has focus, except `Esc` in a plain field or on a closed picker, which leaves the field and closes the detail once pending saves settle (B11); an open picker keeps `Esc` for itself. Opening a record takes focus off the row before the panel exists to receive it, so while the record loads the active element is the document body, outside the surface the shortcuts are delegated from; `Esc` is also handled from the document for exactly that case, guarded on this surface having a panel open and on focus being nowhere at all, so it closes the panel instead of doing nothing. The panel bar shows the save state as a pill: a spinner while saving, a tick for two seconds after, a warning until a failed save is retried.
 
 ## Layout
 

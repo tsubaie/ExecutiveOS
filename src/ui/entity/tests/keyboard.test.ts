@@ -34,6 +34,21 @@ describe('entity keyboard', () => {
     expect(options.select).toHaveBeenCalledTimes(1);
     expect(options.navigate).toHaveBeenCalledWith({ sel: '' }, true);
   });
+  it('EP-B06 Escape closes an open panel while the record is still loading and focus is nowhere', () => {
+    // Opening a record takes focus off the row before the panel exists to receive it, so for a
+    // moment the active element is the document body, outside the surface the shortcuts are
+    // delegated from. Escape has to reach the panel anyway.
+    const { options } = setup({ panel: true });
+    expect(document.activeElement).toBe(document.body);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(options.close).toHaveBeenCalledTimes(1);
+  });
+  it('EP-B06 an Escape from nowhere is ignored when this surface has no panel open', () => {
+    const { options } = setup({ panel: false });
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(options.close).not.toHaveBeenCalled();
+    expect(options.clear).not.toHaveBeenCalled();
+  });
   it('EP-B06 shortcuts are ignored while an input has focus and Escape clears the list state', () => {
     const { root, input, options } = setup();
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));

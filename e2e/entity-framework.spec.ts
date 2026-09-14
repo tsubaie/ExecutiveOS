@@ -1,67 +1,83 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from './fixtures/auth';
 
 // EP-B23: opening a record has to make that record the subject of the page. Every part of this is
 // CSS, and the part that kept failing was a cascade problem rather than a missing rule, so the
 // assertions read computed style from a real browser rather than class names from a render.
-test.describe('entity detail focus @desktop', () => {
-  test('EP-B23 the page hands the open record the foreground', async ({ page }) => {
-    await loginAs(page, 'en');
-    await page.goto('/tasks');
-    const row = page.locator('[data-entity-list] .entity-row').first();
-    await row.click();
-    await page.waitForSelector('.entity-detail');
+async function createTask(page: Page, title: string) {
+  const created = await page.evaluate(async (name) => {
+    const response = await fetch('/api/v1/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'ExecutiveOS',
+        'Idempotency-Key': crypto.randomUUID(),
+      },
+      body: JSON.stringify({ title: name }),
+    });
+    return response.json();
+  }, title);
+  return String(created.data.id);
+}
 
-    // The click that opens a record leaves the pointer on the list, so the hover escape would
-    // cancel the softening at the only moment it matters. The hold has to outrank it.
-    const held = await page.evaluate(() => {
+test('EP-B23 the page hands the open record the foreground @desktop', async ({ page }) => {
+  await loginAs(page, 'en');
+  const prefix = `Focus ${crypto.randomUUID()}`;
+  const id = await createTask(page, `${prefix} first`);
+  await createTask(page, `${prefix} second`);
+  await page.goto(`/tasks?view=all&q=${encodeURIComponent(prefix)}`);
+  const row = page.locator(`[data-row-id="${id}"]`);
+  await expect(row).toBeVisible();
+
+  // Open the record with the pointer left where it will still be over the list once the list
+  // narrows, which is the situation the hold exists for: clicking a row is how a record is opened,
+  // so the hover escape would otherwise cancel the softening at that exact moment.
+  await row.click();
+  await page.waitForSelector('.entity-detail');
+  expect(
+    await page.evaluate(() => {
       const list = document.querySelector('[data-entity-list]');
-      if (!list) return null;
-      return {
-        holding: list.getAnimations().some((a) => 'animationName' in a && a.animationName === 'hold-dim'),
-        filter: getComputedStyle(list).filter,
-      };
-    });
-    expect(held?.holding).toBe(true);
-    expect(held?.filter).toContain('blur(');
+      return list ? getComputedStyle(list).animationName : null;
+    }),
+  ).toBe('hold-dim');
 
-    // One raised plane: the panel keeps the surface tone, the list drops to the page ground.
-    const planes = await page.evaluate(() => {
-      const style = (s: string) => {
-        const el = document.querySelector(s);
-        return el ? getComputedStyle(el) : null;
-      };
-      const list = style('[data-entity-list]');
-      const panel = style('.entity-detail');
-      const current = style('.entity-row[data-current]');
-      return {
-        ground: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(),
-        listBg: list?.backgroundColor ?? null,
-        panelBg: panel?.backgroundColor ?? null,
-        panelShadow: panel?.boxShadow ?? null,
-        currentBg: current?.backgroundColor ?? null,
-        listWidth: document.querySelector('[data-entity-list]')?.getBoundingClientRect().width ?? 0,
-        panelWidth: document.querySelector('.entity-detail')?.getBoundingClientRect().width ?? 0,
-      };
-    });
-    expect(planes.listBg).not.toBe(planes.panelBg);
-    expect(planes.panelShadow).not.toBe('none');
-    // The record is the subject, so it carries the wider column.
-    expect(planes.panelWidth).toBeGreaterThan(planes.listWidth);
-    // The selected row keeps its place with the edge bar alone; the tinted ground goes.
-    expect(planes.currentBg).toBe('rgba(0, 0, 0, 0)');
+  // Soft straight away, before any pointer movement: this is the moment the hover escape used to
+  // cancel, because opening a record is a click on a row.
+  expect(
+    await page.evaluate(() => getComputedStyle(document.querySelector('[data-entity-list]')!).filter),
+  ).toContain('blur(');
 
-    // The heading is focused so the record is announced, but it is not tabbable and draws no ring.
-    const heading = await page.evaluate(() => {
-      const active = document.activeElement as HTMLElement | null;
-      return {
+  // The rest is the resting state, read once the row's own colour transition has settled.
+  await page.waitForTimeout(1500);
+  const planes = await page.evaluate(() => {
+    const style = (selector: string) => {
+      const element = document.querySelector(selector);
+      return element ? getComputedStyle(element) : null;
+    };
+    const box = (selector: string) =>
+      document.querySelector(selector)?.getBoundingClientRect().width ?? 0;
+    const active = document.activeElement as HTMLElement | null;
+    return {
+      listBg: style('[data-entity-list]')?.backgroundColor ?? null,
+      panelBg: style('.entity-detail')?.backgroundColor ?? null,
+      panelShadow: style('.entity-detail')?.boxShadow ?? null,
+      currentBg: style('.entity-row[data-current]')?.backgroundColor ?? null,
+      listWidth: box('[data-entity-list]'),
+      panelWidth: box('.entity-detail'),
+      focus: {
         tag: active?.tagName ?? null,
         tabIndex: active?.getAttribute('tabindex') ?? null,
         outline: active ? getComputedStyle(active).outlineStyle : null,
-      };
-    });
-    expect(heading.tag).toBe('H2');
-    expect(heading.tabIndex).toBe('-1');
-    expect(heading.outline).toBe('none');
+      },
+    };
   });
+  // One raised plane: the panel keeps the surface tone, the list drops to the page ground.
+  expect(planes.listBg).not.toBe(planes.panelBg);
+  expect(planes.panelShadow).not.toBe('none');
+  // The record is the subject, so it carries the wider column.
+  expect(planes.panelWidth).toBeGreaterThan(planes.listWidth);
+  // The selected row keeps its place with the edge bar alone; the tinted ground goes.
+  expect(planes.currentBg).toBe('rgba(0, 0, 0, 0)');
+  // The heading is focused so the record is announced, but it is not tabbable and draws no ring.
+  expect(planes.focus).toEqual({ tag: 'H2', tabIndex: '-1', outline: 'none' });
 });
