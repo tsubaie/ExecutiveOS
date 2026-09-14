@@ -505,12 +505,40 @@
    which covers the keyboard. Where there is no pointer to hover with, the chrome stays: on touch
    an uncoloured control would be the only thing telling a reader the value can be changed. */
 @media (hover: hover) {
-  .property-quiet :is([data-slot='select-trigger'], [data-slot='popover-trigger']) {
+  .property-quiet
+    :is(
+      [data-slot='select-trigger'],
+      [data-slot='popover-trigger'],
+      [data-slot='input'],
+      [data-slot='textarea'],
+      [data-slot='native-select']
+    ) {
     border-color: transparent;
     background: transparent;
   }
-  .property-quiet:hover :is([data-slot='select-trigger'], [data-slot='popover-trigger']),
-  .property-quiet:focus-within :is([data-slot='select-trigger'], [data-slot='popover-trigger']) {
+  .property-quiet:hover
+    :is(
+      [data-slot='select-trigger'],
+      [data-slot='popover-trigger'],
+      [data-slot='input'],
+      [data-slot='textarea'],
+      [data-slot='native-select']
+    ),
+  .property-quiet:focus-within
+    :is(
+      [data-slot='select-trigger'],
+      [data-slot='popover-trigger'],
+      [data-slot='input'],
+      [data-slot='textarea'],
+      [data-slot='native-select']
+    ) {
+    border-color: var(--color-border);
+  }
+  /* A picker with nothing set still says so in words ("No date", "Unassigned"), so it can lose its
+     chrome and stay readable. An empty text field has no words at all, and taking its outline away
+     would leave a label standing over a void. It keeps the outline, because that outline is the
+     affordance to add the value. */
+  .property-quiet.property-empty :is([data-slot='input'], [data-slot='textarea']) {
     border-color: var(--color-border);
   }
   /* The chevron is an affordance, not information: it belongs to the hovered state. */
@@ -530,7 +558,14 @@
 }
 /* A value nobody has set is not a value. It stays legible and reachable, and stops competing with
    the facts the record does carry. */
-.property-empty :is([data-slot='select-trigger'], [data-slot='popover-trigger']) {
+.property-empty
+  :is(
+    [data-slot='select-trigger'],
+    [data-slot='popover-trigger'],
+    [data-slot='input'],
+    [data-slot='textarea'],
+    [data-slot='native-select']
+  ) {
   color: var(--color-text-muted);
 }
 /* Anything that appears in place rather than arriving with the page: the bulk bar when selection

@@ -71,7 +71,7 @@ function SubtaskFields({ task, operation }: { task: Task; operation: Operation }
     operation.run(() => mutations.patch(task.id, task.revision, fields, crypto.randomUUID()));
   return (
     <fieldset disabled={operation.pending} className="grid gap-2">
-      <Property label={t('owner')}>
+      <Property label={t('owner')} quiet empty={!task.ownerId}>
         <OwnerSelect
           value={task.ownerId ?? ''}
           people={owners.data?.data ?? []}
@@ -80,7 +80,7 @@ function SubtaskFields({ task, operation }: { task: Task; operation: Operation }
           }}
         />
       </Property>
-      <Property label={t('dueDate')}>
+      <Property label={t('dueDate')} quiet empty={!task.dueDate}>
         <DueDateField
           value={task.dueDate}
           onChange={(dueDate) => {

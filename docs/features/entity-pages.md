@@ -86,7 +86,12 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   chrome returns. Where there is no pointer to hover with the chrome stays, because on touch it is
   the only thing saying a value can be changed. A value nobody has set is muted, so the eye
   catches what the record says instead of filtering placeholders out of it. Create forms opt out:
-  there the job is to fill the fields in and every one of them should look ready.
+  there the job is to fill the fields in and every one of them should look ready. Both row
+  components carry the signal, `Property` for a label beside its value and `Field` for a label
+  above one, so every module's detail reads the same way whichever it uses and `Field` keeps
+  owning the identifiers EP-B19 requires. One exception earns its chrome back: a picker with
+  nothing set still says so in words, but an empty text field has no words at all, so it keeps its
+  outline rather than leaving a label standing over a void.
 - EP-B24 A change the user caused is acknowledged where it shows. A count that changes is keyed on
   its own value so the new figure replaces the old rather than the element quietly redrawing; this
   covers the rail counts and the statistics strip, and Home states the same rule for its sections.
