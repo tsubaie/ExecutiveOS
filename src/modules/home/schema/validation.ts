@@ -32,6 +32,7 @@ export const Home = z.object({
             count: z.number().nullable().default(null),
             revision: z.number().nullable().default(null),
             overdue: z.number().nullable().default(null),
+            done: z.number().nullable().default(null),
           }),
         )
         .default([]),

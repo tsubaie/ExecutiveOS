@@ -3,7 +3,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Avatar } from '@/ui/layout/Avatar';
 import { TaskCheck } from '@/modules/tasks/ui';
-import { AgeingBar, LoadBar } from './HomeBar';
+import { AgeingBar, Progress } from './HomeBar';
 import { useCount, usePlainDate, useToday } from '@/ui/format';
 import { alarming, daysBetween, type Item, type Section, type SectionKey } from './home-sections';
 
@@ -69,10 +69,8 @@ function Ageing({ section }: { section: Section }) {
   // The absence is the message, so the whole line goes.
   if (!section.stale) return null;
   return (
-    <p className="mt-3 flex items-center gap-3">
-      <span className="max-w-40 flex-1">
-        <AgeingBar count={section.count} stale={section.stale} />
-      </span>
+    <p className="mt-3 flex items-center gap-2">
+      <AgeingBar count={section.count} stale={section.stale} />
       <span className="text-xs font-medium tabular-nums text-danger">
         {t('staleOverdue', { count: section.stale })}
       </span>
@@ -141,11 +139,13 @@ function RowFacts({ item, sectionKey }: { item: Item; sectionKey: SectionKey }) 
       {late > 0 && (
         <bdi className="font-medium tabular-nums text-danger">{t('lateOpen', { count: late })}</bdi>
       )}
+      {sectionKey === 'committees' && item.done !== null && (
+        <Progress done={item.done} open={item.count ?? 0} />
+      )}
     </span>
   );
 }
 function Row({ item, sectionKey, lead }: { item: Item; sectionKey: SectionKey; lead: boolean }) {
-  const load = sectionKey === 'committees' && item.count !== null ? item : null;
   return (
     <div className="group -mx-2 flex items-start gap-3 rounded-md px-2 py-3 hover:bg-surface-raised">
       <RowLead item={item} sectionKey={sectionKey} />
@@ -156,11 +156,6 @@ function Row({ item, sectionKey, lead }: { item: Item; sectionKey: SectionKey; l
           <bdi>{item.title}</bdi>
         </span>
         <RowFacts item={item} sectionKey={sectionKey} />
-        {load && (
-          <span className="mt-2 block max-w-56">
-            <LoadBar open={load.count ?? 0} overdue={load.overdue ?? 0} />
-          </span>
-        )}
       </Link>
     </div>
   );

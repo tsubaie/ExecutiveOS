@@ -104,12 +104,17 @@ const openWork = sql`(select count(*) from tasks t where t.committee_id = commit
 // much of it has already slipped.
 const lateWork = (today: string) => sql`(select count(*) from tasks t where t.committee_id = committees.id
   and t.deleted_at is null and t.parent_id is null and t.status <> 'completed' and t.due_date < ${today}::date)`;
+// Completed top-level work, so a committee row can show how far along it is rather than only how
+// much is left.
+const doneWork = sql`(select count(*) from tasks t where t.committee_id = committees.id
+  and t.deleted_at is null and t.parent_id is null and t.status = 'completed')`;
 export async function selectHomeSummary(database: Database, today: string) {
   const carrying = and(isNull(committees.deletedAt), eq(committees.status, 'active'), sql`${openWork} > 0`);
   const [row] = await database.select({
     count: sql<number>`count(*)::int`,
-    items: sql<{ id: string; title: string; count: number; owner: string; overdue: number }[]>`coalesce((select json_agg(item) from (
-      select id, name as title, nullif(ownership, '') as owner, ${openWork} as count, ${lateWork(today)} as overdue
+    items: sql<{ id: string; title: string; count: number; owner: string; overdue: number; done: number }[]>`coalesce((select json_agg(item) from (
+      select id, name as title, nullif(ownership, '') as owner, ${openWork} as count,
+        ${lateWork(today)} as overdue, ${doneWork} as done
       from committees where ${carrying} order by ${openWork} desc, lower(name), id limit 5) item), '[]'::json)`,
   }).from(committees).where(carrying);
   return row ?? { count: 0, items: [] };

@@ -16,6 +16,8 @@ export type HomeSectionItem = {
   revision?: number | null;
   // How much of `count` is already overdue, where the row aggregates other work.
   overdue?: number | null;
+  // Work the row has already finished, so progress can be shown alongside what is left.
+  done?: number | null;
 };
 export type HomeSection = {
   key: string;

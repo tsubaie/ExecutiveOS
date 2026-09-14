@@ -41,10 +41,14 @@ The one screen the principal opens first. It is a set of queries over existing m
   it. Overdue is the only state that uses the danger token, and only above zero.
 - HOME-B09 Sections that aggregate say how the pile is shaped, not only how big it is. The overdue
   section reports how much of it is a month or more past due, which separates a backlog from a mess,
-  and each committee row shows what share of its open work has already slipped. Every committee's mark
-  is the same width: volume is already stated in text beside it, so the mark carries the proportion,
-  and a column of equal marks reads as one instrument rather than a ragged set of stubs. A section
-  with nothing aged shows no mark at all, because an undivided bar carries no information. Both marks are neutral mass plus a danger portion: accent against danger is
+  and each committee row shows how far along it is as a fixed-width meter with its fraction beside it,
+  the same compact form the rest of the row's facts use. Marks are one accent fill over a neutral
+  track, measured rather than chosen: accent against danger is indistinguishable under protanopia in
+  the light theme, warning against danger fails even for normal vision, and a mid-grey against danger
+  fails in the dark theme, so none of those may carry meaning. The track falls under 3:1 against the
+  surface, so every meter ships with its figures in text and is hidden from assistive technology; the
+  numbers inform and the mark only paces them. A section with nothing aged shows no mark at all,
+  because an undivided bar carries no information. Both marks are neutral mass plus a danger portion: accent against danger is
   indistinguishable under protanopia in the light theme and warning against danger is indistinguishable
   even with normal vision, so neither may carry meaning. The neutral falls under 3:1 against the
   surface, so every mark ships with its figures in text and is hidden from assistive technology; the

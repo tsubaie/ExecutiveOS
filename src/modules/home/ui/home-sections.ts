@@ -21,6 +21,7 @@ export type Item = {
   count: number | null;
   revision: number | null;
   overdue: number | null;
+  done: number | null;
 };
 export type Section = {
   key: SectionKey;
