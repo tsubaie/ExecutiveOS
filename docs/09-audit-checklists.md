@@ -8,7 +8,7 @@ Audits keep an agent-built codebase honest. Script audits run in `pnpm audit:all
 |---|---|---|
 | `audit:structure` | Module manifest (`02-architecture.md`), no extra top-level entries, every module has a spec, every linkable module registers a link resolver and a job kind file if it declares jobs | runtime |
 | `depcruise` | Layering matrix on the real import graph including barrels, aliases, dynamic imports; `server-only` boundaries; no cycles | static |
-| `audit:bundle` | No server code markers in client chunks; route-specific client JS (chunks beyond the root bundle every route loads) ≤ 250 KB gzipped, measured on the production build; the root bundle size is reported so growth stays visible | runtime |
+| `audit:bundle` | No server code markers in client chunks; route-specific client JS (chunks beyond the root bundle every route loads) ≤ 272 KB gzipped (ADR 0023), measured on the production build; the root bundle size is reported so growth stays visible | runtime |
 | `audit:i18n` | Catalog key parity; every literal `t('key')` resolves; ICU syntax valid and argument names equal in both catalogs; dynamic keys (`t(value)`, template keys) are reported per file as warnings because they cannot be resolved statically | runtime |
 | `audit:portability` | Tripwire denylist outside allowed locations; timezone and locale literals outside allowed locations | runtime |
 | `audit:secrets` | `gitleaks` over the tree and history; CI installs the binary, a local run without it fails with an install hint | runtime |

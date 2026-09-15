@@ -1,6 +1,7 @@
 /** TASKS-I01–I06, B01–B12, B16: bounded hierarchy, completion, provenance, fenced edits, source note. */
 import 'server-only';
 import { requireCommittee } from '@/modules/committees';
+import { userIdsForPeople } from '@/modules/people';
 import { z } from 'zod';
 import type { Context } from '@/core/auth/session';
 import { id } from '@/core/db/ids';
@@ -10,6 +11,7 @@ import { decodeCursor, encodeCursor, filtersHash } from '@/core/db/keyset';
 import { applyUpdate, requireRevision, type EntityOps } from '@/core/entity/service';
 import { AppError } from '@/core/http/errors';
 import { routes } from '@/core/routes';
+import { emit } from '@/core/notifications/emit';
 import type { HomeSection } from '@/core/modules/server-manifest';
 import { dayAt, addDays, bandOf } from '@/core/time/tasks';
 import { aiPeople, getPerson, personNameSql } from '@/modules/people';
@@ -141,6 +143,7 @@ export async function createTask(ctx: Context, input: TaskCreate) {
     updatedBy: ctx.user.id,
   });
   await writeAudit(ctx.db, ctx.user.id, 'create', 'task', row.id, toJson(input));
+  await notifyAssigned(ctx, row.id, input.title, null, input.ownerId ?? null);
   return getTask(ctx, row.id);
 }
 export async function patchTask(ctx: Context, taskId: string, input: TaskPatch) {
@@ -152,7 +155,28 @@ export async function patchTask(ctx: Context, taskId: string, input: TaskPatch) 
   const { revision, ...fields } = input;
   void revision;
   await update(ctx, task, { ...fields, ...(fields.status ? { completedAt: null } : {}) });
+  if (fields.ownerId !== undefined)
+    await notifyAssigned(ctx, taskId, task.title, task.ownerId, fields.ownerId);
   return getTask(ctx, taskId);
+}
+// NOTIF-B04 `task.assigned`: emitted when a task comes to rest with an owner who is not the person
+// doing the assigning, in the same transaction as the change (NOTIF-B01). Unassigning notifies
+// nobody -- there is no one to tell -- and re-assigning to the same person is not an event.
+async function notifyAssigned(
+  ctx: Context,
+  taskId: string,
+  title: string,
+  from: string | null,
+  to: string | null | undefined,
+) {
+  if (!to || to === from) return;
+  await emit(ctx, {
+    kind: 'task.assigned',
+    subjectType: 'tasks',
+    subjectId: taskId,
+    payload: { actorName: ctx.user.name, title },
+    to: await userIdsForPeople(ctx, [to]),
+  });
 }
 export async function completeTask(ctx: Context, taskId: string, revision: number, force = false) {
   const task = await current(ctx, taskId, revision);

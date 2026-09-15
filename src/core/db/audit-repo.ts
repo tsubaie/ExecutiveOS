@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { auditLog } from './system-schema';
 import { type Database } from './client';
 import { id } from './ids';
-type Json = z.infer<ReturnType<typeof z.json>>;
+export type Json = z.infer<ReturnType<typeof z.json>>;
 // Dates and undefined values become JSON before they reach the audit row or an error payload.
 export function toJson(value: object | Json): Json {
   return z.json().parse(JSON.parse(JSON.stringify(value)));

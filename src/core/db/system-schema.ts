@@ -242,3 +242,34 @@ export const aiCredentials = pgTable(
     check('ai_credentials_provider', sql`${t.provider} in ('anthropic', 'openrouter')`),
   ],
 );
+
+// ADR 0022: one row per recipient, addressed to a user and never to a person — external people
+// have no login and must never accumulate a feed. `subject_type`/`subject_id` are a soft reference
+// resolved through the owning module at read time (NOTIF-B06), so there is no foreign key to five
+// module tables and a deleted subject drops out of the feed rather than dangling.
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text().notNull(),
+    subjectType: text('subject_type').notNull(),
+    subjectId: uuid('subject_id').notNull(),
+    payload: jsonb().notNull().default({}),
+    // Null for the scheduled kinds: the clock is not an actor (NOTIF-B05).
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: time('created_at').notNull().defaultNow(),
+    readAt: time('read_at'),
+  },
+  (t) => [
+    index('notifications_feed_idx').on(t.userId, t.readAt, t.createdAt.desc()),
+    index('notifications_actor_idx').on(t.actorId),
+    // NOTIF-I02: at most one unread row per subject and kind, which is what makes emission an
+    // idempotent upsert — a task reassigned four times is one unread line, not four.
+    uniqueIndex('notifications_unread_subject_idx')
+      .on(t.userId, t.kind, t.subjectId)
+      .where(sql`${t.readAt} is null`),
+  ],
+);

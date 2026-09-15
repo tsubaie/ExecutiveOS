@@ -36,13 +36,16 @@ It is opinionated software. It is not a general project-management tool, not a C
 | People | Yes. Directory and the single identity for task owners and attendees. `features/people.md` |
 | Links | Yes. Context graph. `features/links.md` |
 | Admin | Yes. Users, settings, backups, jobs, audit log, AI usage, learnings review. `features/admin.md` |
+| Account | Yes. The reader's own name, email, password, sessions and preferences, separate from the workspace's. `features/account.md` |
+| Search | Yes. One query across every module, over the text each already indexes. `features/search.md` |
+| Notifications | Yes. An in-app, pull-only centre for work that arrived for the reader. `features/notifications.md` |
 | AI | Yes. Note refine, tag suggestion, task breakdown, initiative update draft, meeting brief, brief translation, learnings proposal. `06-ai-integration.md` |
 
 ## Explicitly out of v1
 
 - Insights and daily briefing generation (Home is a query, not an AI product)
 - Relationship cadence tracking and reminders (People ships; follow-ups do not)
-- Daily check-in and push notifications
+- Daily check-in, push notifications, and notification email (the notification centre in `features/notifications.md` is in-app and pull-only: it is read when the reader opens it and reaches them nowhere else)
 - Email, calendar, Notion, or Drive integrations, including calendar sync for Meetings
 - Writing / book workspace
 - Public API tokens for third-party clients

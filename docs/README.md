@@ -33,6 +33,9 @@ This folder is the specification. Implementation follows it; when they disagree,
 | [Meetings](features/meetings.md) | Meetings, attendees, agenda, documents, AI briefs, minutes, actions |
 | [People](features/people.md) | Directory of people linked across modules |
 | [Links](features/links.md) | The context graph: contextual links plus projected structural edges |
+| [Search](features/search.md) | One query across every module, over the text each already indexes |
+| [Notifications](features/notifications.md) | In-app, pull-only centre for work that arrived for the reader |
+| [Account](features/account.md) | The reader's own identity, sign-in, sessions and preferences |
 
 ## Decision records
 

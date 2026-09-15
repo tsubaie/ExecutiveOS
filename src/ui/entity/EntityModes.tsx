@@ -29,8 +29,14 @@ function EntityLayout<T extends Entity, P extends object, C>({
     { id: '', label: t('layoutCards'), Icon: LayoutGrid },
     { id: 'table', label: t('layoutTable'), Icon: Table2 },
   ];
+  // EP-B29: the choice is offered where a table can actually be read. On a 390 px phone it cannot,
+  // and a control that hands the reader an unusable arrangement is worse than one that never asked.
   return (
-    <div role="group" aria-label={t('layout')} className="flex shrink-0 rounded-lg border p-0.5">
+    <div
+      role="group"
+      aria-label={t('layout')}
+      className="hidden shrink-0 rounded-lg border p-0.5 @lg:flex"
+    >
       {options.map((option) => (
         <Button
           key={option.id}
@@ -78,7 +84,9 @@ function EntityMode<T extends Entity, P extends object, C>({
           )}
           onClick={() => c.navigate({ [mode.key]: option.id, id: null, sel: null }, true)}
         >
-          {option.label}
+          <span className="segmented-label" data-label={option.label}>
+            {option.label}
+          </span>
         </Button>
       ))}
     </div>

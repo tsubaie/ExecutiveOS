@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import en from '@/core/i18n/messages/en.json';
 import type { ReactNode } from 'react';
 import { EntityModes } from '../EntityModes';
-import { EntityFacets } from '../EntityControls';
+import { EntityFacets } from '../EntityFacets';
 import { testConfig, testController, type TestRow } from './fixtures';
 // EP-B28: a mode is not a filter. It removes nothing from the list, it changes what every row of
 // it says, so it sits in the toolbar in its own right and never among the filter selects.

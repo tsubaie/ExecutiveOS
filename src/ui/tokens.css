@@ -148,10 +148,15 @@
   [tabindex='-1']:focus-visible {
     outline: none;
   }
-  /* Controls are 36px with a pointer and 44px on touch (docs/05 § Density and § Mobile). */
+  /* Controls are 36px with a pointer and 44px on touch (docs/05 § Density and § Mobile). The
+     select trigger is named here too: it is a Base UI button rather than a <select> or a
+     `data-slot="button"`, so it was the one control in the set sizing itself off its own padding,
+     which left every ChoiceSelect a few pixels short of the input and the buttons beside it. Its
+     own `sm` variant is a utility and still overrides this. */
   input,
   textarea,
   select,
+  [data-slot='select-trigger'],
   button[data-slot='button'] {
     min-height: 36px;
   }
@@ -159,6 +164,7 @@
     input,
     textarea,
     select,
+    [data-slot='select-trigger'],
     button[data-slot='button'] {
       min-height: 44px;
     }
@@ -795,6 +801,15 @@
   .entity-page-open .entity-row[data-current] {
     background: transparent;
   }
+  /* EP-B34: the panel covers the end of the list, and the sticky bar runs the list's full width, so
+     its controls sat underneath it — drawn, focusable by Tab, and invisible. The bar keeps clear of
+     the panel instead. The rows do not: EP-B26 promises the list keeps the width it had and that no
+     row moves under the click that opened one, and only the bar can step aside without breaking
+     that. The measure is the panel's own (EP-B07), read against the viewport because the panel is
+     fixed to it, and it is logical rather than left or right so RTL needs no second rule. */
+  .entity-page-open .entity-toolbar {
+    padding-inline-end: clamp(480px, 46vw, 880px);
+  }
   @media (prefers-reduced-motion: reduce) {
     .app-sidebar,
     .entity-rail,
@@ -802,6 +817,22 @@
       transition: none;
     }
   }
+}
+
+/* EP-B28: the selected option of a segmented group is set in the medium weight, and a heavier word
+   is a wider word — so stepping the control changed the group's width and everything sharing its
+   row moved with it. Each option reserves the measure its own label will take once selected: a
+   hidden twin at the selected weight sets the width, and the visible text is laid over it in a row
+   of its own that costs no height. The reservation is per option, so the group holds one width
+   whichever is chosen and in either script. */
+.segmented-label {
+  display: inline-grid;
+}
+.segmented-label::before {
+  content: attr(data-label);
+  font-weight: 500;
+  height: 0;
+  visibility: hidden;
 }
 
 .mobile-navigation > a {

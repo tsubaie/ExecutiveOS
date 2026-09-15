@@ -2,6 +2,7 @@ import 'server-only';
 import { and, eq, isNull, sql, getTableColumns } from 'drizzle-orm';
 import type { Database } from '@/core/db/client';
 import { normalize } from '@/core/search/normalize';
+import { searchMatch, searchRank } from '@/core/db/search';
 import { updateEntity, restoreEntity, type EntityPatch } from '@/core/db/entity';
 import { kpis, kpiReadings, kpiTargets, objectives } from './schema/db';
 type ListQuery = {
@@ -318,4 +319,18 @@ export function restoreObjective(
 }
 export async function lockObjectives(database: Database) {
   await database.execute(sql`select pg_advisory_xact_lock(7312)`);
+}
+// SEARCH: the workspace-wide provider (ADR 0021).
+export async function searchKpis(database: Database, normalized: string, limit: number) {
+  return database
+    .select({
+      id: kpis.id,
+      title: kpis.name,
+      subtitle: kpis.category,
+      rank: searchRank(kpis.name, normalized),
+    })
+    .from(kpis)
+    .where(and(isNull(kpis.deletedAt), searchMatch(kpis.searchText, normalized)))
+    .orderBy(searchRank(kpis.name, normalized), sql`lower(${kpis.name})`)
+    .limit(limit);
 }

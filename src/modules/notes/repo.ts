@@ -1,10 +1,11 @@
 import 'server-only';
-import { and, eq, isNull, isNotNull, inArray, sql, getTableColumns, type SQL } from 'drizzle-orm';
+import { and, eq, isNull, isNotNull, inArray, sql, desc, getTableColumns, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { notes, notePeople, noteRefinements } from './schema/db';
 import type { Database } from '@/core/db/client';
 import { id } from '@/core/db/ids';
 import { normalize } from '@/core/search/normalize';
+import { searchRank } from '@/core/db/search';
 import { restoreEntity, updateEntity, type EntityPatch } from '@/core/db/entity';
 import {
   cursorColumns,
@@ -288,4 +289,28 @@ export async function staleRefinements(database: Database, noteId: string) {
 export async function lockNote(database: Database, noteId: string) {
   const [row] = await database.select().from(notes).where(eq(notes.id, noteId)).for('update');
   return row;
+}
+// SEARCH: the workspace-wide provider (ADR 0021). It reuses NOTES-B04's own predicate, so a note
+// is found globally by the same things that find it in its list -- title, content, tags and the
+// names of its participants -- rather than by a narrower corpus invented here.
+export async function searchNotes(database: Database, normalized: string, limit: number) {
+  return database
+    .select({
+      id: notes.id,
+      title: notes.title,
+      subtitle: sql<string | null>`${notes.noteDate}::text`,
+      rank: searchRank(notes.title, normalized),
+    })
+    .from(notes)
+    .where(and(isNull(notes.deletedAt), searchPredicate(normalized)))
+    .orderBy(searchRank(notes.title, normalized), desc(notes.noteDate))
+    .limit(limit);
+}
+// NOTIF-B06: the titles behind a page of notifications; trashed notes are absent.
+export async function selectNoteSubjects(database: Database, ids: readonly string[]) {
+  if (!ids.length) return [];
+  return database
+    .select({ id: notes.id, title: notes.title })
+    .from(notes)
+    .where(and(inArray(notes.id, [...ids]), isNull(notes.deletedAt)));
 }

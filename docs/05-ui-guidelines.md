@@ -18,10 +18,22 @@
 ```
 AppShell
 ├── Sidebar (≥ 1024px)        nav from src/ui/layout/nav.ts
-├── TopBar                    page title, breadcrumbs, search, user menu
+├── TopBar                    search · notifications · account
 ├── <main>
 └── BottomNav (< 1024px)      Home · Tasks · Meetings · Notes · Menu
 ```
+
+- **The TopBar carries three things and no fourth.** Workspace-wide search (`features/search.md`),
+  the notification bell (`features/notifications.md`) and the account menu
+  (`features/account.md`). It used to carry the workspace name, which the sidebar foot already
+  says in a heavier weight on the same screen, and a pair of loose preference toggles. A band that
+  spans every page at every width has to be earning it: the page's own title belongs to the page
+  (the entity framework's bar owns it, EP-B07), breadcrumbs have nowhere to go in a two-level
+  product, and the workspace name is identity, not navigation, so it stays in the sidebar with the
+  reader's own.
+- Theme and locale move into the account menu. They are the reader's preferences, they are set
+  once, and `features/account.md` owns the page that also sets them; two controls permanently on
+  screen for a decision made twice a year is the wrong trade against the height.
 
 - One navigation definition (`nav.ts`) renders both Sidebar and BottomNav. Modules disabled in settings are absent from both.
 - The shell owns the viewport at every width: it is exactly one screen tall, the header, rail and bottom bar hold their size, and `<main>` is the scrolling element — reserving the bottom bar's height as padding rather than running under it. A page that fills the screen therefore measures nothing itself; writing those heights into a page's own `calc()` is what left a strip of empty ground under the workspace on a desktop and a control beneath the navigation bar on a phone.

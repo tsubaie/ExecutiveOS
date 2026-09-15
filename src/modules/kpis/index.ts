@@ -1,3 +1,4 @@
+import { searchProvider } from './search';
 import type { ServerManifest } from '@/core/modules/server-manifest';
 import { homeSummary } from './service';
 export {
@@ -11,4 +12,4 @@ export {
   createObjective,
   homeSummary,
 } from './service';
-export const server: ServerManifest = { id: 'kpis', homeSummary };
+export const server: ServerManifest = { id: 'kpis', homeSummary, search: searchProvider };

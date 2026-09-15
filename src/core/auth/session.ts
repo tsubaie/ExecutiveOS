@@ -53,4 +53,12 @@ export async function currentUser() {
     );
   return User.parse(found.user);
 }
+// ACCT-B02/B03: which session is making this request. The cookie is the only thing a request knows
+// about itself, so the hash of it is how the account page marks "this device" and how a password
+// change keeps the tab it was made in while revoking the rest. Read-only: it derives a value the
+// session lookup already computes and changes nothing about the session model (ADR 0005).
+export async function currentSessionHash() {
+  const raw = (await cookies()).get(defaults.cookieName)?.value;
+  return raw ? digest(raw) : null;
+}
 export type Context = { user: User; db: Database; requestId: string };

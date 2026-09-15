@@ -59,6 +59,10 @@ export function EntityViews<T extends Entity, P extends object, C>({
   );
 }
 // Featured views show their counts as a strip above the list; each is a shortcut to that view.
+// EP-B35: not where the rail is already showing them. The rail lists every view with its count and
+// the strip re-draws five of them bigger, forty pixels below — the same facts twice, costing 85 px
+// of a desktop list and 198 px of a phone's. The strip is what a surface without a rail gets
+// instead of one, so it appears exactly where the rail is not.
 export function EntityStats<T extends Entity, P extends object, C>({
   config,
   controller: c,
@@ -74,6 +78,7 @@ export function EntityStats<T extends Entity, P extends object, C>({
       className={cn(
         'grid grid-cols-2 gap-2 border-b px-3 py-3',
         featured.length === 5 ? '@lg:grid-cols-5' : '@lg:grid-cols-4',
+        c.railOpen && 'xl:hidden',
       )}
     >
       {featured.map((view) => {

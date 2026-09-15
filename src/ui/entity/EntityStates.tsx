@@ -29,9 +29,11 @@ export function EntityListSkeleton() {
     </div>
   );
 }
+// EP-B33: a sort is not one of these. It reorders the list, it never shortens it, so an empty list
+// under a chosen sort is empty for some other reason and "clear filters" would not bring a row back.
 function isFiltered<T extends Entity, P extends object, C>(c: Surface<T, P, C>['controller']) {
   return Boolean(
-    c.state.q || c.state.sort || c.state.view !== 'all' || Object.values(c.facets).some(Boolean),
+    c.state.q || c.state.view !== 'all' || Object.values(c.facets).some(Boolean),
   );
 }
 export function EntityEmpty<T extends Entity, P extends object, C>({

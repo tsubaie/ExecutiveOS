@@ -6,6 +6,7 @@ import {
   isNotNull,
   sql,
   arrayContains,
+  inArray,
   getTableColumns,
   type SQL,
 } from 'drizzle-orm';
@@ -13,6 +14,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { people } from './schema/db';
 import { type Database } from '@/core/db/client';
 import { normalize } from '@/core/search/normalize';
+import { searchMatch, searchRank } from '@/core/db/search';
 import { restoreEntity, updateEntity, type EntityPatch } from '@/core/db/entity';
 import {
   cursorColumns,
@@ -129,4 +131,47 @@ export function selectAiPeople(database: Database) {
     .select({ id: people.id, name: people.fullName, isAssignable: people.isAssignable })
     .from(people)
     .where(isNull(people.deletedAt));
+}
+// SEARCH: the workspace-wide provider (ADR 0021). Visibility is the list's own — a person in
+// trash is not reachable here either (SEARCH-B05).
+export async function searchPeople(database: Database, normalized: string, limit: number) {
+  // `people.search_text` is declared by migration 0001 rather than by the Drizzle table, which is
+  // why the list's own filter names it in raw SQL too.
+  const corpus = sql`search_text`;
+  const name = sql<string>`coalesce(${people.displayName}, ${people.fullName})`;
+  return database
+    .select({
+      id: people.id,
+      title: name,
+      subtitle: people.organization,
+      rank: searchRank(name, normalized),
+    })
+    .from(people)
+    .where(and(isNull(people.deletedAt), searchMatch(corpus, normalized)))
+    .orderBy(searchRank(name, normalized), sql`lower(${name})`)
+    .limit(limit);
+}
+// ACCT-B05: the directory record linked to a login (ADR 0011). One row or none — `people.user_id`
+// is unique — and it is read by user id because that is what the account knows about itself.
+export async function selectPersonForUser(database: Database, userId: string) {
+  const [row] = await database
+    .select({
+      id: people.id,
+      fullName: people.fullName,
+      organization: people.organization,
+      roleTitle: people.roleTitle,
+    })
+    .from(people)
+    .where(and(eq(people.userId, userId), isNull(people.deletedAt)));
+  return row ?? null;
+}
+// NOTIF-B04: the accounts behind a set of directory records (ADR 0011). A person with no login —
+// every external person — contributes nothing, which is how they never accumulate a feed.
+export async function selectUserIdsForPeople(database: Database, personIds: readonly string[]) {
+  if (!personIds.length) return [];
+  const rows = await database
+    .select({ userId: people.userId })
+    .from(people)
+    .where(and(inArray(people.id, [...personIds]), isNull(people.deletedAt)));
+  return rows.flatMap((row) => (row.userId ? [row.userId] : []));
 }

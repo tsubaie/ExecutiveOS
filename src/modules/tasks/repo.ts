@@ -15,6 +15,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { tasks } from './schema/db';
 import type { Database } from '@/core/db/client';
 import { normalize } from '@/core/search/normalize';
+import { searchMatch, searchRank } from '@/core/db/search';
 import { updateEntity, type EntityPatch } from '@/core/db/entity';
 import {
   cursorColumns,
@@ -241,4 +242,31 @@ export async function selectHomeSummary(database: Database, today: string) {
       group by p.id, p.full_name order by count(*) desc, lower(p.full_name), p.id limit 5) item),'[]'::json)`;
   const [row] = await database.select(columns).from(tasks);
   return row ?? {};
+}
+// SEARCH: the workspace-wide provider (ADR 0021). Subtasks are included — a subtask is a record
+// the reader can open — and the committee is the line that tells two similar titles apart.
+export async function searchTasks(database: Database, normalized: string, limit: number) {
+  const committeeName = sql<
+    string | null
+  >`(select c.name from committees c where c.id = ${tasks.committeeId} and c.deleted_at is null)`;
+  return database
+    .select({
+      id: tasks.id,
+      title: tasks.title,
+      subtitle: committeeName,
+      rank: searchRank(tasks.title, normalized),
+    })
+    .from(tasks)
+    .where(and(isNull(tasks.deletedAt), searchMatch(tasks.searchText, normalized)))
+    .orderBy(searchRank(tasks.title, normalized), sql`${tasks.dueDate} nulls last`, tasks.title)
+    .limit(limit);
+}
+// NOTIF-B06: the titles behind a page of notifications. Trashed tasks are absent, which is what
+// drops their lines from the feed rather than leaving a link to nothing.
+export async function selectTaskSubjects(database: Database, ids: readonly string[]) {
+  if (!ids.length) return [];
+  return database
+    .select({ id: tasks.id, title: tasks.title })
+    .from(tasks)
+    .where(and(inArray(tasks.id, [...ids]), isNull(tasks.deletedAt)));
 }
