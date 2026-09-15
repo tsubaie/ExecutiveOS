@@ -1,5 +1,6 @@
 'use client';
 import { useRef } from 'react';
+import { CirclePlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/ui/primitives/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/ui/primitives/dialog';
@@ -16,6 +17,30 @@ export function EntityPage<T extends Entity, P extends object, C>(props: EntityP
     <EntityNavigationProvider>
       <EntitySurface {...props} />
     </EntityNavigationProvider>
+  );
+}
+// EP-B22: the primary action sits at the head of the rail on every module that is showing one.
+// The toolbar keeps it for every width that has no rail, so there is always exactly one Create on
+// screen and which one it is never depends on how the rows happen to be drawn.
+function EntityRail<T extends Entity, P extends object, C>({
+  config,
+  controller: c,
+}: {
+  config: EntityPageProps<T, P, C>;
+  controller: ReturnType<typeof useEntityController<T, P, C>>;
+}) {
+  const t = useTranslations('common');
+  return (
+    <aside className="entity-rail hidden w-[208px] shrink-0 overflow-y-auto rounded-xl border bg-surface px-2 py-3 xl:block">
+      <Button className="mb-5 w-full" onClick={() => c.navigate({ new: '1' })}>
+        <CirclePlus className="size-4" aria-hidden={true} />
+        {t('create')}
+      </Button>
+      <h2 className="mb-2 px-3 text-[11px] font-semibold tracking-wider text-text-muted uppercase">
+        {t('views')}
+      </h2>
+      <EntityViews config={config} controller={c} />
+    </aside>
   );
 }
 // Rail, list and detail sit as rounded surfaces on the page ground from 1024 px; the list column
@@ -44,14 +69,7 @@ function EntitySurface<T extends Entity, P extends object, C>(props: EntityPageP
       )}
     >
       <div className="entity-workspace flex min-h-0 flex-1 overflow-hidden lg:gap-3 lg:p-3">
-        {c.railOpen && (
-          <aside className="entity-rail hidden w-[208px] shrink-0 overflow-y-auto rounded-xl border bg-surface px-2 py-3 xl:block">
-            <h2 className="mb-2 px-3 text-[11px] font-semibold tracking-wider text-text-muted uppercase">
-              {t('views')}
-            </h2>
-            <EntityViews config={props} controller={c} />
-          </aside>
-        )}
+        {c.railOpen && <EntityRail config={props} controller={c} />}
         <div
           data-entity-list
           className={cn(

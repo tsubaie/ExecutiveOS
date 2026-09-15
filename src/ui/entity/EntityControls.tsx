@@ -17,9 +17,9 @@ export type Surface<T extends Entity, P extends object, C> = {
 // EP-B22: one header, the same on every entity surface. Create used to move into the views rail
 // for card lists and stay in the bar for everything else, which made where the primary action
 // lives a function of how the rows happen to be drawn — two modules of the same framework putting
-// it in two places, and a module that switched to the table (EP-B29) keeping whichever one its
-// card style had picked. It is in the bar, beside the title of the thing it creates into, at every
-// width and whether or not the rail is showing.
+// it in two places. It is at the head of the rail on all of them now, and the bar carries it only
+// where there is no rail to carry it: a heading row with a lone button at the far end leaves a
+// thousand pixels of nothing between the two on a wide screen.
 export function EntityToolbar<T extends Entity, P extends object, C>({
   config,
   controller: c,
@@ -42,7 +42,10 @@ export function EntityToolbar<T extends Entity, P extends object, C>({
           <p className="sr-only">{config.description}</p>
           <EntityToolbarSummary config={config} controller={c} />
         </div>
-        <Button className="shrink-0" onClick={() => c.navigate({ new: '1' })}>
+        <Button
+          className={cn('shrink-0', c.railOpen && 'xl:hidden')}
+          onClick={() => c.navigate({ new: '1' })}
+        >
           <CirclePlus className="size-5" strokeWidth={2.25} />
           {t('create')}
         </Button>

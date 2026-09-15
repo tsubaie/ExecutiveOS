@@ -535,6 +535,63 @@
     stroke-dashoffset: 0;
   }
 }
+/* ADR 0021: stepping the period a surface is read against. The same place restating itself, so the
+   fade carries it and the slide only says which way the reader moved — a full slide would claim a
+   new screen had arrived. The offset is a variable so the direction mirrors with `dir` (EP-B09),
+   and the old leaves faster than the new arrives so the two never overlap into a smear. */
+::view-transition-old(.step-forward),
+::view-transition-old(.step-back) {
+  animation: 120ms ease-in both step-fade reverse, 260ms var(--ease-rise) both step-slide reverse;
+}
+::view-transition-new(.step-forward),
+::view-transition-new(.step-back) {
+  animation: 200ms var(--ease-rise) 100ms both step-fade, 300ms var(--ease-rise) both step-slide;
+}
+::view-transition-old(.step-forward) {
+  --step-x: -1.5rem;
+}
+::view-transition-new(.step-forward) {
+  --step-x: 1.5rem;
+}
+::view-transition-old(.step-back) {
+  --step-x: 1.5rem;
+}
+::view-transition-new(.step-back) {
+  --step-x: -1.5rem;
+}
+[dir='rtl']::view-transition-old(.step-forward),
+[dir='rtl']::view-transition-new(.step-back) {
+  --step-x: 1.5rem;
+}
+[dir='rtl']::view-transition-new(.step-forward),
+[dir='rtl']::view-transition-old(.step-back) {
+  --step-x: -1.5rem;
+}
+@keyframes step-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes step-slide {
+  from {
+    translate: var(--step-x) 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(.step-forward),
+  ::view-transition-old(.step-back),
+  ::view-transition-new(.step-forward),
+  ::view-transition-new(.step-back) {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}
 /* EP-B29: one control opens the record and the whole row is its hit area. The row is the
    positioned ancestor and the control's own pseudo-element covers it, so the accessible name and
    the focus ring stay on a single button — a row of nested buttons is a row the keyboard has to

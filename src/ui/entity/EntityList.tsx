@@ -8,12 +8,21 @@ import { cn } from '@/ui/cn';
 import type { Entity } from './types';
 import type { Surface } from './EntityControls';
 import { useRowMotion, rowMotionClass, type Rendered } from './use-row-motion';
+import { useStepMotion } from '@/ui/motion';
+import { StepBody } from '@/ui/layout/PageTransition';
 import { EntityTable } from './EntityTable';
 import { EntityListSkeleton, EntityEmpty } from './EntityStates';
 export function EntityList<T extends Entity, P extends object, C>(props: Surface<T, P, C>) {
   const t = useTranslations('common');
   const { list } = props.controller;
   const rows = useRowMotion(list.items, list.pending);
+  // EP-B28: a mode rewrites every row rather than removing any, so the whole body steps across.
+  const mode = props.config.filters.mode;
+  const step = useStepMotion(
+    mode
+      ? mode.options.findIndex((option) => option.id === (props.controller.facets[mode.key] ?? ''))
+      : 0,
+  );
   if (list.pending) return <EntityListSkeleton />;
   if (list.error) return <ErrorPanel error={list.error} retry={list.refetch} />;
   if (!rows.length) return <EntityEmpty {...props} />;
@@ -22,7 +31,9 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
   if (props.controller.state.layout === 'table' && props.config.renderers.columns?.length)
     return (
       <>
-        <EntityTable {...props} rows={rows} />
+        <StepBody step={step.step} transition={step.transition}>
+          <EntityTable {...props} rows={rows} />
+        </StepBody>
         {list.more && (
           <Button variant="ghost" className="m-4" onClick={() => void list.fetchMore()}>
             {t('more')}
@@ -31,7 +42,7 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
       </>
     );
   return (
-    <>
+    <StepBody step={step.step} transition={step.transition}>
       {/* EP-B27: the grid is declared on the list itself and its column count comes from container
           queries, so it answers to the width the list actually has rather than to the window's.
           `data-entity-rows` is how the keyboard finds the track count without being told it. */}
@@ -51,7 +62,7 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
           {t('more')}
         </Button>
       )}
-    </>
+    </StepBody>
   );
 }
 function EntityListRow<T extends Entity, P extends object, C>({
@@ -100,7 +111,8 @@ function EntityListRow<T extends Entity, P extends object, C>({
 const SURFACE =
   'overflow-hidden rounded-xl border border-border/60 bg-surface-raised/30 hover:border-accent/40';
 function rowShape(style: 'card' | 'grid' | undefined, lead: boolean) {
-  const button = 'h-auto min-h-11 min-w-0 flex-1 justify-start rounded-none px-3 py-1.5 text-start hover:bg-transparent';
+  const button =
+    'h-auto min-h-11 min-w-0 flex-1 justify-start rounded-none px-3 py-1.5 text-start hover:bg-transparent';
   if (style === 'grid')
     return {
       shell: cn('h-full items-stretch', SURFACE),
@@ -123,9 +135,17 @@ function EntityRowTrail<T extends Entity, P extends object, C>({
   if (!config.renderers.rowTrail) return null;
   const trail = config.renderers.rowTrail(item);
   if (!trail) return null;
-  return <div className={config.renderers.rowStyle === 'card'
-    ? 'mx-4 mb-3 w-full @lg:ms-1 @lg:me-4 @lg:my-2 @lg:w-auto @lg:max-w-[45%] @lg:shrink-0'
-    : 'me-3 shrink-0'}>{trail}</div>;
+  return (
+    <div
+      className={
+        config.renderers.rowStyle === 'card'
+          ? 'mx-4 mb-3 w-full @lg:ms-1 @lg:me-4 @lg:my-2 @lg:w-auto @lg:max-w-[45%] @lg:shrink-0'
+          : 'me-3 shrink-0'
+      }
+    >
+      {trail}
+    </div>
+  );
 }
 
 // The leading control: a selection checkbox in multi-select mode, otherwise the row action.
@@ -162,7 +182,14 @@ function EntityRowLead<T extends Entity, P extends object, C>({
         />
       ) : null}
       {config.rowAction && !c.selecting && (
-        <div className={cn('ms-1 shrink-0', config.renderers.rowStyle === 'card' && 'ms-3 flex items-center')}>{config.rowAction(item)}</div>
+        <div
+          className={cn(
+            'ms-1 shrink-0',
+            config.renderers.rowStyle === 'card' && 'ms-3 flex items-center',
+          )}
+        >
+          {config.rowAction(item)}
+        </div>
       )}
     </>
   );
@@ -186,18 +213,30 @@ function EntityGroupHeading<T extends Entity, P extends object, C>({
   const size = rows.filter((row) => !row.leaving && config.group?.(row.item) === heading).length;
   // EP-B14: the heading is its own list item rather than a block inside the first row's, so a
   // grid can hand it the whole track row and a row that fades out never takes its heading with it.
-  if (config.renderers.rowStyle === 'grid') return <li className="col-span-full flex items-center gap-2 pt-2 text-xs font-medium text-text-muted">
-    <h2>{heading}</h2><span className="text-[10px] tabular-nums">{count(size)}</span>
-  </li>;
-  if (config.renderers.rowStyle === 'card') return <li><h2 className="flex items-center gap-2 px-4 pt-5 pb-2 text-xs font-medium text-text-muted">
-    {heading}<span className="text-[10px] tabular-nums">{count(size)}</span>
-  </h2></li>;
+  if (config.renderers.rowStyle === 'grid')
+    return (
+      <li className="col-span-full flex items-center gap-2 pt-2 text-xs font-medium text-text-muted">
+        <h2>{heading}</h2>
+        <span className="text-[10px] tabular-nums">{count(size)}</span>
+      </li>
+    );
+  if (config.renderers.rowStyle === 'card')
+    return (
+      <li>
+        <h2 className="flex items-center gap-2 px-4 pt-5 pb-2 text-xs font-medium text-text-muted">
+          {heading}
+          <span className="text-[10px] tabular-nums">{count(size)}</span>
+        </h2>
+      </li>
+    );
   return (
-    <li><h2 className="flex h-7 items-center gap-2 border-b bg-surface-raised/60 px-4 text-[11px] leading-none font-semibold tracking-wider text-text-muted uppercase">
-      {heading}
-      <span className="rounded-full bg-surface-raised px-1.5 py-0.5 text-[10px] font-semibold tracking-normal text-text tabular-nums">
-        {count(size)}
-      </span>
-    </h2></li>
+    <li>
+      <h2 className="flex h-7 items-center gap-2 border-b bg-surface-raised/60 px-4 text-[11px] leading-none font-semibold tracking-wider text-text-muted uppercase">
+        {heading}
+        <span className="rounded-full bg-surface-raised px-1.5 py-0.5 text-[10px] font-semibold tracking-normal text-text tabular-nums">
+          {count(size)}
+        </span>
+      </h2>
+    </li>
   );
 }

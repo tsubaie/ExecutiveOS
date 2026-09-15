@@ -111,6 +111,11 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   many filters are on. It is a segmented group rather than a select because the options are few,
   fixed and read against each other, and because a record panel that asks the same question asks it
   in this shape, so moving between the list and a record does not change the control.
+  Stepping it is a view transition, not a remount (ADR 0021): the same place restating itself,
+  so the old and new are captured and cross-faded with a small offset in the direction the
+  reader stepped. Nothing is remounted, so the list's own arrival cascade (EP-B27) does not
+  replay underneath it — that motion belongs to records arriving, not to the same ones being
+  read again.
 
 ## Forms
 
