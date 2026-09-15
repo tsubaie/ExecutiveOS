@@ -1,5 +1,5 @@
 'use client';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
 import { TaskDetail, TaskList, type TaskCreate, type TaskPatch } from '../schema/validation';
@@ -16,6 +16,7 @@ export function useTasks(filters: Filters) {
         TaskList,
       ),
     getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
     refetchInterval: 30000,
   });
   const counts: Record<string, number> = query.data?.pages[0]?.meta.counts ?? {};

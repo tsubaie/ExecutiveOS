@@ -1,5 +1,5 @@
 'use client';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
 import { PersonList, PersonCreated, personDraft } from '@/modules/people/schema/validation';
@@ -24,6 +24,7 @@ export function useNotes(filters: Filters) {
     queryFn: ({ pageParam }) =>
       request(`/notes?${query({ ...filters, cursor: pageParam })}`, NoteList),
     getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
   });
   const counts: Record<string, number> = list.data?.pages[0]?.meta.counts ?? {};
   return {

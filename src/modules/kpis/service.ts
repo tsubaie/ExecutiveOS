@@ -49,19 +49,18 @@ async function scope(ctx: Context): Promise<Scope> {
 }
 const toKpi = (row: NonNullable<Row>, at: Scope) =>
   Kpi.parse({ ...row, meta: deriveMeta(row, at) });
-// KPIS-B07: the sort keys are the cursor tuple. The default files the scorecard under the
-// objectives it serves, severity first inside each. Objectives are alphabetical rather than ranked
-// by their worst measure: a scorecard is read on the cadence it reports on, and an order that
-// reshuffles as statuses change costs what repetition buys. Unfiled measures go last.
-function keyOf(item: Kpi, sort: string): Tuple {
+// KPIS-B07: the sort keys are the cursor tuple. The default files the scorecard under its
+// objectives, alphabetically, severity first inside each, unfiled last. `rank` holds severity to
+// today's reading so a comparison never reshuffles the page (KPIS-B26).
+function keyOf(item: Kpi, sort: string, rank?: number): Tuple {
   const name = item.name.toLocaleLowerCase();
   if (sort === 'name') return [name, item.id];
   if (sort === 'change') {
     const change = item.meta.percentChange;
     return [change === null ? 1 : 0, change === null ? 0 : -change, name, item.id];
   }
-  const objective = (item.objectiveName ?? '').toLocaleLowerCase();
-  return [item.objectiveId ? 0 : 1, objective, severityRank[item.meta.status], name, item.id];
+  const filed = (item.objectiveName ?? '').toLocaleLowerCase();
+  return [item.objectiveId ? 0 : 1, filed, rank ?? severityRank[item.meta.status], name, item.id];
 }
 function inView(item: Kpi, view: string) {
   if (view === 'trash') return Boolean(item.deletedAt);
@@ -73,18 +72,19 @@ function inView(item: Kpi, view: string) {
 const views = ['all', 'attention', ...KpiStatus.options, 'trash'];
 export async function listKpis(ctx: Context, query: KpiListQuery) {
   const at = await scope(ctx);
-  const rows = await repo.selectKpis(ctx.db, query, {
-    today: at.today,
-    fromYear: Number(at.today.slice(0, 4)) - 1,
-  });
-  // KPIS-B26: one period for the page, applied before every status, count and sort key below.
+  const window = { today: at.today, fromYear: Number(at.today.slice(0, 4)) - 1 };
+  const rows = await repo.selectKpis(ctx.db, query, window);
+  // KPIS-B26: one period for the page, ahead of every status and count — never the order. A
+  // comparison changes what a measure says, not where it sits, so severity is ranked to today's
+  // reading and stepping leaves every card exactly where the reader last saw it.
   const shift = query.period === 'previous' ? -1 : query.period === 'next' ? 1 : 0;
+  const rank = new Map(rows.map((row) => [row.id, severityRank[deriveMeta(row, at).status]]));
   const all = rows.map((row) => toKpi(row, { ...at, offset: shift }));
   const { cursor, ...filters } = query;
   const hash = filtersHash({ ...filters, date: at.today });
   const ranked: Keyed[] = all
     .filter((item) => inView(item, query.view))
-    .map((item) => ({ item, key: keyOf(item, query.sort) }))
+    .map((item) => ({ item, key: keyOf(item, query.sort, rank.get(item.id)) }))
     .sort((left, right) => compareTuples(left.key, right.key));
   const after = decodeTupleCursor(cursor, query.sort, hash);
   const remaining = after ? ranked.filter((row) => compareTuples(row.key, after) > 0) : ranked;

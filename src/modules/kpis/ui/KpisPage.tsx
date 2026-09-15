@@ -20,11 +20,14 @@ import { useKpis, useKpi, useKpiMutations, useKpiFacets } from './queries';
 import { KpiCard } from './KpiCard';
 import { CreateKpi } from './CreateKpi';
 import { useKpiColumns } from './KpiColumns';
-const KpiRecord = dynamic(() => import('./KpiRecord').then((module) => module.KpiRecord));
+import { usePrefetch } from '@/ui/entity/use-prefetch';
+const importRecord = () => import('./KpiRecord');
+const KpiRecord = dynamic(() => importRecord().then((module) => module.KpiRecord));
 export function KpisPage() {
   const t = useTranslations('kpis');
   const mutations = useKpiMutations();
   const columns = useKpiColumns();
+  usePrefetch(importRecord);
   const filters = useKpiFilters();
   return (
     <EntityPage

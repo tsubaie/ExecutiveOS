@@ -77,6 +77,20 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   does not become a ticker. Rows are keyed by identity, so a refetch returning the same records
   re-renders without replaying it; a new view, filter or reading (EP-B28) is a new screen and does
   replay it. Nothing cascades under reduced motion.
+- EP-B30 The surface is read and re-read without being reloaded. Two things made it look otherwise.
+  Every piece of this URL — the view, the facets, the sort, the layout, the open record, the
+  selection — is read by the client surface and by nothing on the server, so it is written with the
+  native history methods rather than through the router. Routing it made each of them a request for
+  a route whose output cannot change, which is why opening a record fetched the page again before
+  the panel appeared. The methods integrate with the router and with `useSearchParams`, so back and
+  forward still move through the states the reader passed. And a list query that changes keeps the
+  page it already has while the next one loads: the reader changed which question is being asked of
+  the same records, not which records they are looking at, so the rows change where they stand
+  instead of the list emptying to a placeholder and filling again. A genuine first load has nothing
+  to hold and still shows the placeholder (EP-B15). A record's renderer is still loaded on demand,
+  so a list route carries no chart runtime it may never need, but the chunk is fetched once the list
+  is on screen rather than when a row is clicked — otherwise the first record opened on a fresh page
+  pauses and every one after it is instant, which reads as the page loading once for no reason.
 - EP-B29 `renderers.columns` declares the same records as a table, and declaring them is what
   offers the reader the choice: a module with no columns has no toggle. A column carries a `head`,
   a `cell`, and `numeric` — the only styling a module may ask for, because it is the one that means

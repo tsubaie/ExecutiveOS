@@ -1,5 +1,5 @@
 'use client';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
 import {
@@ -10,6 +10,7 @@ import {
   PersonPatch,
 } from '../schema/validation';
 import type { Filters } from '@/ui/entity/types';
+import { listResult } from '@/ui/entity/queries';
 export function usePeople(filters: Filters) {
   const result = useInfiniteQuery({
     queryKey: ['people', 'list', filters],
@@ -26,20 +27,9 @@ export function usePeople(filters: Filters) {
         PersonList,
       ),
     getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
   });
-  return {
-    items: result.data?.pages.flatMap((page) => page.data) ?? [],
-    counts: result.data?.pages[0]?.meta.counts ?? {},
-    pending: result.isPending,
-    error: result.error,
-    more: result.hasNextPage,
-    fetchMore: async () => {
-      await result.fetchNextPage();
-    },
-    refetch: () => {
-      void result.refetch();
-    },
-  };
+  return listResult(result);
 }
 export function usePerson(id: string | null, trash: boolean) {
   const result = useQuery({

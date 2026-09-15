@@ -10,11 +10,14 @@ import { Scope, Sort, type Committee } from '../schema/validation';
 import { useCommittees, useCommittee, useCommitteeMutations } from './queries';
 import { CreateCommittee } from './CreateCommittee';
 import { useCommitteeColumns } from './CommitteeColumns';
-const CommitteeDetail = dynamic(() => import('./CommitteeDetail').then((module) => module.CommitteeDetail));
+import { usePrefetch } from '@/ui/entity/use-prefetch';
+const importRecord = () => import('./CommitteeDetail');
+const CommitteeDetail = dynamic(() => importRecord().then((module) => module.CommitteeDetail));
 export function CommitteesPage() {
   const t = useTranslations('committees');
   const mutations = useCommitteeMutations();
   const columns = useCommitteeColumns();
+  usePrefetch(importRecord);
   return <EntityPage module="committees" title={t('title')} description={t('intro')}
     filters={{ views: [
       { id: 'active', label: t('active'), icon: Landmark }, { id: 'all', label: t('all'), icon: Landmark },
