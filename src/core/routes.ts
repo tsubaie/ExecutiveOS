@@ -22,6 +22,7 @@ export const routes = {
     withQuery('/notes', query),
   person: (personId: string) => withQuery('/people', { id: personId }),
   admin: (page: AdminPage) => `/admin/${page}`,
+  account: () => '/account',
   login: () => '/login',
   setup: () => '/setup',
   recovery: () => '/recovery',

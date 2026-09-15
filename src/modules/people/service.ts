@@ -119,3 +119,8 @@ export async function restorePerson(ctx: Context, personId: string, opId: string
 export async function aiPeople(ctx: Context) {
   return repo.selectAiPeople(ctx.db);
 }
+// ACCT-B05: exposed for the account page, which shows the reader's directory record without
+// editing it. Other modules reach People through this index, never through its repo.
+export async function personForUser(ctx: Context, userId: string) {
+  return repo.selectPersonForUser(ctx.db, userId);
+}

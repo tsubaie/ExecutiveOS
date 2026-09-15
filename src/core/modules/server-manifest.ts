@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Context } from '@/core/auth/session';
 import type { JobHandler } from '@/core/jobs/types';
+import type { SearchProvider } from '@/core/search/types';
 // Server contribution of a module: home sections and job kinds, composed by core/modules/registry.
 // HOME-B01: a row carries the few facts the principal triages on. Every fact is optional because
 // each section answers a different question; the page renders only what a section supplies.
@@ -33,4 +34,8 @@ export type ServerManifest = {
   id: string;
   homeSummary?: (ctx: Context, today: string) => Promise<HomeSection[]>;
   jobs?: Record<string, JobHandler>;
+  // ADR 0021: a module answers the workspace-wide query over its own tables, because it already
+  // owns what its records are visible to whom and what counts as a match -- notes widen theirs to
+  // tags and participant names, and that knowledge does not belong in core.
+  search?: SearchProvider;
 };

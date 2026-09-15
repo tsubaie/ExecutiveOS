@@ -1,17 +1,12 @@
 'use client';
 import { type ReactNode } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { ShellLinks } from './ShellLinks';
 import { useTranslations } from 'next-intl';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { LogOut, Command } from 'lucide-react';
-import { z } from 'zod';
-import { request } from '@/core/http/client';
-import { Preferences } from './Preferences';
+import { Command } from 'lucide-react';
+import { ShellHeader } from './ShellHeader';
 import { routes } from '@/core/routes';
-import { Button } from '@/ui/primitives/button';
-type ShellUser = { id: string; name: string; role: string };
+type ShellUser = { id: string; name: string; email: string; role: string };
 export function AppShell({
   children,
   user,
@@ -21,19 +16,6 @@ export function AppShell({
   user: ShellUser;
   workspace: string;
 }) {
-  const t = useTranslations('common');
-  const client = useQueryClient();
-  const router = useRouter();
-  const logout = useMutation({
-    mutationFn: () =>
-      request('/auth/logout', z.object({ data: z.null() }), { method: 'POST', body: {} }),
-    onSuccess: () => {
-      client.clear();
-      router.push(routes.login());
-      router.refresh();
-    },
-  });
-
   return (
     // The shell owns the viewport: it is exactly one screen tall and the page scrolls inside its own
     // column, under a header and over a bottom bar that each hold their size. Nothing depends on
@@ -42,17 +24,7 @@ export function AppShell({
     <div className="flex h-dvh flex-col overflow-hidden lg:grid lg:grid-cols-[208px_minmax(0,1fr)]">
       <Sidebar workspace={workspace} user={user} />
       <div className="flex min-h-0 min-w-0 flex-col">
-        <header className="flex min-h-18 shrink-0 items-center justify-between gap-2 border-b px-4 lg:px-8">
-          <span className="truncate text-sm text-text-muted">
-            <bdi>{workspace}</bdi>
-          </span>
-          <div className="flex items-center gap-1">
-            <Preferences />
-            <Button variant="ghost" aria-label={t('logout')} onClick={() => logout.mutate()}>
-              <LogOut className="size-4 rtl:rotate-180" />
-            </Button>
-          </div>
-        </header>
+        <ShellHeader user={user} />
         {/* The bottom bar floats over this column, so the page reserves its height rather than
             running under it. */}
         <main

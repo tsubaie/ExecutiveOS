@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { AiCapability } from './ai-capabilities';
 import { ModelId } from './ai-model-schema';
 import { Locale, defaults } from './defaults';
-const Theme = z.enum(['dark', 'light']);
-const Timezone = z.string().refine((value) => {
+export const Theme = z.enum(['dark', 'light']);
+export const Timezone = z.string().refine((value) => {
   try {
     new Intl.DateTimeFormat(defaults.locale, { timeZone: value });
     return true;

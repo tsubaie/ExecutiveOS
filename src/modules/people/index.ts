@@ -1,3 +1,4 @@
+import { searchProvider } from './search';
 import type { ServerManifest } from '@/core/modules/server-manifest';
 export {
   aiPeople,
@@ -10,5 +11,6 @@ export {
   removePerson,
   restorePerson,
   personNameSql,
+  personForUser,
 } from './service';
-export const server: ServerManifest = { id: 'people' };
+export const server: ServerManifest = { id: 'people', search: searchProvider };

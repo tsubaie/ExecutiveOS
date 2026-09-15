@@ -3,6 +3,7 @@ import { and, eq, isNull, isNotNull, sql, getTableColumns, type SQL } from 'driz
 import type { Database } from '@/core/db/client';
 import { auditLog } from '@/core/db/system-schema';
 import { normalize } from '@/core/search/normalize';
+import { searchMatch, searchRank } from '@/core/db/search';
 import { updateEntity, restoreEntity, type EntityPatch } from '@/core/db/entity';
 import { cursorColumns, cursorPredicate, orderBy, filteredCounts, type SortSpec, type SortKey } from '@/core/db/keyset';
 import { committees } from './schema/db';
@@ -118,4 +119,19 @@ export async function selectHomeSummary(database: Database, today: string) {
       from committees where ${carrying} order by ${openWork} desc, lower(name), id limit 5) item), '[]'::json)`,
   }).from(committees).where(carrying);
   return row ?? { count: 0, items: [] };
+}
+// SEARCH: the workspace-wide provider (ADR 0021). Archived committees are included: they are not
+// deleted, and a reader searching by name is usually looking for exactly the one that ended.
+export async function searchCommittees(database: Database, normalized: string, limit: number) {
+  return database
+    .select({
+      id: committees.id,
+      title: committees.name,
+      subtitle: committees.ownership,
+      rank: searchRank(committees.name, normalized),
+    })
+    .from(committees)
+    .where(and(isNull(committees.deletedAt), searchMatch(committees.searchText, normalized)))
+    .orderBy(searchRank(committees.name, normalized), sql`lower(${committees.name})`)
+    .limit(limit);
 }

@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, gt, isNull, sql, or } from 'drizzle-orm';
+import { and, eq, gt, isNull, ne, desc, sql, or } from 'drizzle-orm';
 import { db, type Database } from './client';
 import { users, sessions, workspace, loginAttempts, recoveryTokens } from './system-schema';
 import { id } from './ids';
@@ -138,4 +138,63 @@ export async function recoverUser(
     })
     .where(eq(users.id, userId));
   await revokeUserSessions(database, userId);
+}
+// ACCT-B03: the reader's own sessions, newest first. The current one is identified by its token
+// hash rather than by its id, because the cookie is the only thing the request knows about itself.
+export async function userSessions(database: Database, userId: string) {
+  return database
+    .select({
+      id: sessions.id,
+      tokenHash: sessions.tokenHash,
+      issuedAt: sessions.issuedAt,
+      lastSeenAt: sessions.lastSeenAt,
+      ip: sessions.ip,
+      userAgent: sessions.userAgent,
+    })
+    .from(sessions)
+    .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)))
+    .orderBy(desc(sessions.lastSeenAt));
+}
+// ACCT-B02/B03: revoking everything the reader holds except the session making the request, so a
+// password change signs them out everywhere else without signing them out of the tab they are in.
+export async function revokeOtherSessions(database: Database, userId: string, keepHash: string) {
+  const rows = await database
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(
+      and(
+        eq(sessions.userId, userId),
+        isNull(sessions.revokedAt),
+        ne(sessions.tokenHash, keepHash),
+      ),
+    )
+    .returning({ id: sessions.id });
+  return rows.length;
+}
+// One session of the reader's own. Scoped by user so an id from elsewhere revokes nothing.
+export async function revokeOwnSession(database: Database, userId: string, sessionId: string) {
+  const rows = await database
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(sessions.userId, userId), eq(sessions.id, sessionId), isNull(sessions.revokedAt)))
+    .returning({ id: sessions.id });
+  return rows.length > 0;
+}
+// ACCT-B01/B02: the account's own writes. `updatedAt` and the revision move with every change so
+// the concurrency token the rest of the app uses keeps working here too.
+export async function updateUserAccount(
+  database: Database,
+  userId: string,
+  patch: Partial<typeof users.$inferInsert>,
+) {
+  const [row] = await database
+    .update(users)
+    .set({ ...patch, updatedAt: new Date(), updatedBy: userId })
+    .where(eq(users.id, userId))
+    .returning();
+  return row;
+}
+export async function userById(database: Database, userId: string) {
+  const [row] = await database.select().from(users).where(eq(users.id, userId));
+  return row;
 }

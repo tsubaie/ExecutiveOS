@@ -87,6 +87,7 @@ Every module under `src/modules/<name>/` has this shape. The structure audit rea
 | `service.ts` | yes | Business rules, invariants, transactions, explicit orchestration of other modules through their `index.ts`, audit writes, job enqueueing. Actor-aware: every function takes `ctx`. |
 | `api.ts` | yes | `defineHandler` implementations. |
 | `jobs.ts` | if the module owns jobs | Job handlers registered in `core/jobs/registry.ts`. |
+| `search.ts` | if the module owns searchable records | The workspace-wide search provider (ADR 0021): the module's own query over its `search_text` corpus, mapped to hits. A capability gets its own file, as `jobs.ts` does, so `service.ts` keeps the business rules. |
 | `ai/` | if the module owns capabilities | `capabilities.ts` and `prompts/<name>.v<N>.ts`. |
 | `ui/` | yes | Components, `queries.ts` (TanStack hooks), `index.ts` (components other modules may reuse). |
 | `tests/` | yes | Scenario tests named by requirement ID (see `08-testing-strategy.md`). |

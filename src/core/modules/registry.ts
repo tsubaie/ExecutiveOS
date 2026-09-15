@@ -9,6 +9,7 @@ import { server as notes } from '@/modules/notes';
 import { server as kpis } from '@/modules/kpis';
 import { server as users } from '@/modules/users';
 import { server as settings } from '@/modules/settings';
+import { server as account } from '@/modules/account';
 // Home aggregates these providers; the home module itself is the consumer, so it is not listed.
 export const serverModules: readonly ServerManifest[] = [
   tasks,
@@ -18,6 +19,7 @@ export const serverModules: readonly ServerManifest[] = [
   people,
   users,
   settings,
+  account,
 ];
 export function homeProviders(modules: readonly ServerManifest[] = serverModules) {
   return modules.flatMap((item) => (item.homeSummary ? [item.homeSummary] : []));
@@ -39,6 +41,12 @@ export async function collectHomeSections(
       owned.set(section.key, section);
     }
   return owned;
+}
+// ADR 0021: collected the way home sections are. A module that declares none is simply skipped;
+// unlike a home section there is no ownership to check, because two modules matching the same
+// query is the normal case and the merge is what handles it.
+export function searchProviders(modules: readonly ServerManifest[] = serverModules) {
+  return modules.flatMap((item) => (item.search ? [{ id: item.id, search: item.search }] : []));
 }
 export function mergeJobs(
   base: Record<string, JobHandler>,

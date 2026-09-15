@@ -59,3 +59,11 @@ export async function writeSetting<K extends SettingKey>(
       updatedBy: actorId,
     });
 }
+// ACCT-I03: clearing a user's row is not the same as writing the workspace's current value into
+// it. A cleared preference falls back through the registry, so a later change to the workspace
+// default still reaches the reader; a copied one would silently pin them to today's answer.
+export async function clearSetting(database: Database, key: SettingKey, userId: string) {
+  await database
+    .delete(settings)
+    .where(and(eq(settings.key, key), eq(settings.userId, userId)));
+}
