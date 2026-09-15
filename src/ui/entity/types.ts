@@ -21,11 +21,16 @@ export type View = {
 };
 export type Facet = { key: string; label: string; options: { value: string; label: string }[] };
 export type SortOption = { id: string; label: string };
-// Views, facets and sort are declared together; the framework owns their URL state.
+// Views, facets, sort and mode are declared together; the framework owns their URL state.
 export type FiltersDef = {
   views: View[];
   facets?: Facet[];
   sort?: { options: SortOption[]; default: string };
+  // EP-B28: one reading the whole list is taken under, as a segmented control in the toolbar. It
+  // travels with the facets — same URL key, same query, same clearing — but it is not a filter and
+  // does not read as one: it removes nothing from the list, it changes what every row of it says.
+  // Its first option is the default and carries the empty value.
+  mode?: { key: string; label: string; options: SortOption[] };
 };
 export type Filters = { view: string; q: string; sort: string; [key: string]: string };
 export type ListResult<T> = {
@@ -97,7 +102,9 @@ export type EntityPageProps<T extends Entity, P, C> = {
     restore: (id: string, opId: string) => Promise<T>;
   };
   renderers: {
-    rowStyle?: 'card';
+    // 'card' spaces the rows as full-width containers; 'grid' lays them out as tiles in columns
+    // (EP-B27), for a list whose rows are figures rather than sentences.
+    rowStyle?: 'card' | 'grid';
     row: (item: T) => ReactNode;
     // Rendered beside the row button rather than inside it, so it may hold its own control.
     rowTrail?: (item: T) => ReactNode;

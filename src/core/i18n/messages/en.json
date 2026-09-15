@@ -516,6 +516,7 @@
     "quarterLabel": "Q{quarter} {year}",
     "noReading": "No reading",
     "targetOf": "Target {value} · {quarter}",
+    "targetProgress": "{percent} of target · {quarter}",
     "targetOfShort": "Target {value}",
     "trendOf": "Recent readings for {name}",
     "achievementOf": "{percent} of target · {status}",
@@ -597,6 +598,9 @@
     "nextYear": "Next year",
     "readingsIntro": "Everything recorded against {name}, newest first.",
     "targetsIntro": "What {name} is measured against, one year at a time.",
-    "maintain": "Maintain"
+    "maintain": "Maintain",
+    "comparePrevious": "Previous",
+    "compareCurrent": "Current",
+    "compareNext": "Next"
   }
 }

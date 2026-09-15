@@ -38,6 +38,7 @@ export const View = z.enum([
   'trash',
 ]);
 export const Sort = z.enum(['default', 'name', 'change']);
+export const ComparePeriod = z.enum(['', 'previous', 'next']); // KPIS-B26; '' is the effective one
 // docs/03 § Numbers: numeric(14,4) with an absolute value under 10^10, so the value survives the
 // JSON boundary exactly. Rounding here keeps the stored value and the validated value identical.
 const Amount = z
@@ -171,6 +172,7 @@ export const KpiListQuery = z.strictObject({
   objectiveId: z.string().max(100).default(''),
   category: z.string().max(100).default(''),
   ownerId: z.string().max(100).default(''),
+  period: ComparePeriod.default(''),
   sort: Sort.default('default'),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   cursor: z.string().max(4000).optional(),
@@ -308,13 +310,18 @@ export type KpiFacts = {
 };
 // The period is not part of the measurement context: each KPI is on its own cadence, so it is
 // derived from the day and that KPI's frequency wherever it is needed.
-export type MeasuredAt = { today: string; thresholds: StatusThresholds };
+export type MeasuredAt = { today: string; thresholds: StatusThresholds; offset?: number };
 export function deriveMeta(facts: KpiFacts, at: MeasuredAt): KpiMeta {
   const current = facts.current?.value ?? null;
   const currentDate = facts.current?.date ?? null;
   const direction = Direction.parse(facts.direction);
   const frequency = Frequency.parse(facts.frequency);
-  const target = resolveEffectiveTarget(facts.targets, periodOf(at.today, frequency), frequency);
+  // KPIS-B26: `at.offset` reads the whole scorecard against a neighbouring period, named exactly
+  // and without freshness, for the reasons the spec gives.
+  const period = shiftPeriod(periodOf(at.today, frequency), at.offset ?? 0, frequency);
+  const target = at.offset
+    ? (facts.targets.find((row) => row.year === period.year && row.period === period.period) ?? null)
+    : resolveEffectiveTarget(facts.targets, period, frequency);
   const value = target?.value ?? null;
   return {
     current,
@@ -325,7 +332,7 @@ export function deriveMeta(facts: KpiFacts, at: MeasuredAt): KpiMeta {
     effectiveTargetPeriod: target ? { year: target.year, period: target.period } : null,
     status: computeKpiStatus({
       current,
-      currentDate,
+      currentDate: at.offset ? at.today : currentDate,
       target: value,
       direction,
       frequency,

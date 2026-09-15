@@ -17,9 +17,12 @@ type Options = {
 export function useEntityKeyboard(root: RefObject<HTMLElement | null>, options: Options) {
   const keyboard = useEffectEvent((event: KeyboardEvent) => {
     if (ignoredKey(event)) return;
-    if (!options.panel && ['ArrowDown', 'j', 'ArrowUp', 'k'].includes(event.key)) {
-      event.preventDefault();
-      focusNeighbor(event, options, root.current);
+    if (!options.panel) {
+      const step = arrowStep(event, root.current);
+      if (step) {
+        event.preventDefault();
+        focusNeighbor(step, options, root.current);
+      }
     }
     if (!options.panel && event.key === 'x') {
       event.preventDefault();
@@ -92,14 +95,24 @@ function selectFocused(options: Options) {
   options.navigate({ sel: selected.join(',') }, true);
 }
 
-function focusNeighbor(event: KeyboardEvent, options: Options, element: HTMLElement | null) {
-  const index = Math.max(
-    0,
-    Math.min(
-      options.items.length - 1,
-      options.focused + (['ArrowDown', 'j'].includes(event.key) ? 1 : -1),
-    ),
-  );
+// EP-B06 moved focus along one axis, which is the whole list when rows are lines. A grid has two
+// (EP-B27): down is a whole track row away, not the next item. The track count is read off the
+// list's computed columns rather than passed down, because it is the container query that decides
+// it and nothing in React knows the answer. Left and right are bound only in a grid, so on a list
+// of lines those keys stay with the browser; in RTL they swap, since the next tile sits at the
+// start edge (EP-B09). Returns 0 for a key this surface does not handle.
+function arrowStep(event: KeyboardEvent, element: HTMLElement | null) {
+  const rows = element?.querySelector('[data-entity-rows]');
+  const style = rows ? getComputedStyle(rows) : null;
+  const columns = style ? style.gridTemplateColumns.split(' ').filter(Boolean).length : 1;
+  if (['ArrowDown', 'j'].includes(event.key)) return columns;
+  if (['ArrowUp', 'k'].includes(event.key)) return -columns;
+  if (columns < 2 || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return 0;
+  return (style?.direction === 'rtl') === (event.key === 'ArrowLeft') ? 1 : -1;
+}
+
+function focusNeighbor(step: number, options: Options, element: HTMLElement | null) {
+  const index = Math.max(0, Math.min(options.items.length - 1, options.focused + step));
   options.setFocused(index);
   const item = options.items[index];
   if (item)

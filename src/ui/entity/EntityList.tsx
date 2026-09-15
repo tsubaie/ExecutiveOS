@@ -18,7 +18,16 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
   if (!rows.length) return <EntityEmpty {...props} />;
   return (
     <>
-      <ul>
+      {/* EP-B27: the grid is declared on the list itself and its column count comes from container
+          queries, so it answers to the width the list actually has rather than to the window's.
+          `data-entity-rows` is how the keyboard finds the track count without being told it. */}
+      <ul
+        data-entity-rows
+        className={cn(
+          props.config.renderers.rowStyle === 'grid' &&
+            'entity-grid grid items-stretch gap-3 p-3 @2xl:grid-cols-2 @5xl:grid-cols-3',
+        )}
+      >
         {rows.map((row, index) => (
           <EntityListRow key={row.item.id} {...props} rows={rows} row={row} index={index} />
         ))}
@@ -94,37 +103,55 @@ function EntityListRow<T extends Entity, P extends object, C>({
 }: Surface<T, P, C> & { rows: Rendered<T>[]; row: Rendered<T>; index: number }) {
   const { item, leaving } = row;
   const current = !leaving && c.state.id === item.id;
-  const card = config.renderers.rowStyle === 'card';
+  const shape = rowShape(config.renderers.rowStyle, Boolean(config.rowAction) || c.selecting);
   return (
-    <li className={rowMotionClass(row)} inert={leaving || undefined}>
-      <EntityGroupHeading config={config} rows={rows} index={index} />
-      <div
-        className={cn(
-          'entity-row relative flex min-w-0 items-center transition-colors',
-          card ? 'mx-3 mb-2 flex-wrap overflow-hidden rounded-xl border border-border/60 bg-surface-raised/30 hover:border-accent/40 @lg:flex-nowrap' : 'border-b',
-          current ? 'bg-accent-soft' : 'hover:bg-surface-raised/50',
-        )}
-        data-current={current ? '' : undefined}
-      >
-        <EntityRowLead config={config} controller={c} item={item} />
-        <Button
-          data-row-id={leaving ? undefined : item.id}
-          aria-current={current ? 'true' : undefined}
-          variant="ghost"
+    <>
+      <EntityGroupHeading config={config} controller={c} rows={rows} index={index} />
+      <li className={cn(rowMotionClass(row), 'min-w-0')} inert={leaving || undefined}>
+        <div
           className={cn(
-            'h-auto min-h-11 min-w-0 flex-1 justify-start rounded-none px-3 py-1.5 text-start hover:bg-transparent',
-            !config.rowAction && !c.selecting && 'ps-4',
-            card && 'min-h-14 basis-3/4 rounded-lg px-4 py-3 @lg:basis-0',
+            'entity-row relative flex min-w-0 items-center transition-colors',
+            shape.shell,
+            current ? 'bg-accent-soft' : 'hover:bg-surface-raised/50',
           )}
-          onFocus={() => c.setFocused(index)}
-          onClick={() => c.navigate({ id: item.id })}
+          data-current={current ? '' : undefined}
         >
-          {config.renderers.row(item)}
-        </Button>
-        <EntityRowTrail config={config} controller={c} item={item} />
-      </div>
-    </li>
+          <EntityRowLead config={config} controller={c} item={item} />
+          <Button
+            data-row-id={leaving ? undefined : item.id}
+            aria-current={current ? 'true' : undefined}
+            variant="ghost"
+            className={shape.button}
+            onFocus={() => c.setFocused(index)}
+            onClick={() => c.navigate({ id: item.id })}
+          >
+            {config.renderers.row(item)}
+          </Button>
+          <EntityRowTrail config={config} controller={c} item={item} />
+        </div>
+      </li>
+    </>
   );
+}
+// The three presentations of one row, kept together so the differences between them are readable
+// side by side rather than spread across four conditional class lists. A card is a full-width
+// container, a tile fills its grid cell so a short record and a long one line up across a track
+// row (EP-B27), and the default is a bordered line.
+const SURFACE =
+  'overflow-hidden rounded-xl border border-border/60 bg-surface-raised/30 hover:border-accent/40';
+function rowShape(style: 'card' | 'grid' | undefined, lead: boolean) {
+  const button = 'h-auto min-h-11 min-w-0 flex-1 justify-start rounded-none px-3 py-1.5 text-start hover:bg-transparent';
+  if (style === 'grid')
+    return {
+      shell: cn('h-full items-stretch', SURFACE),
+      button: cn(button, 'items-stretch rounded-xl p-4 whitespace-normal'),
+    };
+  if (style === 'card')
+    return {
+      shell: cn('mx-3 mb-2 flex-wrap @lg:flex-nowrap', SURFACE),
+      button: cn(button, 'min-h-14 basis-3/4 rounded-lg px-4 py-3 @lg:basis-0'),
+    };
+  return { shell: 'border-b', button: cn(button, !lead && 'ps-4') };
 }
 
 // EP-B20: the trailing slot mirrors the leading one. A control belongs here rather than in
@@ -152,7 +179,13 @@ function EntityRowLead<T extends Entity, P extends object, C>({
     <>
       {config.bulkActions?.length && c.selecting ? (
         <Checkbox
-          className={cn('entity-check ms-1 shrink-0', config.renderers.rowStyle === 'card' && 'ms-3 self-center')}
+          className={cn(
+            'entity-check ms-1 shrink-0',
+            config.renderers.rowStyle === 'card' && 'ms-3 self-center',
+            // A tile has no leading column to give the control, so it sits over the tile's own
+            // corner rather than pushing the figures across.
+            config.renderers.rowStyle === 'grid' && 'absolute top-1 start-1 z-10 ms-0',
+          )}
           aria-label={t('selectItem', { name: config.renderers.name(item) })}
           checked={c.selected.includes(item.id)}
           onCheckedChange={(checked) =>
@@ -178,24 +211,33 @@ function EntityRowLead<T extends Entity, P extends object, C>({
 // Group headers carry the count of loaded rows in the group (EP-B14).
 function EntityGroupHeading<T extends Entity, P extends object, C>({
   config,
+  controller: c,
   rows,
   index,
-}: Pick<Surface<T, P, C>, 'config'> & { rows: Rendered<T>[]; index: number }) {
+}: Surface<T, P, C> & { rows: Rendered<T>[]; index: number }) {
   const count = useCount();
   const item = rows[index]?.item;
   const before = rows[index - 1]?.item;
-  const heading = item ? config.group?.(item) : null;
+  // EP-B14: a heading only means something while the list is in the order the grouping describes.
+  // Once the reader has chosen a sort of their own the rows no longer arrive grouped, and the
+  // headings would repeat down the page marking nothing.
+  const heading = item && !c.state.sort ? config.group?.(item) : null;
   if (!heading || (before && heading === config.group?.(before))) return null;
   const size = rows.filter((row) => !row.leaving && config.group?.(row.item) === heading).length;
-  if (config.renderers.rowStyle === 'card') return <h2 className="flex items-center gap-2 px-4 pt-5 pb-2 text-xs font-medium text-text-muted">
+  // EP-B14: the heading is its own list item rather than a block inside the first row's, so a
+  // grid can hand it the whole track row and a row that fades out never takes its heading with it.
+  if (config.renderers.rowStyle === 'grid') return <li className="col-span-full flex items-center gap-2 pt-2 text-xs font-medium text-text-muted">
+    <h2>{heading}</h2><span className="text-[10px] tabular-nums">{count(size)}</span>
+  </li>;
+  if (config.renderers.rowStyle === 'card') return <li><h2 className="flex items-center gap-2 px-4 pt-5 pb-2 text-xs font-medium text-text-muted">
     {heading}<span className="text-[10px] tabular-nums">{count(size)}</span>
-  </h2>;
+  </h2></li>;
   return (
-    <h2 className="flex h-7 items-center gap-2 border-b bg-surface-raised/60 px-4 text-[11px] leading-none font-semibold tracking-wider text-text-muted uppercase">
+    <li><h2 className="flex h-7 items-center gap-2 border-b bg-surface-raised/60 px-4 text-[11px] leading-none font-semibold tracking-wider text-text-muted uppercase">
       {heading}
       <span className="rounded-full bg-surface-raised px-1.5 py-0.5 text-[10px] font-semibold tracking-normal text-text tabular-nums">
         {count(size)}
       </span>
-    </h2>
+    </h2></li>
   );
 }

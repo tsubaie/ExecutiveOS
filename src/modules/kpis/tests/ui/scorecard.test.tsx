@@ -10,7 +10,7 @@ import {
   type Reading,
   type Target,
 } from '../../schema/validation';
-import { KpiRow, KpiTrail } from '../../ui/KpiRow';
+import { KpiCard } from '../../ui/KpiCard';
 import { KpiHeadline, KpiSummary, LatestNote } from '../../ui/KpiHeadline';
 import { KpiTrend } from '../../ui/KpiTrend';
 import { KpiTargets } from '../../ui/KpiTargets';
@@ -74,20 +74,44 @@ const kpi = (overrides: Partial<typeof base> = {}, metaOverrides: Partial<KpiMet
     meta: derived,
   });
 };
-it('KPIS-B07 a row states its status in words and pairs every figure with its unit', () => {
-  mount(
-    <>
-      <KpiRow kpi={kpi()} />
-      <KpiTrail kpi={kpi()} />
-    </>,
-  );
+it('KPIS-B07 a tile states its status in words and pairs every figure with its unit', () => {
+  mount(<KpiCard kpi={kpi()} />);
   expect(screen.getByText(en.kpis.near_target)).toBeTruthy();
   expect(screen.getByText('Net promoter score')).toBeTruthy();
-  expect(screen.getByText('Service · Grow the base')).toBeTruthy();
   expect(screen.getByText('42.5 pts')).toBeTruthy();
-  expect(screen.getByText('Target 50 pts · Q3 2026')).toBeTruthy();
   expect(screen.getByText('+25%')).toBeTruthy();
-  expect(screen.getByRole('img', { name: /Recent readings/u })).toBeTruthy();
+  // What it serves and who holds it: the two facts the tile is acted on from.
+  expect(screen.getByText(`Grow the base · ${en.kpis.noOwner}`)).toBeTruthy();
+});
+it('KPIS-B07 a tile says how far through the target the measure is, as a mark and as a figure', () => {
+  const { container } = mount(<KpiCard kpi={kpi()} />);
+  expect(screen.getByText('85%')).toBeTruthy();
+  expect(screen.getByText('Target 50 pts · Q3 2026')).toBeTruthy();
+  expect(container.querySelector('.meter-arc')).toBeTruthy();
+  // Past the target the arc stays full, the way the record's own gauge does.
+  const full = mount(<KpiCard kpi={kpi({}, { achievement: 3.4 })} />);
+  expect(full.container.querySelector('.meter-arc')?.getAttribute('d')).toBe(
+    container.querySelector('svg path')?.getAttribute('d'),
+  );
+});
+it('KPIS-B07 a measure with no target reports that instead of leaving the answer blank', () => {
+  const { container } = mount(
+    <KpiCard
+      kpi={kpi(
+        {},
+        {
+          status: 'no_target',
+          achievement: null,
+          effectiveTarget: null,
+          effectiveTargetPeriod: null,
+        },
+      )}
+    />,
+  );
+  expect(screen.getAllByText(en.kpis.no_target).length).toBeGreaterThan(0);
+  // An unset target is not a zero: the arc keeps its empty track and the figure is a dash.
+  expect(container.querySelector('.meter-arc')).toBeNull();
+  expect(screen.getByText('—')).toBeTruthy();
 });
 it('KPIS-B07 each status carries its own mark and word from the one status scale', () => {
   // A mark needs 3:1 and a word needs 4.5:1, so the word takes the ink variant of the same hue.
@@ -100,19 +124,21 @@ it('KPIS-B07 each status carries its own mark and word from the one status scale
     ['no_target', 'bg-text-muted', 'text-text-muted'],
   ];
   for (const [status, mark, ink] of marks) {
-    const { container } = mount(<KpiRow kpi={kpi({}, { status })} />);
-    expect(container.querySelector('span[aria-hidden]')?.className).toContain(mark);
-    // The state is never colour alone: the word is there, in the same hue.
-    expect(screen.getByText(en.kpis[status]).className).toContain(ink);
+    mount(<KpiCard kpi={kpi({}, { status })} />);
+    // One chip carries both: its wash is the mark, its label the word, so the state is never
+    // colour alone and never says itself twice.
+    const chip = screen.getByText(en.kpis[status]);
+    expect(chip.className).toContain(mark);
+    expect(chip.className).toContain(ink);
   }
 });
 it('KPIS-B06 KPIS-A07 a row whose objective was deleted still names it, as archived', () => {
-  mount(<KpiRow kpi={kpi({ objectiveDeleted: true })} />);
-  expect(screen.getByText('Service · Grow the base (archived)')).toBeTruthy();
+  mount(<KpiCard kpi={kpi({ objectiveDeleted: true })} />);
+  expect(screen.getByText(`Grow the base (archived) · ${en.kpis.noOwner}`)).toBeTruthy();
 });
 it('KPIS-B07 a KPI with no reading says so instead of showing a number', () => {
   mount(
-    <KpiTrail
+    <KpiCard
       kpi={kpi({}, { current: null, currentDate: null, percentChange: null, sparkline: [] })}
     />,
   );

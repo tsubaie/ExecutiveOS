@@ -15,7 +15,7 @@ One implementation of list + detail behavior for every module: selection, URL st
 <EntityPage<TItem, TPatch, TCreate>
   module="tasks"
   title={…} description={…}
-  filters={{ views, facets?, sort?: { options, default } }}   // the framework owns their URL state
+  filters={{ views, facets?, sort?: { options, default }, mode? }}  // the framework owns their URL state
   useList={useTaskList}                      // (filters: { view, q, sort, ...facets }) => ListResult<TItem>
   useDetail={useTaskDetail}                  // (id, trash) => DetailResult<TItem>
   mutations={{                               // adapters; each returns a promise and throws ApiError
@@ -29,6 +29,7 @@ One implementation of list + detail behavior for every module: selection, URL st
   group={(item) => heading | null}           // suppressed while a sort is active
   rowAction={(item) => …}                    // sibling control beside the row (completion toggle)
   renderers={{
+    rowStyle: 'card' | 'grid',               // default rows are lines; see EP-B20, EP-B27
     row: (item) => …,
     rowTrail: (item) => …,                   // sibling of the row button, so it may hold a control
     detail: (item, api) => …,                // api: save(patch), close, next, prev, neighbors, remove, restore, saveState, retry
@@ -56,9 +57,34 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 
 ## Layout
 
-- EP-B07 Desktop (≥ 1024 px): rail 208 px (collapsible, ≥ 1280 px), list, detail inline at `clamp(480px, 46%, 880px)` of the workspace (rail included, so it reads as roughly 55/45 against the list); the list takes the remainder and resizes, never shifts. The open record carries the wider of the two columns (EP-B23): 480 px stays the floor, so no width loses room against the fixed panel it replaces. The list column opens with one sticky bar that carries the page title, the current view and its count (a button into the filter sheet where the rail is hidden), search, Filter, selection mode and the primary Create action; the page description is exposed to assistive technology only. Card lists place Create above the desktop views rail and use a compact search/sort/action toolbar; without a visible rail, the title/view and Create remain above it (EP-B22). Rows are 44 px single-line by default; group headers are 28 px; rail items 32 px with a divider before views marked `separated`. Views marked `featured` also show their count in a strip under the bar (tinted by `tone` when the count is above zero: `accent` and `danger` for the app's own semantics, `good`, `warn` and `bad` for the status scale a scorecard reads in); views may carry an `icon` for the rail. While a panel or the create form is open the shell sidebar, the rail and the list soften with a light blur so only the open record reads sharp, and they stay soft for as long as the record is open (EP-B23). Colours do not change. Keyboard focus is the single exception: focus within one of those surfaces restores it, because tabbing into the list has to leave it readable. The pointer does not, so passing over the list on the way to something else does not flicker it back and forth. The panel bar shows the item's position in the loaded list ("3 of 11") when no save is in flight, as a control: previous and next move through the loaded list from the panel. This reverses the earlier rule that moving between items is done from the list alone. The list is the narrower column while a record is open and, since EP-B23, stays softened, so sending the reader back to it for the commonest move in triage is the wrong cost. The bar also carries the record's name once the heading has scrolled out of view, so a long record always says which one it is.
+- EP-B07 Desktop (≥ 1024 px): rail 208 px (collapsible, ≥ 1280 px), list, and the detail as a slide-over over the list at `clamp(480px, 46%, 880px)` of the window, running the full height of the viewport flush against its end edge, over the shell header as well as the page (EP-B26). The list keeps the width it had before the record opened: nothing resizes and no row moves under the click that opened it. 480 px stays the floor and 880 px the ceiling because that is the measure a property form reads at; the share is now of what the panel covers rather than of what it displaces. The list column opens with one sticky bar that carries the page title, the current view and its count (a button into the filter sheet where the rail is hidden), search, Filter, selection mode and the primary Create action; the page description is exposed to assistive technology only. Card lists place Create above the desktop views rail and use a compact search/sort/action toolbar; without a visible rail, the title/view and Create remain above it (EP-B22). Rows are 44 px single-line by default; group headers are 28 px; rail items 32 px with a divider before views marked `separated`. Views marked `featured` also show their count in a strip under the bar (tinted by `tone` when the count is above zero: `accent` and `danger` for the app's own semantics, `good`, `warn` and `bad` for the status scale a scorecard reads in); views may carry an `icon` for the rail. While a panel or the create form is open the shell sidebar, the rail and the list soften with a light blur so only the open record reads sharp, and they stay soft for as long as the record is open (EP-B23). Colours do not change. Keyboard focus is the single exception: focus within one of those surfaces restores it, because tabbing into the list has to leave it readable. The pointer does not, so passing over the list on the way to something else does not flicker it back and forth. The panel bar shows the item's position in the loaded list ("3 of 11") when no save is in flight, as a control: previous and next move through the loaded list from the panel. This reverses the earlier rule that moving between items is done from the list alone. While a record is open the list is covered on its end side and, since EP-B23, stays softened, so sending the reader back to it for the commonest move in triage is the wrong cost. The bar also carries the record's name once the heading has scrolled out of view, so a long record always says which one it is.
 - EP-B08 Mobile: views `list` → `detail` → `create`, full screen, slide from the end side (`dir`-aware); rail as a bottom sheet with active-filter count. Back gesture and browser back both go to the previous view.
 - EP-B09 Direction: all animation and column order derive from `dir`.
+- EP-B27 `renderers.rowStyle: "grid"` lays the rows out as tiles in columns instead of stacked
+  containers, for a list whose rows are figures rather than sentences. The column count comes from
+  container queries on the list itself — two from `@2xl`, three from `@5xl` — so it answers to the
+  width the list actually has and not to the window's, which matters because the slide-over of
+  EP-B26 no longer changes that width. Tiles stretch to their track row, so a short record and a
+  long one align across it and a column of figures reads as a column. A group heading is its own
+  list item spanning every track (EP-B14), which is also why headings are siblings of the rows
+  rather than blocks inside the first row of each group. Selection sits over the tile's own corner,
+  because a tile has no leading column to give it.
+  A grid has two axes, so `↑/↓` move a whole track row and `←/→` move one tile, mirrored by `dir`
+  (EP-B09); the track count is read from the list's computed columns, since the container query is
+  what decides it. `←/→` are bound only in a grid, so a list of lines leaves them to the browser.
+  Tiles arrive as a cascade on the delay step every other entrance in the app is timed from, set by
+  position rather than by an index the markup carries, and capped from the seventh so a long list
+  does not become a ticker. Rows are keyed by identity, so a refetch returning the same records
+  re-renders without replaying it; a new view, filter or reading (EP-B28) is a new screen and does
+  replay it. Nothing cascades under reduced motion.
+- EP-B28 `filters.mode` is one reading the whole list is taken under: a segmented control in the
+  toolbar whose first option is the default and carries the empty value. It keeps URL state exactly
+  as a facet does — same key, same query, same clearing — but it is not a filter and must not be
+  presented as one. A filter shortens the list; a mode changes what every row of it says, and
+  something that rewrites every figure on the page does not belong behind a button that reports how
+  many filters are on. It is a segmented group rather than a select because the options are few,
+  fixed and read against each other, and because a record panel that asks the same question asks it
+  in this shape, so moving between the list and a record does not change the control.
 
 ## Forms
 
@@ -75,7 +101,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 ## Lists
 
 - EP-B13 Infinite paging with `fetchNextPage` on scroll; next/prev at the end of the loaded page loads the next page before moving.
-- EP-B14 Grouping renders headers with counts over the loaded rows and, when `meta.counts` provides a group count, the full count in parentheses; collapse state per module in local storage. The selected row is marked with the accent-soft ground and a 3 px start-edge bar; while a panel is open the ground is dropped and the bar carries it alone (EP-B23), because the open record already answers which row it is.
+- EP-B14 Grouping renders headers with counts over the loaded rows and, when `meta.counts` provides a group count, the full count in parentheses; collapse state per module in local storage. A heading only means something while the list is in the order the grouping describes, so a sort the reader chooses suppresses grouping outright: otherwise the headings repeat down the page marking nothing. The selected row is marked with the accent-soft ground and a 3 px start-edge bar; while a panel is open the ground is dropped and the bar carries it alone (EP-B23), because the open record already answers which row it is.
 - EP-B15 Empty states: no items at all (primary action) versus no matches (clear filters); the module may supply the icon through `emptyState.icon`. While the first page loads the list shows six placeholder rows at row height, and while an item loads the detail shows a placeholder title, property rows and text block.
 - EP-B16 Errors: list error panel with retry and request id; detail error inline.
 - EP-B17 Focus: opening detail moves focus to the title; closing returns focus to the row; create returns focus to the new row after submit.
@@ -103,6 +129,29 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   popping in. The save pill's tick lands the way the completion tick does, so a save reads as an
   event rather than a substitution. None of these is a loop: motion here marks something that
   happened and then stops, and none of it runs under reduced motion.
+- EP-B26 From 1024 px the detail is a slide-over, not a column. It leaves the workspace's flex row
+  and is positioned against the window's end edge, running the full height of the viewport and
+  flush to it rather than floating inside the gap the rail and the list sit on: a record that
+  covers the list is a plane in front of it, and a plane in front of something does not also sit on
+  the ground behind it. It is fixed rather than absolute, so it clears the shell header too and an
+  open record is one unbroken surface from the top of the window to the bottom. Its corners are
+  square and only its inner side carries a border: it meets three sides of the window, and a
+  radius there would round a corner that has nothing to be a corner against. The shell's own
+  controls are what it covers; they are one Esc away, and the sidebar it does not reach keeps the
+  nav reachable the whole time. Only its inner side is an edge, so only that side carries a border and a
+  radius, and the shadow it casts is even rather than offset so it falls on the list in both
+  directions (EP-B09). The list keeps its full width underneath: opening a record moves no row, and closing one moves none back. The
+  panel is deliberately not modal. There is no scrim, nothing behind it is inert, the list still
+  scrolls and still takes Tab, and `Esc` closes the record exactly as it did (EP-B06) — a record is
+  something the reader works on next to the list, not a door closed on it, and the pairing of the
+  two is the whole point of the surface. What separates the planes is the EP-B23 softening plus
+  elevation, which is why the shadow is heavier than the one a side-by-side column needed. The
+  panel is its own scroll container and contains its overscroll, so reaching its end does not start
+  scrolling the list behind it. It enters by travelling its own width in from beyond the
+  workspace's clipped edge, mirrored by `dir` (EP-B09); under reduced motion it does not travel at
+  all. Mobile is unchanged: below 1024 px the detail is still the full-screen view swap of EP-B08,
+  because at that width a slide-over and a full-screen view are the same thing and the back gesture
+  already reads the second one correctly.
 - EP-B23 Opening a record makes that record the subject of the page, and the page has to say so
   without recolouring anything. Four things carry it. The surrounding surfaces soften for as long
   as the record is open: the dim belongs to the open record, not to where the pointer happens to
@@ -110,9 +159,10 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   the moment it was for, since a record is opened by clicking a row and the pointer is therefore
   already on the list. Keyboard focus still lifts it, because tabbing into the list is a
   deliberate move away from the record and what is focused has to be readable. The open panel is
-  the only raised plane: the list and rail drop to the page
-  ground and the panel keeps the surface tone and a tinted shadow, so the separation is read off
-  the neutral scale rather than a tint. The selected row gives up its ground and keeps its edge
+  the only raised plane, and since EP-B26 it is literally in front of the list rather than beside
+  it: the list and rail drop to the page ground and the panel keeps the surface tone over a
+  two-layer shadow, so the separation is read off the neutral scale and off height, never off a
+  tint. The selected row gives up its ground and keeps its edge
   bar. The heading the panel focuses on open (EP-B17) shows no focus ring, because it is not
   tabbable and a ring there makes an editable title read as a selected form field; the focus itself
   stays, so the record is still announced. The panel fades as it slides in rather than only sliding.
@@ -140,12 +190,14 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - `feedback.test.tsx`: B24 the save tick only once saved, the bulk bar's arrival.
 
 - `row-trail.test.tsx`: B20 the trailing control renders outside the row button, never nested inside it.
+- `grid.test.tsx`: B27 the grid's arrows move by track row and by tile, `←/→` are inert on a list of lines, and a group heading spans every track; B14 a chosen sort suppresses the headings.
+- `mode.test.tsx`: B28 the mode reaches the list query under its own key, is cleared with the filters, and is not rendered among them.
 - `field.test.tsx`: B19 label, hint, error and invalid associations; first invalid field focused on submit.
 - `multiselect.test.tsx`: selection clearing rules, bulk action confirm.
 - `bulk-actions.test.tsx`: confirm flow runs once, render escape hatch, disabled predicates.
 - `navigation-guard.test.tsx`: registered guard defers, unregistered surface navigates, guards leave with their owner.
 - `keyboard.test.ts`: `a` opens bulk actions, `x` toggles, shortcuts ignored in inputs.
-- e2e `entity-framework.spec.ts`: A02, A03, A06 in both locales; B23 the dim holds through the click that opened the record, the panel is the only raised plane and the wider column, and the selected row keeps only its edge bar.
+- e2e `entity-framework.spec.ts`: A02, A03, A06 in both locales; B23 the dim holds through the click that opened the record, the panel is the only raised plane, and the selected row keeps only its edge bar; B26 the list keeps its width when a record opens, the panel overlaps it rather than sitting beside it, and the list stays scrollable and tabbable behind it.
 - Mutation targets: `resolveUrlState`, `saveQueue`, `keyboardHandler`.
 
 ## Audit items

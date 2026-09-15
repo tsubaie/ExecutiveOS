@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, type RefObject } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { resolveUrlState, changeUrl, clearEntityFilters } from './url-state';
-import type { Entity, EntityPageProps } from './types';
+import type { Entity, EntityPageProps, FiltersDef } from './types';
 import { useEntityNavigation } from './navigation';
 import { useEntityNeighbors } from './use-entity-neighbors';
 import { useEntityKeyboard } from './use-entity-keyboard';
@@ -17,7 +17,7 @@ export function useEntityController<T extends Entity, P extends object, C>(
   const state = resolveUrlState(new URLSearchParams(params));
   const sort = state.sort || (props.filters.sort?.default ?? '');
   const facets = Object.fromEntries(
-    (props.filters.facets ?? []).map((f) => [f.key, params.get(f.key) ?? '']),
+    keyedFilters(props.filters).map((f) => [f.key, params.get(f.key) ?? '']),
   );
   const list = props.useList({ view: state.view, q: state.q, sort, ...facets });
   const detail = props.useDetail(state.id, state.view === 'trash');
@@ -148,4 +148,11 @@ function useEntityCreate<T extends Entity, C>(
     }
   };
   return { creating, submit };
+}
+
+// EP-B28: everything the list is read with that lives under its own URL key. The mode is not a
+// filter, but its state is kept the same way, so it is collected here rather than threaded
+// separately through the query, the clearing and the cursor.
+function keyedFilters(filters: FiltersDef) {
+  return [...(filters.facets ?? []), ...(filters.mode ? [filters.mode] : [])];
 }

@@ -66,6 +66,13 @@
   --status-warn-ink: #b45309;
   --status-bad-ink: #b91c1c;
   --shadow-panel: 0 10px 30px -14px #202a2840;
+  /* EP-B26: the slide-over covers the list instead of sitting beside it, so it needs the
+     elevation of something in front of content rather than of another surface on the ground.
+     Two layers, both cast evenly rather than downwards: running the full height, the edge that
+     has to separate from the rows is the vertical one, and an offset shadow would have to be
+     mirrored for RTL to keep falling on the list (EP-B09). A tight layer reads as contact, a
+     wide one as height. */
+  --shadow-slideover: 0 0 2px #202a2826, 0 0 44px -6px #202a2866;
   /* Motion (docs/05 § Motion). One deceleration curve for anything that arrives, and one step that
      sets the cascade's rhythm: every entrance delay is a multiple of it, so the whole page is
      retimed from this single number. Both are theme-independent, so the dark block leaves them. */
@@ -100,6 +107,7 @@
   --status-warn-ink: #f59e0b;
   --status-bad-ink: #f87171;
   --shadow-panel: 0 12px 36px -16px #11111bcc;
+  --shadow-slideover: 0 0 2px #05050999, 0 0 44px -6px #050509e6;
   --scrim: #11111bcc;
   color-scheme: dark;
 }
@@ -190,30 +198,37 @@
     background: transparent;
   }
 }
+/* EP-B26: the detail arrives as a slide-over from the end edge. The distance is a variable rather
+   than a second set of frames, because the two widths want different journeys from the same
+   entrance: a phone swaps one full-screen view for another and needs only the nudge that says
+   which way the stack moved, while from 1024 px the panel travels its own width in from beyond the
+   workspace's clipped edge, which is what makes it read as arriving over the list rather than as
+   another column appearing inside it. EP-B09: direction is the same variable negated, so the RTL
+   mirror is one declaration instead of a duplicated animation. */
 .entity-detail {
+  --panel-slide: 1rem;
   animation: enter-detail 220ms var(--ease-rise);
+}
+[dir='rtl'] .entity-detail {
+  --panel-slide: -1rem;
 }
 @keyframes enter-detail {
   from {
     opacity: 0;
-    translate: 1rem;
+    translate: var(--panel-slide);
   }
   to {
     opacity: 1;
     translate: 0;
   }
 }
-[dir='rtl'] .entity-detail {
-  animation-name: enter-detail-rtl;
-}
-@keyframes enter-detail-rtl {
-  from {
-    opacity: 0;
-    translate: -1rem;
+@media (min-width: 1024px) {
+  .entity-detail {
+    --panel-slide: 100%;
+    animation-duration: 260ms;
   }
-  to {
-    opacity: 1;
-    translate: 0;
+  [dir='rtl'] .entity-detail {
+    --panel-slide: -100%;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -506,10 +521,63 @@
     transform: scaleX(1);
   }
 }
+/* The arc draws itself the way the linear meter fills. `pathLength` normalises every arc to 1, so
+   one keyframe covers a tenth of a sweep and a full one without either length being known here. */
+.meter-arc {
+  stroke-dasharray: 1;
+  animation: meter-arc 620ms var(--ease-rise) calc(var(--step-rise) * 2) backwards;
+}
+@keyframes meter-arc {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* EP-B27: a grid of tiles arrives as a cascade rather than all at once, for the reason Home's lead
+   rows do — it walks the eye across the page in reading order instead of presenting a finished
+   wall. The delays are the same step every other entrance in the app is timed from, they are set
+   by position rather than by an index the markup would have to carry, and they stop: the seventh
+   tile and everything after it share the last delay, so a long scorecard does not turn into a
+   ticker. Rows are keyed by identity, so a refetch that returns the same measures re-renders them
+   without re-running any of this; a new view or a new comparison period is a new screen and does
+   run it, which is the one time the movement is telling the truth about what happened. */
+.entity-grid > * {
+  animation: rise 320ms var(--ease-rise) backwards;
+}
+.entity-grid > *:nth-child(1) {
+  animation-delay: calc(var(--step-rise) * 0.5);
+}
+.entity-grid > *:nth-child(2) {
+  animation-delay: calc(var(--step-rise) * 1);
+}
+.entity-grid > *:nth-child(3) {
+  animation-delay: calc(var(--step-rise) * 1.5);
+}
+.entity-grid > *:nth-child(4) {
+  animation-delay: calc(var(--step-rise) * 2);
+}
+.entity-grid > *:nth-child(5) {
+  animation-delay: calc(var(--step-rise) * 2.4);
+}
+.entity-grid > *:nth-child(6) {
+  animation-delay: calc(var(--step-rise) * 2.8);
+}
+.entity-grid > *:nth-child(n + 7) {
+  animation-delay: calc(var(--step-rise) * 3.2);
+}
+/* The strip above it is one block and rises as one, ahead of the tiles it summarises. */
+[data-entity-stats] {
+  animation: rise 300ms var(--ease-rise) backwards;
+}
 @media (prefers-reduced-motion: reduce) {
   .home-rise,
   .home-column > *,
   .home-lead-rows > *,
+  .entity-grid > *,
+  [data-entity-stats],
+  .meter-arc,
   .meter-fill {
     animation: none;
   }
@@ -712,8 +780,12 @@
   .entity-page-open [data-entity-list] {
     background: var(--color-bg);
   }
+  /* EP-B26: as a slide-over the panel is genuinely in front of the list rather than next to it, so
+     the elevation has to be read as height above content. The blur behind it does half the work
+     and the shadow does the rest; neither changes a colour, so contrast inside the panel and
+     inside the list is what it was. */
   .entity-detail {
-    box-shadow: var(--shadow-panel);
+    box-shadow: var(--shadow-slideover);
   }
   /* EP-B14: with the panel open the record itself answers "which one is this", so the row only has
      to hold the reader's place. The tinted ground goes and the start-edge bar stays. */

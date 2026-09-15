@@ -516,6 +516,7 @@
     "quarterLabel": "{quarter, plural, =1 {الربع الأول} =2 {الربع الثاني} =3 {الربع الثالث} =4 {الربع الرابع} other {الربع #}} {year}",
     "noReading": "لا قراءة",
     "targetOf": "المستهدف {value} · {quarter}",
+    "targetProgress": "{percent} من المستهدف · {quarter}",
     "targetOfShort": "المستهدف {value}",
     "trendOf": "أحدث قراءات {name}",
     "achievementOf": "{percent} من المستهدف · {status}",
@@ -597,6 +598,9 @@
     "nextYear": "السنة التالية",
     "readingsIntro": "كل ما سُجِّل على {name}، الأحدث أولًا.",
     "targetsIntro": "ما يُقاس به {name}، سنةً بعد سنة.",
-    "maintain": "الصيانة"
+    "maintain": "الصيانة",
+    "comparePrevious": "السابقة",
+    "compareCurrent": "الحالية",
+    "compareNext": "التالية"
   }
 }

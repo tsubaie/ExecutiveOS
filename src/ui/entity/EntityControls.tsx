@@ -146,6 +146,7 @@ function EntityToolbarControls<T extends Entity, P extends object, C>({
       {config.renderers.rowStyle === 'card' && c.railOpen && <Button variant="ghost" size="icon" className="hidden xl:inline-flex"
         aria-label={t('collapseViews')} onClick={() => c.setRailOpen(false)}><PanelLeftClose className="size-4 rtl:rotate-180" /></Button>}
       <div className="flex min-w-0 flex-1 basis-full @lg:basis-0"><EntitySearch key={c.searchReset} query={c.state.q} navigate={c.navigate} /></div>
+      <EntityMode config={config} controller={c} />
       {config.filters.sort && <div className="min-w-0 max-w-44">
         <ChoiceSelect label={t('sort')} value={c.state.sort}
           items={config.filters.sort.options.map((option) => ({ value: option.id, text: option.label, label: option.label }))}
@@ -163,6 +164,40 @@ function EntityToolbarControls<T extends Entity, P extends object, C>({
         <X aria-hidden={true} className="size-4" />
       </Button>
       <EntitySelectionControl config={config} controller={c} />
+    </div>
+  );
+}
+
+// EP-B28: the reading the whole list is taken under. A segmented group rather than a select,
+// because the options are few, fixed and compared against each other — and because the record's
+// own period toggle is this shape, so moving between the list and a record does not change how the
+// same question is asked. It is not folded into the filter sheet: a filter shortens the list and
+// this does not, and something that rewrites every figure on the page should not be behind a
+// button that says how many filters are on.
+function EntityMode<T extends Entity, P extends object, C>({
+  config,
+  controller: c,
+}: Surface<T, P, C>) {
+  const mode = config.filters.mode;
+  if (!mode) return null;
+  const current = c.facets[mode.key] ?? '';
+  return (
+    <div role="group" aria-label={mode.label} className="flex shrink-0 rounded-lg border p-0.5">
+      {mode.options.map((option) => (
+        <Button
+          key={option.id}
+          variant="ghost"
+          size="sm"
+          aria-pressed={option.id === current}
+          className={cn(
+            'h-7 px-2.5 text-xs font-normal text-text-muted',
+            option.id === current && 'bg-surface-raised font-medium text-text',
+          )}
+          onClick={() => c.navigate({ [mode.key]: option.id, id: null, sel: null }, true)}
+        >
+          {option.label}
+        </Button>
+      ))}
     </div>
   );
 }

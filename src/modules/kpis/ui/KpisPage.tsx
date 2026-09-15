@@ -17,7 +17,7 @@ import { sortOptions } from '@/ui/entity/filters';
 import type { Facet, FiltersDef, View } from '@/ui/entity/types';
 import { Sort } from '../schema/validation';
 import { useKpis, useKpi, useKpiMutations, useKpiFacets } from './queries';
-import { KpiRow, KpiTrail } from './KpiRow';
+import { KpiCard } from './KpiCard';
 import { CreateKpi } from './CreateKpi';
 const KpiRecord = dynamic(() => import('./KpiRecord').then((module) => module.KpiRecord));
 export function KpisPage() {
@@ -34,11 +34,17 @@ export function KpisPage() {
       useDetail={useKpi}
       mutations={mutations}
       emptyState={{ title: t('emptyTitle'), description: t('emptyDescription'), icon: Target }}
+      group={(item) =>
+        item.objectiveName
+          ? item.objectiveDeleted
+            ? t('archivedObjective', { name: item.objectiveName })
+            : item.objectiveName
+          : t('noObjective')
+      }
       renderers={{
-        rowStyle: 'card',
+        rowStyle: 'grid',
         name: (item) => item.name,
-        row: (item) => <KpiRow kpi={item} />,
-        rowTrail: (item) => <KpiTrail kpi={item} />,
+        row: (item) => <KpiCard kpi={item} />,
         detail: (item, api) => <KpiRecord kpi={item} api={api} />,
         create: (api) => <CreateKpi api={api} />,
       }}
@@ -76,7 +82,20 @@ function useKpiFilters(): FiltersDef {
       ],
     },
   ];
-  return { views: useKpiViews(), facets: options, sort: sortOptions(Sort.options, t) };
+  return {
+    views: useKpiViews(),
+    facets: options,
+    sort: sortOptions(Sort.options, t),
+    mode: {
+      label: t('measuredAgainst'),
+      key: 'period',
+      options: [
+        { id: 'previous', label: t('comparePrevious') },
+        { id: '', label: t('compareCurrent') },
+        { id: 'next', label: t('compareNext') },
+      ],
+    },
+  };
 }
 function useKpiViews(): View[] {
   const t = useTranslations('kpis');

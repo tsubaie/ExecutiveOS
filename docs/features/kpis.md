@@ -44,9 +44,46 @@ See `03-data-model.md`. Invariants:
 - KPIS-B02 **Effective target**: periods of the KPI's frequency, in `ctx.timezone`; current period first, else earliest future, else none; the record names which period is used.
 - KPIS-B03 **Achievement** shown on the gauge: `higher`: `current / target`; `lower`: `target / current` (so 100 percent means on target in both directions); capped at 999 percent for display, arc capped at 100; undefined when target ≤ 0 or current ≤ 0 (gauge shows the status badge only). The arc spans between the two figures it compares: the current reading under one foot, the target under the other. A period toggle moves the comparison to the period before the effective one or the one after it, and the arc, the percentage, the badge and the target figure all move with it; the toggle carries the dates, so the two figures under the arc do not repeat them. It opens on the effective period, so the record starts on the answer the row it was opened from was showing. The neighbours never read `stale`: the question they answer is whether a period's target was met, which does not go out of date.
 - KPIS-B04 **Previous value** = the reading before current; percent change = `(current − previous) / |previous|` when previous ≠ 0 else null. **Previous period comparison** = last reading dated in the previous period and that period's target; the trend's own previous-period column and the toggle's left step carry it on screen, so the record does not also print it as a row. The newest reading whose note says anything is quoted under the headline: it is the one field on the page that says *why* a number moved.
-- KPIS-B05 **Sparkline**: last 8 readings up to today.
+- KPIS-B05 **Sparkline**: last 8 readings up to today. The scorecard list does not draw it: a
+  tile answers where a measure stands against its target, and the shape of the readings is a
+  second mark competing with the one that carries that (KPIS-B07). The record keeps the trend.
 - KPIS-B06 **Objectives** CRUD with manual sort; deleting an objective soft-deletes it and leaves `objective_id` on KPIs and initiatives (chip renders "archived"); purge nulls.
-- KPIS-B07 **List** rows: status dot and label, name, current value with unit, effective target with its period, change arrow, category, sparkline. Views `all` (default), `attention` (off, stale, no_data), `on_target`, `near_target`, `off_target`, `no_data`, `stale`, `no_target`, `trash`. Facets objective, category, owner, `linkedTo`. The spark is the last thing in the row: the figures are read first and the shape confirms them. Sort: severity (off, stale, no_data, near, no_target, on) then name (default); name; change.
+- KPIS-B07 **List** tiles (EP-B27): name, the objective it serves, the status as one chip whose
+  wash is the mark and whose label is the word, an arc carrying how far through the target the
+  measure is with that figure inside it, the current reading with its unit, the change since the
+  previous reading, and the effective target with its period. The arc is the instrument the page is
+  scanned by: a column of them is read without reading anything, because the short ones are the
+  ones to open. It is the record's gauge drawn directly in SVG rather than through the chart
+  library, for the reason the sparkline was (`docs/05`): a list holds fifty of these and a charting
+  runtime per tile costs more than the rest of the page. A measure with no target keeps an empty
+  track and a dash, never a zero, which is a different and worse answer.
+  The whole tile is never painted its status colour. It is the obvious executive look and it
+  defeats itself: when every tile shouts the eye has nothing to catch on, and light text on a
+  saturated ground gives up the contrast the status scale was measured to hold (`src/ui/tokens.css`).
+  The surface stays neutral so the marks can carry the state.
+  Neither the owner nor the category appears on a tile. An owner is read once a measure has been
+  opened, and a column of proper nouns sits between the eye and the figures; a category is a facet,
+  which is where it is used.
+  Views `all` (default), `attention` (off, stale, no_data), `on_target`, `near_target`,
+  `off_target`, `no_data`, `stale`, `no_target`, `trash`. Facets objective, category, owner,
+  `linkedTo`. The list is grouped by the objective each measure serves, because a measure means
+  little apart from the thing it is meant to move. Sort: the default files the scorecard under its
+  objectives, severity (off, stale, no_data, near, no_target, on) then name inside each; objectives
+  themselves are alphabetical rather than ranked by their worst measure, because a scorecard is read
+  on the cadence it reports on and an order that reshuffles as statuses change costs the reader what
+  repetition buys them — what is off track is found from the views and the strip above, which exist
+  for it. Measures filed under no objective are a group too, and go last. Also name; change; each
+  of which suppresses the grouping (EP-B14).
+- KPIS-B26 **Comparison period**: one reading applies to the whole page, chosen from a segmented
+  control in the toolbar (EP-B28) and carried in the URL as `period=previous|next`, empty being the
+  effective one. It is not a filter: it removes no measure from the list, it changes what every one
+  of them says. Everything downstream of a status follows it — each tile's arc, target and period,
+  the statuses themselves, the counts in the strip and the rail, and the default order — because a
+  scorecard read half against one quarter and half against another is not a scorecard. A shifted
+  reading names its period exactly rather than rolling forward to the next plan, since the question
+  it answers is "was that target met" and that is about one period and no other; a measure with no
+  target in that period reads as having none. Freshness is dropped with the shift, for the reason
+  the record's neighbouring periods drop it (KPIS-B08): a target already past does not go stale.
   A status is a function of today's date and the workspace thresholds rather than of a column, so it
   cannot be filtered, counted or ordered in SQL without writing the rules a second time. The list
   therefore reads its candidates in one statement, ranks them with `computeKpiStatus`, and pages on
@@ -77,7 +114,7 @@ See `03-data-model.md`. Invariants:
 
 ## UI
 
-Charts via wrappers (Sparkline, TrendChart, Gauge). RTL: time axis right-to-left, readings table order unchanged (chronological), labels logical. The year form offers one input per period of the KPI's cadence — twelve, four or one — in order, so the tab key walks the year the way it is reported. Mobile: gauge, trend, readings.
+Charts via wrappers (TrendChart, Gauge). RTL: time axis right-to-left, readings table order unchanged (chronological), labels logical. The year form offers one input per period of the KPI's cadence — twelve, four or one — in order, so the tab key walks the year the way it is reported. Mobile: gauge, trend, readings.
 
 Objectives are managed from Administration (`/admin/objectives`), beside the other workspace
 vocabularies (note types, tags). They are read by every member — the KPI picker and the objective

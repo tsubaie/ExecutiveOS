@@ -21,11 +21,15 @@ export function EntityPage<T extends Entity, P extends object, C>(props: EntityP
 }
 // Rail, list and detail sit as rounded surfaces on the page ground from 1024 px; the list column
 // opens with one bar carrying the title, current view, search, filters and Create (EP-B07).
-// EP-B23: an open record is the subject of the page, so the detail carries the wider of the two
-// columns and the list becomes the index beside it. The share is of the whole workspace, rail
-// included, which is why 46 % reads as roughly 55/45 against the list. 480 px stays the floor, so
-// no window width loses room against the fixed panel this replaces, and 880 px is the ceiling
-// because a property form wider than that stops being readable.
+// EP-B26: from 1024 px the detail is a slide-over. It leaves the flex row entirely -- fixed, not
+// absolute -- so it is measured against the viewport rather than against the workspace, and runs
+// the full height of the window over the shell header as well as the page. The list keeps the
+// width it had before the record opened and no row moves when one is clicked. Only the inner side
+// is an edge, so only it carries a border, and it is square: the panel meets three sides of the
+// window, and a radius there would round a corner that has nothing to be a corner against. The panel is not modal: nothing is
+// inert behind it, the list scrolls and tabs as it always did, and Esc still closes (EP-B06). The
+// width is the measure it had as a column -- 480 px floor, 880 px ceiling -- because that is what
+// a property form reads at; the percentage now reads against the window it covers.
 function EntitySurface<T extends Entity, P extends object, C>(props: EntityPageProps<T, P, C>) {
   const t = useTranslations('common');
   const root = useRef<HTMLElement>(null);
@@ -64,7 +68,7 @@ function EntitySurface<T extends Entity, P extends object, C>(props: EntityPageP
           <EntityList config={props} controller={c} />
         </div>
         {panel && (
-          <aside className="entity-detail min-w-0 flex-1 overflow-y-auto bg-surface lg:w-[clamp(480px,46%,880px)] lg:flex-none lg:rounded-xl lg:border">
+          <aside className="entity-detail min-w-0 flex-1 overflow-y-auto overscroll-contain bg-surface lg:fixed lg:inset-y-0 lg:end-0 lg:z-30 lg:w-[clamp(480px,46%,880px)] lg:border-s">
             <EntityOutside config={props} controller={c} />
             <EntityContent config={props} controller={c} />
           </aside>

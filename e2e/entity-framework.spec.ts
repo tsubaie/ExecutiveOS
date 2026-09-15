@@ -48,16 +48,12 @@ test('EP-B23 the page hands the open record the foreground @desktop', async ({ p
       const element = document.querySelector(selector);
       return element ? getComputedStyle(element) : null;
     };
-    const box = (selector: string) =>
-      document.querySelector(selector)?.getBoundingClientRect().width ?? 0;
     const active = document.activeElement as HTMLElement | null;
     return {
       listBg: style('[data-entity-list]')?.backgroundColor ?? null,
       panelBg: style('.entity-detail')?.backgroundColor ?? null,
       panelShadow: style('.entity-detail')?.boxShadow ?? null,
       currentBg: style('.entity-row[data-current]')?.backgroundColor ?? null,
-      listWidth: box('[data-entity-list]'),
-      panelWidth: box('.entity-detail'),
       focus: {
         tag: active?.tagName ?? null,
         tabIndex: active?.getAttribute('tabindex') ?? null,
@@ -68,8 +64,6 @@ test('EP-B23 the page hands the open record the foreground @desktop', async ({ p
   // One raised plane: the panel keeps the surface tone, the list drops to the page ground.
   expect(planes.listBg).not.toBe(planes.panelBg);
   expect(planes.panelShadow).not.toBe('none');
-  // The record is the subject, so it carries the wider column.
-  expect(planes.panelWidth).toBeGreaterThan(planes.listWidth);
   // The selected row keeps its place with the edge bar alone; the tinted ground goes.
   expect(planes.currentBg).toBe('rgba(0, 0, 0, 0)');
   // The heading is focused so the record is announced, but it is not tabbable and draws no ring.
@@ -88,4 +82,64 @@ test('EP-B23 the page hands the open record the foreground @desktop', async ({ p
   await page.keyboard.press('Escape');
   await expect(page.locator('.entity-detail')).toHaveCount(0);
   await expect.poll(soft).toBe('none');
+});
+
+// EP-B26: the detail is a slide-over, so the two things that separate it from the column it
+// replaced are geometry (it covers the list instead of displacing it) and the fact that nothing
+// behind it is inert. Both are read from a real browser for the same reason EP-B23 is.
+test('EP-B26 the record slides over the list instead of displacing it @desktop', async ({
+  page,
+}) => {
+  await loginAs(page, 'en');
+  const prefix = `Slide ${crypto.randomUUID()}`;
+  const id = await createTask(page, `${prefix} first`);
+  await createTask(page, `${prefix} second`);
+  await page.goto(`/tasks?view=all&q=${encodeURIComponent(prefix)}`);
+  const list = page.locator('[data-entity-list]');
+  const row = page.locator(`[data-row-id="${id}"]`);
+  await expect(row).toBeVisible();
+
+  const closed = await list.boundingBox();
+  await row.click();
+  const panel = page.locator('.entity-detail');
+  await expect(panel).toBeVisible();
+  // The entrance travels the panel's own width, so every box below has to be the resting one.
+  // Polling for the edge it settles against beats sleeping for longer than the animation: the
+  // measurement is the wait, and a slow frame lengthens it instead of failing it.
+  const edge = () => panel.boundingBox().then((box) => Math.round((box?.x ?? 0) + (box?.width ?? 0)));
+  await expect.poll(edge).toBe(page.viewportSize()?.width ?? 0);
+
+  // Opening a record moves no row: the list keeps exactly the width it had when it was alone.
+  const open = await list.boundingBox();
+  expect(open?.width).toBeCloseTo(closed?.width ?? 0, 0);
+  expect(open?.x).toBeCloseTo(closed?.x ?? 0, 0);
+
+  // And the panel is in front of it rather than beside it, which is the same thing said in boxes:
+  // a column would start where the list ends, a slide-over starts inside it.
+  const over = await panel.boundingBox();
+  const overlap =
+    Math.min((open?.x ?? 0) + (open?.width ?? 0), (over?.x ?? 0) + (over?.width ?? 0)) -
+    Math.max(open?.x ?? 0, over?.x ?? 0);
+  expect(overlap).toBeGreaterThan(0);
+
+  // Full height of the window, flush to its end edge: a plane in front of the whole site, not a
+  // card on the ground beside the list. It is measured against the viewport because the panel is
+  // fixed, and it clears the shell header, which is the part that makes it read as unbroken.
+  const view = page.viewportSize();
+  expect(over?.y).toBeCloseTo(0, 0);
+  expect(over?.height).toBeCloseTo(view?.height ?? 0, 0);
+  const header = await page.locator('header').boundingBox();
+  expect((header?.x ?? 0) + (header?.width ?? 0)).toBeGreaterThan(over?.x ?? 0);
+
+  // Not modal: no scrim was added, the list still scrolls, and it still takes Tab.
+  await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCount(0);
+  const second = page.locator('[data-entity-list] [data-row-id]').nth(1);
+  await second.focus();
+  await expect(second).toBeFocused();
+
+  // Closing it puts nothing back, because nothing had moved.
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+  const after = await list.boundingBox();
+  expect(after?.width).toBeCloseTo(closed?.width ?? 0, 0);
 });

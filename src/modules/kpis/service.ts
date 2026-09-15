@@ -41,7 +41,7 @@ import {
 } from './schema/validation';
 import * as repo from './repo';
 type Row = Awaited<ReturnType<typeof repo.selectKpi>>;
-type Scope = { today: string; thresholds: StatusThresholds };
+type Scope = { today: string; thresholds: StatusThresholds; offset?: number };
 type Keyed = { item: Kpi; key: Tuple };
 async function scope(ctx: Context): Promise<Scope> {
   const today = dayAt(await getSetting(ctx.db, 'workspace.timezone'));
@@ -49,8 +49,10 @@ async function scope(ctx: Context): Promise<Scope> {
 }
 const toKpi = (row: NonNullable<Row>, at: Scope) =>
   Kpi.parse({ ...row, meta: deriveMeta(row, at) });
-// KPIS-B07: the sort keys are the cursor tuple. Severity first by default, because the page exists
-// to surface what is not on track; name breaks every tie so the order is total and stable.
+// KPIS-B07: the sort keys are the cursor tuple. The default files the scorecard under the
+// objectives it serves, severity first inside each. Objectives are alphabetical rather than ranked
+// by their worst measure: a scorecard is read on the cadence it reports on, and an order that
+// reshuffles as statuses change costs what repetition buys. Unfiled measures go last.
 function keyOf(item: Kpi, sort: string): Tuple {
   const name = item.name.toLocaleLowerCase();
   if (sort === 'name') return [name, item.id];
@@ -58,7 +60,8 @@ function keyOf(item: Kpi, sort: string): Tuple {
     const change = item.meta.percentChange;
     return [change === null ? 1 : 0, change === null ? 0 : -change, name, item.id];
   }
-  return [severityRank[item.meta.status], name, item.id];
+  const objective = (item.objectiveName ?? '').toLocaleLowerCase();
+  return [item.objectiveId ? 0 : 1, objective, severityRank[item.meta.status], name, item.id];
 }
 function inView(item: Kpi, view: string) {
   if (view === 'trash') return Boolean(item.deletedAt);
@@ -74,7 +77,9 @@ export async function listKpis(ctx: Context, query: KpiListQuery) {
     today: at.today,
     fromYear: Number(at.today.slice(0, 4)) - 1,
   });
-  const all = rows.map((row) => toKpi(row, at));
+  // KPIS-B26: one period for the page, applied before every status, count and sort key below.
+  const shift = query.period === 'previous' ? -1 : query.period === 'next' ? 1 : 0;
+  const all = rows.map((row) => toKpi(row, { ...at, offset: shift }));
   const { cursor, ...filters } = query;
   const hash = filtersHash({ ...filters, date: at.today });
   const ranked: Keyed[] = all
