@@ -609,6 +609,7 @@
     "compareCurrent": "الحالية",
     "compareNext": "التالية",
     "statusColumn": "الحالة",
-    "achievement": "الإنجاز"
+    "achievement": "الإنجاز",
+    "changeColumn": "التغير"
   }
 }

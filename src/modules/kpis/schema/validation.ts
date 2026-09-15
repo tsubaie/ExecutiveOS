@@ -305,6 +305,7 @@ export type KpiFacts = {
   frequency: string;
   current: Point | null;
   previous: number | null;
+  previousPeriodValue: number | null;
   sparkline: Point[];
   targets: PeriodTarget[];
 };
@@ -326,8 +327,8 @@ export function deriveMeta(facts: KpiFacts, at: MeasuredAt): KpiMeta {
   return {
     current,
     currentDate,
-    previous: facts.previous,
-    percentChange: percentChangeOf(current, facts.previous),
+    previous: facts.previousPeriodValue,
+    percentChange: percentChangeOf(current, facts.previousPeriodValue),
     effectiveTarget: value,
     effectiveTargetPeriod: target ? { year: target.year, period: target.period } : null,
     status: computeKpiStatus({

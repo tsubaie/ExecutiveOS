@@ -60,7 +60,7 @@ export function useKpiColumns(): Column<Kpi>[] {
       numeric: true,
       cell: (kpi) => kpi.meta.achievement !== null && labels.percent(kpi.meta.achievement),
     },
-    { key: 'change', head: t('change'), numeric: true, cell: (kpi) => <ChangeCell kpi={kpi} /> },
+    { key: 'change', head: t('changeColumn'), numeric: true, cell: (kpi) => <ChangeCell kpi={kpi} /> },
     {
       key: 'objective',
       head: t('objective'),

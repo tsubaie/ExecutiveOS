@@ -609,6 +609,7 @@
     "compareCurrent": "Current",
     "compareNext": "Next",
     "statusColumn": "Status",
-    "achievement": "Progress"
+    "achievement": "Progress",
+    "changeColumn": "Change"
   }
 }
