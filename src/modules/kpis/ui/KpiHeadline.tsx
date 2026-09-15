@@ -42,11 +42,11 @@ export function KpiSummary({ kpi }: { kpi: KpiDetail }) {
 // and everything the arc says moves with it. It opens on the effective period, so the record starts
 // on the same answer the row the reader came from was showing.
 //
-// Stepping it is deliberately not a view transition (ADR 0021 covers the list, not this). Capturing
-// this block would tear the gauge down and stand a new one up, and a chart that re-mounts reads as
-// a chart that is loading — the one thing the reader must not think when they have only asked to
-// compare a quarter. The arc animates between the two values in place instead, which is the
-// movement that actually means something here: the mark travelling from one reading to the other.
+// Stepping it is deliberately not animated. Capturing or remounting this block to slide it tears
+// the gauge down and stands a new one up, and a chart that re-mounts reads as a chart that is
+// loading — the one thing the reader must not think when they have only asked to compare a
+// quarter. The arc moves between the two values in place instead, which is the movement that
+// actually means something here: the mark travelling from one reading to the other.
 export function KpiHeadline({ kpi }: { kpi: KpiDetail }) {
   const [chosen, setChosen] = useState(1);
   const view = kpi.periods[chosen] ?? kpi.periods[1];

@@ -111,11 +111,11 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   many filters are on. It is a segmented group rather than a select because the options are few,
   fixed and read against each other, and because a record panel that asks the same question asks it
   in this shape, so moving between the list and a record does not change the control.
-  Stepping it is a view transition, not a remount (ADR 0021): the same place restating itself,
-  so the old and new are captured and cross-faded with a small offset in the direction the
-  reader stepped. Nothing is remounted, so the list's own arrival cascade (EP-B27) does not
-  replay underneath it — that motion belongs to records arriving, not to the same ones being
-  read again.
+  Stepping it is not animated. Every arrangement of these records carries marks that draw
+  themselves on arrival — a tile's arc, a meter's fill — and anything that captures or remounts the
+  body to animate the step replays all of them, which reads as the page loading rather than as the
+  same records being read against another period. The figures change where they stand. Motion here
+  belongs to records arriving (EP-B27), not to the ones already on screen being restated.
 
 ## Forms
 

@@ -8,21 +8,12 @@ import { cn } from '@/ui/cn';
 import type { Entity } from './types';
 import type { Surface } from './EntityControls';
 import { useRowMotion, rowMotionClass, type Rendered } from './use-row-motion';
-import { useStepMotion } from '@/ui/motion';
-import { StepBody } from '@/ui/layout/PageTransition';
 import { EntityTable } from './EntityTable';
 import { EntityListSkeleton, EntityEmpty } from './EntityStates';
 export function EntityList<T extends Entity, P extends object, C>(props: Surface<T, P, C>) {
   const t = useTranslations('common');
   const { list } = props.controller;
   const rows = useRowMotion(list.items, list.pending);
-  // EP-B28: a mode rewrites every row rather than removing any, so the whole body steps across.
-  const mode = props.config.filters.mode;
-  const step = useStepMotion(
-    mode
-      ? mode.options.findIndex((option) => option.id === (props.controller.facets[mode.key] ?? ''))
-      : 0,
-  );
   if (list.pending) return <EntityListSkeleton />;
   if (list.error) return <ErrorPanel error={list.error} retry={list.refetch} />;
   if (!rows.length) return <EntityEmpty {...props} />;
@@ -31,9 +22,7 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
   if (props.controller.state.layout === 'table' && props.config.renderers.columns?.length)
     return (
       <>
-        <StepBody step={step.step} transition={step.transition}>
-          <EntityTable {...props} rows={rows} />
-        </StepBody>
+        <EntityTable {...props} rows={rows} />
         {list.more && (
           <Button variant="ghost" className="m-4" onClick={() => void list.fetchMore()}>
             {t('more')}
@@ -42,7 +31,7 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
       </>
     );
   return (
-    <StepBody step={step.step} transition={step.transition}>
+    <>
       {/* EP-B27: the grid is declared on the list itself and its column count comes from container
           queries, so it answers to the width the list actually has rather than to the window's.
           `data-entity-rows` is how the keyboard finds the track count without being told it. */}
@@ -62,7 +51,7 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
           {t('more')}
         </Button>
       )}
-    </StepBody>
+    </>
   );
 }
 function EntityListRow<T extends Entity, P extends object, C>({
