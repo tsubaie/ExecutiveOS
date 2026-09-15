@@ -161,6 +161,34 @@
   p {
     overflow-wrap: anywhere;
   }
+  /* One scrollbar for the whole product, in the theme's own colours: a thin track that keeps the
+     surface it sits on and a rounded thumb in the border step, which darkens under the pointer.
+     `color-scheme` already hands the platform a matching default, so this is the same bar drawn
+     slimmer; Firefox takes the two-value form and every other engine the parts below. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-text);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 .entity-detail {
   animation: enter-detail 220ms var(--ease-rise);
@@ -194,11 +222,13 @@
   }
 }
 
-/* Shared entity surfaces keep list and detail independently reachable. */
+/* Shared entity surfaces keep list and detail independently reachable. The page fills the column
+   the shell gives it, which is the screen less the header and the bottom bar; measuring either of
+   those here would only be a second copy of a number the shell already knows (docs/05). */
 .entity-page {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 63px - 56px - env(safe-area-inset-bottom));
+  height: 100%;
 }
 /* The completion toggle keeps a 44px hit area at every pointer type; the ring inside is 18px. */
 .entity-check[data-slot='checkbox'] {
@@ -594,6 +624,25 @@
   ) {
   color: var(--color-text-muted);
 }
+/* What a record is maintained from folds away under it (KPIS-B08). The marker is the chevron beside
+   the heading, so the browser's own triangle goes and the chevron turns when the section opens. */
+.kpi-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.kpi-fold > summary > svg {
+  transition: rotate 150ms var(--ease-rise);
+}
+.kpi-fold[open] > summary > svg {
+  rotate: 90deg;
+}
+[dir='rtl'] .kpi-fold[open] > summary > svg {
+  rotate: -90deg;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kpi-fold > summary > svg {
+    transition: none;
+  }
+}
 /* Anything that appears in place rather than arriving with the page: the bulk bar when selection
    starts, a row created into a list already on screen. Same gesture as the page's own entrance, in
    the shorter time a single element earns. */
@@ -637,9 +686,6 @@
   }
 }
 @media (min-width: 1024px) {
-  .entity-page {
-    height: calc(100dvh - 63px);
-  }
   /* An open panel pulls focus: the shell sidebar, the views rail and the list soften so only the
      open record reads sharp. Hover or focus brings an element back; colours are not changed, so
      text contrast holds. */
@@ -683,9 +729,6 @@
   }
 }
 
-main:has(.entity-page) {
-  padding-bottom: 0;
-}
 .mobile-navigation > a {
   min-width: 44px;
   min-height: 56px;

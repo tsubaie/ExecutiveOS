@@ -6,19 +6,19 @@ await mkdir('tmp/screenshots', { recursive: true });
 const viewports = { desktop: { width: 1440, height: 900 }, mobile: { width: 390, height: 844 } };
 const today = new Date();
 const day = (back) => new Date(Date.now() - back * 86400000).toISOString().slice(0, 10);
-const quarter = Math.floor(today.getUTCMonth() / 3) + 1;
+const period = Math.floor(today.getUTCMonth() / 3) + 1;
 // One of each state the list has to tell apart, so the screenshots show the scorecard doing its job.
 const measures = [
   {
     name: 'Board decisions implemented',
-    unit: '%',
+    unit: 'percent',
     category: 'Governance',
     readings: [72, 78, 84, 91],
     target: 90,
   },
   {
     name: 'Average days to close an action',
-    unit: 'days',
+    unit: 'count',
     category: 'Delivery',
     direction: 'lower',
     readings: [21, 18, 16, 14],
@@ -26,15 +26,15 @@ const measures = [
   },
   {
     name: 'Strategic budget committed',
-    unit: '%',
+    unit: 'percent',
     category: 'Finance',
     readings: [41, 44, 46, 48],
     target: 75,
   },
-  { name: 'Partner satisfaction', unit: 'pts', category: 'External', readings: [], target: 8 },
+  { name: 'Partner satisfaction', unit: 'points', category: 'External', readings: [], target: 8 },
   {
     name: 'Regional coverage',
-    unit: 'sites',
+    unit: 'count',
     category: 'Delivery',
     readings: [12],
     stale: true,
@@ -79,10 +79,10 @@ for (const measure of measures) {
     unit: measure.unit,
     category: measure.category,
     direction: measure.direction ?? 'higher',
+    frequency: 'quarterly',
     objectiveId: objective?.data?.id ?? null,
-    teams: [],
+    ownerId: null,
     notes: '',
-    freshnessDays: 120,
   });
   const id = kpi?.data?.id;
   if (!id) continue;
@@ -94,7 +94,9 @@ for (const measure of measures) {
       note: '',
     });
   await api(`/kpis/${id}/targets`, 'PUT', {
-    items: [{ year: today.getUTCFullYear(), quarter, targetValue: measure.target }],
+    items: [1, 2, 3, 4]
+      .filter((each) => each <= period)
+      .map((each) => ({ year: today.getUTCFullYear(), period: each, targetValue: measure.target })),
   });
 }
 const record = created[0];

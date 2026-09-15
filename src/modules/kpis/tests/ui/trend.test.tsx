@@ -4,12 +4,17 @@ import { screen, within } from '@testing-library/react';
 import { TrendChart, type TrendPoint } from '@/ui/charts/TrendChart';
 import { mount } from './harness';
 const series: TrendPoint[] = [
-  { date: '2026-07-01', label: 'Q3 2026', value: 10, target: 20 },
-  { date: '2026-08-01', label: 'Q3 2026', value: 14, target: 20 },
-  { date: '2026-09-01', label: 'Q4 2026', value: 18, target: 25 },
+  { key: '2026-2', label: 'Q2 2026', value: 10, target: 20 },
+  { key: '2026-3', label: 'Q3 2026', value: 14, target: 20 },
+  { key: '2026-4', label: 'Q4 2026', value: 18, target: 25 },
 ];
-const labels = { date: 'Date', value: 'Reading', target: 'Target', caption: 'Readings for Uptime' };
-const format = { value: (value: number) => String(value), date: (date: string) => date.slice(5) };
+const labels = {
+  period: 'Period',
+  value: 'Reading',
+  target: 'Target',
+  caption: 'Readings for Uptime',
+};
+const format = { value: (value: number) => String(value) };
 const chart = (rtl: boolean) => (
   <TrendChart
     series={series}
@@ -80,4 +85,20 @@ it('KPIS-B08 a KPI with no targets draws the readings alone, with no reference s
   expect(container.querySelectorAll('.recharts-line-curve')).toHaveLength(0);
   const table = screen.getByRole('table', { name: labels.caption });
   expect(within(table).queryByRole('columnheader', { name: labels.target })).toBeNull();
+});
+it('KPIS-B08 a period nobody reported keeps its place on the axis with no column over it', () => {
+  const gap: TrendPoint[] = [
+    { key: '2026-1', label: 'Q1 2026', value: 12, target: 20 },
+    { key: '2026-2', label: 'Q2 2026', value: null, target: 20 },
+    { key: '2026-3', label: 'Q3 2026', value: 14, target: 20 },
+  ];
+  const { container } = mount(
+    <TrendChart series={gap} labels={labels} format={format} width={640} />,
+  );
+  // The missing quarter is the thing a scorecard most needs to show: no column, but the period is
+  // still on the axis and still in the table, so the gap is visible rather than closed over.
+  expect(container.querySelectorAll('.recharts-rectangle')).toHaveLength(2);
+  const table = screen.getByRole('table', { name: labels.caption });
+  expect(within(table).getAllByRole('row')).toHaveLength(gap.length + 1);
+  expect(within(table).getByRole('cell', { name: 'Q2 2026' })).toBeTruthy();
 });

@@ -19,4 +19,6 @@ export const toneColor: Record<ChartTone, string> = {
 };
 // Marks are thin and the chrome is recessive (dataviz § Mark specs). A column is capped well under
 // its slot so the band's leftover reads as air, and rounds only at the end away from the baseline.
-export const chartMark = { line: 2, hairline: 1, dot: 4, ring: 2, bar: 22, cap: 4 };
+// `bar` is the column a full history draws; `barWide` is what a short one draws, so a measure with
+// two periods behind it reads as two columns rather than two threads on an empty field.
+export const chartMark = { line: 2, hairline: 1, dot: 4, ring: 2, bar: 22, barWide: 40, cap: 4 };

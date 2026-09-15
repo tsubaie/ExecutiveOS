@@ -7,7 +7,9 @@ async function createKpi(page: Page, m: typeof en, name: string) {
   await page.goto(`/kpis?view=all&q=${encodeURIComponent(name)}`);
   await page.getByRole('button', { name: m.common.create, exact: true }).click();
   await page.getByLabel(m.kpis.name, { exact: true }).fill(name);
-  await page.getByLabel(m.kpis.unit, { exact: true }).fill('pts');
+  // The unit is a closed list, so it is chosen rather than typed (KPIS-B08).
+  await page.getByLabel(m.kpis.unit, { exact: true }).click();
+  await page.getByRole('option', { name: m.kpis.unitPoints, exact: true }).click();
   await page.getByRole('button', { name: m.common.create, exact: true }).last().click();
   await expect(page).toHaveURL(/id=/);
   return {
@@ -41,7 +43,7 @@ function setTarget(page: Page, id: string, targetValue: number) {
     items: [
       {
         year: now.getUTCFullYear(),
-        quarter: quarterOfMonth(now.getUTCMonth()),
+        period: quarterOfMonth(now.getUTCMonth()),
         targetValue,
       },
     ],
@@ -58,9 +60,20 @@ for (const locale of ['en', 'ar']) {
     const { detail, id } = await createKpi(page, m, name);
     // A measure with nothing recorded against it says so rather than scoring zero.
     await expect(detail.getByText(m.kpis.no_data, { exact: true }).first()).toBeVisible();
-    await detail.getByRole('tab', { name: m.kpis.readings, exact: true }).click();
-    await detail.getByLabel(m.kpis.reading, { exact: true }).first().fill('90');
-    await detail.getByRole('button', { name: m.kpis.addReading, exact: true }).click();
+    // EP-B09: nothing in the record may push the page wider than the screen. A name that is one
+    // unbroken token is the case that finds it, and in RTL an overflow slides the page out from
+    // under the reader rather than just adding a scrollbar.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    // The history and the form that feeds it are a task the record opens into (KPIS-B08).
+    await detail.getByRole('button', { name: m.kpis.readings }).click();
+    const readings = page.getByRole('dialog');
+    await readings.getByRole('button', { name: m.kpis.addReadingOpen, exact: true }).click();
+    await readings.getByLabel(m.kpis.reading, { exact: true }).first().fill('90');
+    await readings.getByRole('button', { name: m.kpis.addReading, exact: true }).click();
+    // Closing the dialog returns to the record; Escape on a phone would close the record as well.
+    await readings.getByRole('button', { name: m.common.close, exact: true }).click();
     // A reading without a target is measured against nothing, and the page says which.
     await expect(detail.getByText(m.kpis.no_target, { exact: true }).first()).toBeVisible();
     await setTarget(page, id, 100);
@@ -85,11 +98,18 @@ for (const locale of ['en', 'ar']) {
     );
     await page.reload();
     const panel = page.locator('aside.entity-detail');
-    await panel.getByRole('tab', { name: m.kpis.readings, exact: true }).click();
-    await expect(panel.getByText(m.kpis.futureReading, { exact: true })).toBeVisible();
-    // The future reading is listed, but the current value is still the one that has happened.
+    // The record answers with the reading that has happened, not the one dated ahead of today. The
+    // unit belongs to the reader's language, so the figure is asserted the way the catalog writes
+    // it rather than as an English suffix.
     await expect(panel.getByText(m.kpis.currentReading, { exact: true })).toBeVisible();
-    await expect(panel.getByText('10 pts', { exact: true }).first()).toBeVisible();
+    await expect(
+      panel.getByText(m.kpis.valuePoints.replace('{value}', '10'), { exact: true }).first(),
+    ).toBeVisible();
+    // The future reading is still in the history, flagged for what it is.
+    await panel.getByRole('button', { name: m.kpis.readings }).click();
+    await expect(
+      page.getByRole('dialog').getByText(m.kpis.futureReading, { exact: true }),
+    ).toBeVisible();
   });
 }
 test('KPIS-A06 changing the workspace thresholds changes statuses across the list', async ({

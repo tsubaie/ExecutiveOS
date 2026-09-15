@@ -24,6 +24,8 @@ AppShell
 ```
 
 - One navigation definition (`nav.ts`) renders both Sidebar and BottomNav. Modules disabled in settings are absent from both.
+- The shell owns the viewport at every width: it is exactly one screen tall, the header, rail and bottom bar hold their size, and `<main>` is the scrolling element — reserving the bottom bar's height as padding rather than running under it. A page that fills the screen therefore measures nothing itself; writing those heights into a page's own `calc()` is what left a strip of empty ground under the workspace on a desktop and a control beneath the navigation bar on a phone.
+- Scrollbars are styled once, in `tokens.css`, for every scrolling element: a thin bar with no track and a rounded thumb in `--border` that darkens to `--muted-text` under the pointer. `color-scheme` still hands the platform its matching default, so a bar that cannot be styled is the right colour anyway.
 - Every page has `loading.tsx` and `error.tsx`. Placeholder pages are forbidden.
 - Home is specified in `features/home.md`.
 
@@ -79,7 +81,7 @@ All list + detail modules use `src/ui/entity` per `features/entity-pages.md`. Pa
 - **Status scale.** `--status-good`, `--status-warn`, `--status-bad` are the three colours a state is read in, with `-ink` variants for the same hue as text. Marks take the scale, words take the ink: a mark needs 3:1 and a word needs 4.5:1, and the two are not always the same step. The scale is separate from `--success`/`--warning`/`--danger`, which carry the app's own semantics (a late task, a destructive action); a featured view's `tone` may name either.
 - Two or more series always carry a legend, written in HTML beside the plot rather than drawn by the library, so identity survives translation, the text tokens and a screen reader. Text never wears a series colour; the colour sits on the mark next to the words. One series needs no legend: the heading already names it.
 - Never a second value axis. Two measures of different scale are two charts.
-- Every chart ships the same figures as a visually hidden table (`ChartTable`). A chart small enough to sit inside a list row carries a spoken summary instead, because a hidden table per row would drown the rows it belongs to, and every figure it draws is already written in the row.
+- Every chart ships the same figures as a visually hidden table (`ChartTable`). The hiding goes on a wrapper around the table, never on the table itself: a table treats the `sr-only` width as a suggestion and still lays out at its content's width, so one long unbroken word in a caption pushes the document wider than the screen — which in RTL slides the page sideways rather than merely adding a scrollbar. A chart small enough to sit inside a list row carries a spoken summary instead, because a hidden table per row would drown the rows it belongs to, and every figure it draws is already written in the row.
 
 ## Copy and tone
 

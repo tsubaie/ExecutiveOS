@@ -1,26 +1,46 @@
 'use client';
-import { useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/ui/primitives/button';
 import { Gauge } from '@/ui/charts/Gauge';
-import { TrendChart, type TrendPoint } from '@/ui/charts/TrendChart';
-import { Locale } from '@/core/config/defaults';
-import { periodOf, type Frequency } from '@/core/time/kpis';
-import { usePlainDate, useToday } from '@/ui/format';
+import { type Frequency } from '@/core/time/kpis';
+import { usePlainDate, useRelativeDay } from '@/ui/format';
 import { cn } from '@/ui/cn';
 import { useKpiLabels } from './use-kpi-labels';
 import type { KpiDetail, PeriodView } from '../schema/validation';
-// KPIS-B03 and KPIS-B08: the one figure the record leads with. The arc is a meter bent round the
-// number rather than a dial, and it spans between the two figures it compares: where the measure
-// stands, under one foot, and what it is being read against, under the other. Where a ratio would
-// be meaningless the arc is dropped entirely and the status stands on its own, which is the honest
-// reading of "no target".
+// KPIS-B08: the answer in a sentence, before any mark. A chart confirms a reading; it is not where
+// the reading should first be found, and a principal who opens a record wants to be told.
+export function KpiSummary({ kpi }: { kpi: KpiDetail }) {
+  const t = useTranslations('kpis');
+  const labels = useKpiLabels();
+  const ago = useRelativeDay();
+  const view = kpi.periods[1];
+  if (!view) return null;
+  const period = labels.period(view, kpi.frequency);
+  const value = kpi.meta.current;
+  const age = kpi.meta.currentDate;
+  const sentence =
+    value === null || age === null
+      ? t('summaryNoReading', { period })
+      : view.target === null
+        ? t('summaryNoTarget', { value: labels.value(value, kpi.unit), period, age: ago(age) })
+        : t('summary', {
+            value: labels.value(value, kpi.unit),
+            target: labels.value(view.target, kpi.unit),
+            period,
+            status: labels.status(view.status).toLocaleLowerCase(),
+            age: ago(age),
+          });
+  return <p className="text-sm text-text-muted">{sentence}</p>;
+}
+// KPIS-B03: the arc is a meter bent round the ratio it measures, spanning between the two figures
+// it compares — where the measure stands, under one foot, and what it is being read against, under
+// the other. The figure inside says what it is ("of target"): on a KPI whose unit is itself a
+// percentage, a bare percentage in the middle reads as the measure and means the opposite.
 //
-// The period is a choice, because a target is: the toggle moves the comparison to the period before
-// the one this KPI is measured against, or the one after it, and everything the arc says moves with
-// it. The periods are the KPI's own — months, quarters or years — and the toggle carries the dates,
-// so the figures under the arc do not repeat them. It opens on the effective period, so the record
-// starts on the same answer the row the reader came from was showing.
+// The period is a choice, because a target is: the toggle moves the comparison a period either way
+// and everything the arc says moves with it. It opens on the effective period, so the record starts
+// on the same answer the row the reader came from was showing.
 export function KpiHeadline({ kpi }: { kpi: KpiDetail }) {
   const t = useTranslations('kpis');
   const labels = useKpiLabels();
@@ -56,16 +76,19 @@ export function KpiHeadline({ kpi }: { kpi: KpiDetail }) {
         }
       >
         {view.achievement !== null && (
-          <span className="text-3xl leading-none font-semibold">
-            {labels.percent(view.achievement)}
-          </span>
+          <>
+            <span className="text-3xl leading-none font-semibold">
+              {labels.percent(view.achievement)}
+            </span>
+            <span className="text-[11px] text-text-muted">{t('ofTarget')}</span>
+          </>
         )}
-        <span
-          className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', labels.chip(view.status))}
-        >
-          {labels.status(view.status)}
-        </span>
       </Gauge>
+      <span
+        className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', labels.chip(view.status))}
+      >
+        {labels.status(view.status)}
+      </span>
       <PeriodToggle
         periods={kpi.periods}
         frequency={kpi.frequency}
@@ -99,8 +122,20 @@ function PeriodToggle({
 }) {
   const t = useTranslations('kpis');
   const labels = useKpiLabels();
+  const group = useRef<HTMLDivElement>(null);
+  // A segmented control is one stop on the tab ring and the arrows move within it, the way a set of
+  // mutually exclusive options is expected to behave.
+  function steer(event: React.KeyboardEvent, index: number) {
+    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    if (!step) return;
+    event.preventDefault();
+    const next = (index + step + periods.length) % periods.length;
+    choose(next);
+    group.current?.querySelectorAll('button')[next]?.focus();
+  }
   return (
     <div
+      ref={group}
       role="group"
       aria-label={t('measuredAgainst')}
       className="inline-flex rounded-lg border p-0.5"
@@ -116,6 +151,7 @@ function PeriodToggle({
             index === chosen && 'bg-surface-raised font-medium text-text',
           )}
           onClick={() => choose(index)}
+          onKeyDown={(event) => steer(event, index)}
         >
           {labels.period(period, frequency)}
         </Button>
@@ -123,69 +159,21 @@ function PeriodToggle({
     </div>
   );
 }
-// KPIS-B04: the period before this one, read at its own last reading rather than at today's.
-export function PreviousPeriod({ kpi }: { kpi: KpiDetail }) {
+// KPIS-B04: the owner's own words on the newest reading that carries any. It is the one field on
+// this page that says *why* a number moved, and it used to be an empty input in a table column.
+export function LatestNote({ kpi }: { kpi: KpiDetail }) {
   const t = useTranslations('kpis');
-  const labels = useKpiLabels();
-  if (!kpi.previousPeriod) return null;
-  const { value, target, ...period } = kpi.previousPeriod;
-  return (
-    <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-baseline gap-3 text-sm">
-      <span className="text-text-muted">{t('previousPeriod')}</span>
-      <span className="flex flex-wrap items-baseline gap-x-2">
-        <span className="tabular-nums">
-          {value === null ? t('noReading') : labels.value(value, kpi.unit)}
-        </span>
-        <span className="text-xs text-text-muted">{labels.period(period, kpi.frequency)}</span>
-        {target !== null && (
-          <span className="text-xs text-text-muted">
-            {t('targetOfShort', { value: labels.value(target, kpi.unit) })}
-          </span>
-        )}
-      </span>
-    </div>
-  );
-}
-// KPIS-B08: the readings up to today as columns, against the target that applied in each reading's
-// own period. The axis is labelled at the KPI's cadence, so a monthly measure reads in months.
-export function KpiTrend({ kpi }: { kpi: KpiDetail }) {
-  const t = useTranslations('kpis');
-  const labels = useKpiLabels();
   const date = usePlainDate();
-  const today = useToday();
-  const locale = useLocale();
-  const targets = new Map(kpi.targets.map((row) => [`${row.year}-${row.period}`, row.targetValue]));
-  // One column per reporting period, not per reading: a period is what a target belongs to and what
-  // the axis is labelled in, so several readings inside one month or quarter are that period's
-  // latest figure rather than three columns sharing a name. Readings arrive newest first, so the
-  // first one seen for a period is the one that stands for it.
-  const byPeriod = new Map<string, TrendPoint>();
-  for (const reading of kpi.readings) {
-    if (reading.readingDate > today) continue;
-    const period = periodOf(reading.readingDate, kpi.frequency);
-    const key = `${period.year}-${period.period}`;
-    if (byPeriod.has(key)) continue;
-    byPeriod.set(key, {
-      date: reading.readingDate,
-      label: labels.period(period, kpi.frequency),
-      value: reading.value,
-      target: targets.get(key) ?? null,
-    });
-  }
-  const series: TrendPoint[] = [...byPeriod.values()].reverse();
-  if (!series.length) return <p className="text-sm text-text-muted">{t('notEnoughReadings')}</p>;
+  const latest = kpi.readings.find((reading) => reading.note.trim() !== '');
+  if (!latest) return null;
   return (
-    <TrendChart
-      series={series}
-      tone={labels.tone(kpi.meta.status)}
-      rtl={locale === Locale.options[1]}
-      labels={{
-        date: t('date'),
-        value: t('reading'),
-        target: t('target'),
-        caption: t('trendCaption', { name: kpi.name }),
-      }}
-      format={{ value: (amount) => labels.value(amount, kpi.unit), date }}
-    />
+    <figure className="m-0 grid gap-1 border-s-2 ps-3">
+      <blockquote dir="auto" className="m-0 text-sm">
+        {latest.note}
+      </blockquote>
+      <figcaption className="text-xs text-text-muted">
+        {t('latestNote')} · <time dateTime={latest.readingDate}>{date(latest.readingDate)}</time>
+      </figcaption>
+    </figure>
   );
 }

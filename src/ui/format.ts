@@ -65,6 +65,13 @@ export function useSignedPercent() {
   const format = useFormatter();
   return (value: number) => format.number(value, 'signedPercent');
 }
+// How long ago a calendar day was, in words. A reading is dated to a day rather than an instant,
+// so it is relativised at UTC midnight the way every other plain date is rendered.
+export function useRelativeDay() {
+  const format = useFormatter();
+  const now = useNow();
+  return (day: string) => format.relativeTime(plainDateValue(day), now);
+}
 // Up to two initials from a display name; works for Arabic and Latin names (PEOPLE-A06).
 export function initials(name: string) {
   return name

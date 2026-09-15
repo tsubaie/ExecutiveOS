@@ -13,21 +13,29 @@ import {
 } from 'recharts';
 import { chartColor, chartMark, toneColor, type ChartTone } from './tokens';
 import { ChartTable } from './ChartTable';
-// `label` is what the axis calls the point: the reading's own reporting period, named at the
-// cadence the KPI is reported on.
-export type TrendPoint = { date: string; label: string; value: number; target: number | null };
-export type TrendLabels = { date: string; value: string; target: string; caption: string };
-export type TrendFormat = { value: (value: number) => string; date: (date: string) => string };
+// `key` identifies the period, `label` is what the axis calls it. A period nobody reported carries
+// a null value: the column is simply absent, which is the point.
+export type TrendPoint = {
+  key: string;
+  label: string;
+  value: number | null;
+  target: number | null;
+};
+export type TrendLabels = { period: string; value: string; target: string; caption: string };
+export type TrendFormat = { value: (value: number) => string };
 // The card reserves the plot plus its axis band, so the labels never scroll inside their own box.
 const HEIGHT = 240;
+// Below this many periods the columns widen: a young KPI has a handful of them, and a 22px stick
+// with half the plot either side of it reads as a missing chart rather than a short history.
+const FEW = 4;
 const axisTick = { fill: chartColor.reference, fontSize: 11 };
 const axisLine = { stroke: chartColor.grid };
 const cursor = { fill: chartColor.grid, fillOpacity: 0.25 };
+const margin = { top: 8, right: 12, bottom: 4, left: 4 };
 const figure = { fill: chartColor.reference, fontSize: 11 };
 const targetDot = { r: 4, fill: chartColor.reference, stroke: chartColor.surface, strokeWidth: 2 };
-const margin = { top: 8, right: 12, bottom: 4, left: 4 };
-// Recharts hands a label its raw value; only a number is ours to format, and a missing target has
-// no label to draw at all.
+// Recharts hands a label its raw value; only a number is ours to format, and a period with no
+// reading has no figure to draw.
 type Renderable = string | number | boolean | null | undefined;
 const asFigure = (format: TrendFormat) => (value: Renderable) =>
   typeof value === 'number' ? format.value(value) : '';
@@ -40,14 +48,14 @@ type PlotProps = {
   hasTarget: boolean;
   width: number | undefined;
 };
-// KPIS-B08: each reading is a column and the quarter's target runs across them as a line — the
+// KPIS-B08: each period is a column and its target is a dot over it, joined into a line — the
 // measurement is the mass, the target is the rule it is read against. Two marks of different kinds,
 // so neither is mistaken for a second measure; the legend names both, written in HTML rather than
 // drawn by the chart, because it is the identity channel that has to survive translation, the text
-// tokens and a screen reader. The columns carry the KPI's status colour, so the record's figure,
-// its arc and its history all say the same thing. The target is stepped and dashed, which is what a
-// threshold looks like. The axis runs from the edge the reader starts at, so in RTL both the time
-// axis and the value axis move to the other side.
+// tokens and a screen reader. The columns carry the KPI's status colour, so the record's figure, its
+// arc and its history all say the same thing. Both marks are labelled with their value: a scorecard
+// is read for the numbers, and there are only ever a handful of periods on screen. The axis runs
+// from the edge the reader starts at, so in RTL both the period axis and the value axis move over.
 export function TrendChart({
   series,
   labels,
@@ -89,12 +97,12 @@ export function TrendChart({
       </div>
       <ChartTable
         caption={labels.caption}
-        columns={[labels.date, labels.value, ...(hasTarget ? [labels.target] : [])]}
+        columns={[labels.period, labels.value, ...(hasTarget ? [labels.target] : [])]}
         rows={series.map((point) => ({
-          key: point.date,
+          key: point.key,
           cells: [
-            format.date(point.date),
-            format.value(point.value),
+            point.label,
+            point.value === null ? '' : format.value(point.value),
             ...(hasTarget ? [point.target === null ? '' : format.value(point.target)] : []),
           ],
         }))}
@@ -102,14 +110,21 @@ export function TrendChart({
     </figure>
   );
 }
-// KPIS-B08: the target for each period, a dot over its own column with its value beside it. It is
-// a reference the readings are read against, drawn as a line through a dot on each period's value.
-// Its figure sits
-// well above the dot: a target close to its reading would otherwise write over the column's own
-// figure, and the plot leaves headroom above the tallest mark for exactly this.
+// The target for each period, a dot over its own column with its value beside it. It is a reference
+// the readings are read against, drawn as a line through those dots. Its figure sits well above the
+// dot: a target close to its reading would otherwise write over the column's own figure, and the
+// plot leaves headroom above the tallest mark for exactly this.
 function targetMark(name: string, format: TrendFormat) {
   return (
-    <Line dataKey="target" name={name} strokeWidth={0} dot={targetDot} isAnimationActive={false}>
+    <Line
+      dataKey="target"
+      name={name}
+      stroke={chartColor.reference}
+      strokeWidth={chartMark.line}
+      dot={targetDot}
+      connectNulls
+      isAnimationActive={false}
+    >
       <LabelList
         dataKey="target"
         position="top"
@@ -135,7 +150,7 @@ function Plot({ series, labels, format, tone, rtl, hasTarget, width }: PlotProps
         tickLine={false}
         axisLine={axisLine}
         tick={axisTick}
-        minTickGap={24}
+        minTickGap={4}
       />
       {/* Every mark carries its own figure, so a value scale down the side would only repeat them
           and a grid behind them would be ink with nothing to say. The axis stays in the data. */}
@@ -150,14 +165,14 @@ function Plot({ series, labels, format, tone, rtl, hasTarget, width }: PlotProps
         dataKey="value"
         name={labels.value}
         fill={toneColor[tone]}
-        maxBarSize={chartMark.bar}
+        maxBarSize={series.length < FEW ? chartMark.barWide : chartMark.bar}
         radius={[chartMark.cap, chartMark.cap, 0, 0]}
         isAnimationActive={false}
       >
         <LabelList
           dataKey="value"
           position="top"
-          offset={8}
+          offset={6}
           formatter={asFigure(format)}
           {...figure}
         />
@@ -168,15 +183,7 @@ function Plot({ series, labels, format, tone, rtl, hasTarget, width }: PlotProps
 }
 // A column swatch and a target dot, each beside its name in text tokens: identity comes from the
 // mark next to the words, never from colouring the words.
-function Legend({
-  value,
-  target,
-  tone,
-}: {
-  value: string;
-  target: string | null;
-  tone: ChartTone;
-}) {
+function Legend({ value, target, tone }: { value: string; target: string | null; tone: ChartTone }) {
   return (
     <figcaption className="flex flex-wrap items-center gap-4 text-xs text-text-muted">
       <Key label={value}>
@@ -214,7 +221,7 @@ function TrendTooltip({
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border bg-surface px-3 py-2 text-xs shadow-md">
-      <p className="font-medium">{typeof label === 'string' ? format.date(label) : ''}</p>
+      <p className="font-medium">{typeof label === 'string' ? label : ''}</p>
       {payload.map((entry) => (
         <p key={String(entry.dataKey)} className="mt-1 flex items-center gap-2 text-text-muted">
           <span>{entry.dataKey === 'target' ? labels.target : labels.value}</span>

@@ -2,6 +2,7 @@
 import { expect, it } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import en from '@/core/i18n/messages/en.json';
+import ar from '@/core/i18n/messages/ar.json';
 import {
   KpiDetail,
   type KpiMeta,
@@ -10,7 +11,8 @@ import {
   type Target,
 } from '../../schema/validation';
 import { KpiRow, KpiTrail } from '../../ui/KpiRow';
-import { KpiHeadline } from '../../ui/KpiHeadline';
+import { KpiHeadline, KpiSummary, LatestNote } from '../../ui/KpiHeadline';
+import { KpiTrend } from '../../ui/KpiTrend';
 import { KpiTargets } from '../../ui/KpiTargets';
 import { mount } from './harness';
 const base = {
@@ -181,9 +183,15 @@ it('KPIS-B08 KPIS-A05 the year form offers the KPI cadence in order and pre-fill
   expect(inputs.indexOf(quarters[0] as HTMLInputElement)).toBeLessThan(
     inputs.indexOf(quarters[3] as HTMLInputElement),
   );
-  const table = screen.getByRole('table');
-  expect(within(table).getByRole('rowheader', { name: '2026' })).toBeTruthy();
-  expect(within(table).getAllByText(en.kpis.unset)).toHaveLength(2);
+  // The form is the display: it covers one year at a time, stepped from a single control, and
+  // nothing repeats the same four numbers in a table underneath it.
+  const years = screen.getByRole('group', { name: en.kpis.year });
+  expect(within(years).getByText('2026')).toBeTruthy();
+  fireEvent.click(within(years).getByRole('button', { name: en.kpis.nextYear }));
+  expect(within(years).getByText('2027')).toBeTruthy();
+  // Stepping to a year nobody has planned yet clears the form rather than carrying numbers over.
+  expect(quarters.map((field) => (field as HTMLInputElement).value)).toEqual(['', '', '', '']);
+  expect(screen.queryByRole('table')).toBeNull();
 });
 it('KPIS-B08 a deleted KPI shows its targets without offering to change them', () => {
   mount(
@@ -197,5 +205,111 @@ it('KPIS-B08 a deleted KPI shows its targets without offering to change them', (
     />,
   );
   expect(screen.queryByLabelText('Q1')).toBeNull();
-  expect(screen.getByRole('table')).toBeTruthy();
+  const table = screen.getByRole('table');
+  expect(within(table).getByRole('rowheader', { name: '2026' })).toBeTruthy();
+  expect(within(table).getAllByText(en.kpis.unset)).toHaveLength(3);
+});
+it('KPIS-B08 the record answers in a sentence before it draws anything', () => {
+  mount(<KpiSummary kpi={kpi()} />);
+  const sentence = screen.getByText(/Net promoter|42.5|85/u).textContent ?? '';
+  expect(sentence).toContain('42.5 pts');
+  expect(sentence).toContain('50 pts');
+  expect(sentence).toContain('Q3 2026');
+  expect(sentence).toContain(en.kpis.near_target.toLocaleLowerCase());
+});
+it('KPIS-B04 the newest note that says anything is quoted under the headline', () => {
+  const readings: Reading[] = [
+    {
+      id: '01a08a9f-1991-760a-b73a-568f6f866521',
+      revision: 1,
+      readingDate: '2026-09-09',
+      value: 42.5,
+      note: '',
+      future: false,
+      createdAt: '2026-09-09T07:00:00.000Z',
+    },
+    {
+      id: '01a08a9f-1991-760a-b73a-568f6f866522',
+      revision: 1,
+      readingDate: '2026-08-09',
+      value: 34,
+      note: 'Two large accounts renewed early.',
+      future: false,
+      createdAt: '2026-08-09T07:00:00.000Z',
+    },
+  ];
+  mount(<LatestNote kpi={kpi({ readings })} />);
+  expect(screen.getByText('Two large accounts renewed early.')).toBeTruthy();
+  // An empty note is not a note: the quote skips it and takes the newest one that says something.
+  mount(<LatestNote kpi={kpi({ readings: [readings[0] as Reading] })} />);
+  expect(screen.queryByText(en.kpis.latestNote)).toBeNull();
+});
+it('KPIS-B08 the trend starts at the first reading, not eight periods before it', () => {
+  const readings: Reading[] = [
+    {
+      id: '01a08a9f-1991-760a-b73a-568f6f866521',
+      revision: 1,
+      readingDate: '2026-09-09',
+      value: 42.5,
+      note: '',
+      future: false,
+      createdAt: '2026-09-09T07:00:00.000Z',
+    },
+    {
+      id: '01a08a9f-1991-760a-b73a-568f6f866522',
+      revision: 1,
+      readingDate: '2026-05-04',
+      value: 34,
+      note: '',
+      future: false,
+      createdAt: '2026-05-04T07:00:00.000Z',
+    },
+  ];
+  mount(<KpiTrend kpi={kpi({ readings })} />);
+  // A KPI first read in Q2 has no history before Q2: showing 2024 and 2025 as blank columns would
+  // report a gap in a record that had not started.
+  const table = screen.getByRole('table');
+  const rows = within(table).getAllByRole('row').slice(1);
+  expect(rows).toHaveLength(2);
+  expect(rows[0]?.textContent).toContain('Q2 2026');
+  expect(rows[1]?.textContent).toContain('Q3 2026');
+});
+it('KPIS-B08 a period that was planned but not reported still stands under its target', () => {
+  const readings: Reading[] = [
+    {
+      id: '01a08a9f-1991-760a-b73a-568f6f866531',
+      revision: 1,
+      readingDate: '2026-09-09',
+      value: 42.5,
+      note: '',
+      future: false,
+      createdAt: '2026-09-09T07:00:00.000Z',
+    },
+  ];
+  const targets: Target[] = [1, 2, 3, 4].map((period) => ({
+    id: `01a08a9f-1991-760a-b73a-568f6f86654${period}`,
+    year: 2026,
+    period,
+    targetValue: 40 + period,
+  }));
+  mount(<KpiTrend kpi={kpi({ readings, targets })} />);
+  // The plan runs to the end of the year, so the quarters nobody has reported are columns with a
+  // target and no reading — which is the gap the chart exists to show.
+  const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1);
+  expect(rows.map((row) => row.textContent)).toEqual([
+    'Q1 202641 pts',
+    'Q2 202642 pts',
+    'Q3 202642.5 pts43 pts',
+    'Q4 202644 pts',
+  ]);
+});
+it('KPIS-B08 a quarter is named in Arabic, not numbered', () => {
+  mount(<KpiHeadline kpi={kpi()} />, 'ar');
+  // "الربع الأول" is how a quarter is said; "الربع 1" is how it is written down by a program.
+  const toggle = screen.getByRole('group', { name: ar.kpis.measuredAgainst });
+  expect(
+    within(toggle)
+      .getAllByRole('button')
+      .map((button) => button.textContent),
+  ).toEqual(['الربع الثاني 2026', 'الربع الثالث 2026', 'الربع الرابع 2026']);
 });

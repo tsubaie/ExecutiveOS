@@ -14,16 +14,30 @@ export const NO_OBJECTIVE = 'none';
 export const NO_OWNER = 'none';
 type Save = (patch: Omit<KpiPatch, 'revision'>) => void;
 type Part = { initial: KpiCreate; save?: Save | undefined };
+const rows = (save: Save | undefined) => (save ? 'grid gap-2' : 'grid gap-4');
 // EP-B25: in a record the properties read as facts and become controls on contact; in the create
 // form every one of them should look ready, which is what `save` being absent means here.
-export function KpiFields({ initial, save, nameError }: Part & { nameError?: string | undefined }) {
+//
+// The two groups are separated by who reads them. Ownership — who holds the measure and what it
+// belongs to — is state a principal scans. The definition is how the measure is written down: set
+// once by its owner, read by nobody afterwards, and folded away at the end of the record.
+export function KpiOwnership({ initial, save }: Part) {
+  return (
+    <fieldset data-autosave={save ? true : undefined} className={rows(save)}>
+      <Owner initial={initial} save={save} />
+      <Objective initial={initial} save={save} />
+    </fieldset>
+  );
+}
+export function KpiDefinition({
+  initial,
+  save,
+  nameError,
+}: Part & { nameError?: string | undefined }) {
   const t = useTranslations('kpis');
   const quiet = Boolean(save);
   return (
-    <fieldset
-      data-autosave={save ? true : undefined}
-      className={quiet ? 'grid gap-2' : 'grid gap-4'}
-    >
+    <fieldset data-autosave={save ? true : undefined} className={rows(save)}>
       <Field label={t('name')} error={nameError} quiet={quiet} row={quiet}>
         {(control) => (
           <Input
@@ -31,6 +45,7 @@ export function KpiFields({ initial, save, nameError }: Part & { nameError?: str
             name="name"
             dir="auto"
             required
+            autoComplete="off"
             maxLength={500}
             defaultValue={initial.name}
             onBlur={(event) => {
@@ -40,16 +55,17 @@ export function KpiFields({ initial, save, nameError }: Part & { nameError?: str
           />
         )}
       </Field>
-      <Placement initial={initial} save={save} />
+      <Property label={t('direction')} quiet={quiet}>
+        <DirectionToggle value={initial.direction} save={save} />
+      </Property>
       <Measurement initial={initial} save={save} />
-      <Owner initial={initial} save={save} />
       <Field label={t('notes')} quiet={quiet} empty={!initial.notes}>
         {(control) => (
           <Textarea
             {...control}
             name="notes"
             dir="auto"
-            rows={4}
+            rows={3}
             maxLength={50000}
             defaultValue={initial.notes}
             onBlur={(event) => {
@@ -61,8 +77,58 @@ export function KpiFields({ initial, save, nameError }: Part & { nameError?: str
     </fieldset>
   );
 }
-// The two choices that decide how the KPI is read: which way is good, and what it belongs to.
-function Placement({ initial, save }: Part) {
+// The create form is the same fields with nothing quiet: there is no record to read yet, so every
+// control should look ready to fill in.
+export function KpiFields({
+  initial,
+  nameError,
+}: {
+  initial: KpiCreate;
+  nameError?: string | undefined;
+}) {
+  return (
+    <div className="grid gap-4">
+      <KpiDefinition initial={initial} nameError={nameError} />
+      <KpiOwnership initial={initial} />
+    </div>
+  );
+}
+// Who holds the measure. People are the only owner identity in this product (ADR 0011), so the
+// choices are the assignable part of the directory rather than a free-text team name.
+function Owner({ initial, save }: Part) {
+  const t = useTranslations('kpis');
+  const quiet = Boolean(save);
+  const facets = useKpiFacets();
+  const incoming = initial.ownerId ?? NO_OWNER;
+  const [owner, setOwner] = useState(incoming);
+  const [seen, setSeen] = useState(incoming);
+  if (seen !== incoming) {
+    setSeen(incoming);
+    setOwner(incoming);
+  }
+  return (
+    <Property label={t('owner')} quiet={quiet} empty={owner === NO_OWNER}>
+      <ChoiceSelect
+        label={t('owner')}
+        name="ownerId"
+        value={owner}
+        items={[
+          { value: NO_OWNER, text: t('noOwner'), label: t('noOwner') },
+          ...(facets.data?.owners ?? []).map((row) => ({
+            value: row.id,
+            text: row.name,
+            label: row.name,
+          })),
+        ]}
+        onChange={(next) => {
+          setOwner(next);
+          save?.({ ownerId: next === NO_OWNER ? null : next });
+        }}
+      />
+    </Property>
+  );
+}
+function Objective({ initial, save }: Part) {
   const t = useTranslations('kpis');
   const quiet = Boolean(save);
   const objectives = useObjectives();
@@ -74,30 +140,25 @@ function Placement({ initial, save }: Part) {
     setObjective(incoming);
   }
   return (
-    <>
-      <Property label={t('direction')} quiet={quiet}>
-        <DirectionToggle value={initial.direction} save={save} />
-      </Property>
-      <Property label={t('objective')} quiet={quiet} empty={objective === NO_OBJECTIVE}>
-        <ChoiceSelect
-          label={t('objective')}
-          name="objectiveId"
-          value={objective}
-          items={[
-            { value: NO_OBJECTIVE, text: t('noObjective'), label: t('noObjective') },
-            ...(objectives.data?.data ?? []).map((row) => ({
-              value: row.id,
-              text: row.name,
-              label: row.name,
-            })),
-          ]}
-          onChange={(next) => {
-            setObjective(next);
-            save?.({ objectiveId: next === NO_OBJECTIVE ? null : next });
-          }}
-        />
-      </Property>
-    </>
+    <Property label={t('objective')} quiet={quiet} empty={objective === NO_OBJECTIVE}>
+      <ChoiceSelect
+        label={t('objective')}
+        name="objectiveId"
+        value={objective}
+        items={[
+          { value: NO_OBJECTIVE, text: t('noObjective'), label: t('noObjective') },
+          ...(objectives.data?.data ?? []).map((row) => ({
+            value: row.id,
+            text: row.name,
+            label: row.name,
+          })),
+        ]}
+        onChange={(next) => {
+          setObjective(next);
+          save?.({ objectiveId: next === NO_OBJECTIVE ? null : next });
+        }}
+      />
+    </Property>
   );
 }
 // How the measure is written down: the symbol its values carry, the cadence it is reported on, and
@@ -147,80 +208,27 @@ function Measurement({ initial, save }: Part) {
           }}
         />
       </Property>
-      <Written
-        label={t('category')}
-        name="category"
-        value={initial.category}
-        limit={100}
-        quiet={quiet}
-        save={(category) => save?.({ category })}
-      />
+      <Category initial={initial} save={save} />
     </>
   );
 }
-// Who holds the measure. People are the only owner identity in this product (ADR 0011), so the
-// choices are the assignable part of the directory rather than a free-text team name.
-function Owner({ initial, save }: Part) {
+// Where the measure is filed. Free text, because a workspace's own filing is not ours to enumerate.
+function Category({ initial, save }: Part) {
   const t = useTranslations('kpis');
   const quiet = Boolean(save);
-  const facets = useKpiFacets();
-  const incoming = initial.ownerId ?? NO_OWNER;
-  const [owner, setOwner] = useState(incoming);
-  const [seen, setSeen] = useState(incoming);
-  if (seen !== incoming) {
-    setSeen(incoming);
-    setOwner(incoming);
-  }
   return (
-    <Property label={t('owner')} quiet={quiet} empty={owner === NO_OWNER}>
-      <ChoiceSelect
-        label={t('owner')}
-        name="ownerId"
-        value={owner}
-        items={[
-          { value: NO_OWNER, text: t('noOwner'), label: t('noOwner') },
-          ...(facets.data?.owners ?? []).map((row) => ({
-            value: row.id,
-            text: row.name,
-            label: row.name,
-          })),
-        ]}
-        onChange={(next) => {
-          setOwner(next);
-          save?.({ ownerId: next === NO_OWNER ? null : next });
-        }}
-      />
-    </Property>
-  );
-}
-// A trimmed single-line value that writes itself back only when it actually changed.
-function Written({
-  label,
-  name,
-  value,
-  limit,
-  quiet,
-  save,
-}: {
-  label: string;
-  name: string;
-  value: string;
-  limit: number;
-  quiet: boolean;
-  save: (next: string) => void;
-}) {
-  return (
-    <Field label={label} quiet={quiet} row={quiet} empty={!value}>
+    <Field label={t('category')} quiet={quiet} row={quiet} empty={!initial.category}>
       {(control) => (
         <Input
           {...control}
-          name={name}
+          name="category"
           dir="auto"
-          maxLength={limit}
-          defaultValue={value}
+          autoComplete="off"
+          maxLength={100}
+          defaultValue={initial.category}
           onBlur={(event) => {
-            const next = event.target.value.trim();
-            if (next !== value) save(next);
+            const category = event.target.value.trim();
+            if (category !== initial.category) save?.({ category });
           }}
         />
       )}

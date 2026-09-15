@@ -35,10 +35,14 @@ export function AppShell({
   });
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[208px_minmax(0,1fr)]">
+    // The shell owns the viewport: it is exactly one screen tall and the page scrolls inside its own
+    // column, under a header and over a bottom bar that each hold their size. Nothing depends on
+    // either of those heights being written down a second time in CSS, which is what left a strip of
+    // empty ground under the page — and, on a phone, a control under the navigation bar.
+    <div className="flex h-dvh flex-col overflow-hidden lg:grid lg:grid-cols-[208px_minmax(0,1fr)]">
       <Sidebar workspace={workspace} user={user} />
-      <div className="min-w-0">
-        <header className="flex min-h-18 items-center justify-between gap-2 border-b px-4 lg:px-8">
+      <div className="flex min-h-0 min-w-0 flex-col">
+        <header className="flex min-h-18 shrink-0 items-center justify-between gap-2 border-b px-4 lg:px-8">
           <span className="truncate text-sm text-text-muted">
             <bdi>{workspace}</bdi>
           </span>
@@ -49,7 +53,12 @@ export function AppShell({
             </Button>
           </div>
         </header>
-        <main id="content" className="min-w-0 pb-24 lg:pb-0">
+        {/* The bottom bar floats over this column, so the page reserves its height rather than
+            running under it. */}
+        <main
+          id="content"
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0"
+        >
           {children}
         </main>
       </div>
@@ -63,7 +72,7 @@ export function AppShell({
 function Sidebar({ workspace, user }: { workspace: string; user: ShellUser }) {
   const t = useTranslations('common');
   return (
-    <aside className="app-sidebar sticky top-0 hidden h-dvh flex-col border-e bg-surface p-5 lg:flex">
+    <aside className="app-sidebar hidden h-full flex-col overflow-y-auto border-e bg-surface p-5 lg:flex">
       <Link href={routes.home()} className="mb-10 flex items-center gap-3 text-lg font-semibold">
         <Command className="size-7 text-accent" />
         {t('brand')}

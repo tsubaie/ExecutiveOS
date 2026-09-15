@@ -2,7 +2,6 @@
 import { useTranslations } from 'next-intl';
 import { DollarSign, Hash, Percent, SaudiRiyal, Star, type LucideIcon } from 'lucide-react';
 import {
-  useCount,
   useDecimal,
   useMonth,
   useMonthYear,
@@ -70,27 +69,27 @@ const valueForms: Record<
   usd: 'valueUsd',
   points: 'valuePoints',
 };
-// A period reads the way its cadence is spoken: a month by name, a quarter by number, a year alone.
+// A period reads the way its cadence is spoken: a month by name, a quarter by its name in the
+// reader's own language — English numbers them, Arabic names them ("الربع الأول") — and a year
+// alone. The quarter is handed over as a number so the catalog can choose that wording itself.
 export function usePeriodLabel() {
   const t = useTranslations('kpis');
-  const count = useCount();
   const year = useYear();
   const monthYear = useMonthYear();
   return (period: Period, frequency: Frequency) => {
     if (frequency === 'annual') return year(period.year);
     if (frequency === 'monthly') return monthYear(period.year, period.period);
-    return t('quarterLabel', { quarter: count(period.period), year: year(period.year) });
+    return t('quarterLabel', { quarter: period.period, year: year(period.year) });
   };
 }
 // The same period without its year, for a column header or a compact axis tick.
 export function usePeriodShort() {
   const t = useTranslations('kpis');
-  const count = useCount();
   const month = useMonth();
   return (period: number, frequency: Frequency) => {
     if (frequency === 'annual') return t('annual');
     if (frequency === 'monthly') return month(period);
-    return t('quarterShort', { quarter: count(period) });
+    return t('quarterShort', { quarter: period });
   };
 }
 export function useKpiLabels() {

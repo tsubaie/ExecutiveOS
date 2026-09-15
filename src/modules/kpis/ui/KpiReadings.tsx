@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation } from '@tanstack/react-query';
-import { Trash2 } from 'lucide-react';
+import { CirclePlus } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { DatePicker } from '@/ui/layout/DatePicker';
@@ -10,20 +10,35 @@ import { Field } from '@/ui/layout/Field';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { ApiError } from '@/core/http/client';
 import { usePlainDate, useToday } from '@/ui/format';
-import { useKpiLabels } from './use-kpi-labels';
 import { useReadingMutations } from './queries';
-import type { KpiDetail, Reading } from '../schema/validation';
-// KPIS-B09: the date is the address of a reading, so a second reading for a day that already has
-// one is a conflict the workspace resolves rather than a silent replacement. The overwrite is
-// offered in place, with the value about to be written still on screen.
+import type { KpiDetail } from '../schema/validation';
+import { ReadingsTable } from './KpiReadingsTable';
+// KPIS-B09: the history is a record, not a form. Recording a reading is the owner's job and a rare
+// one, so the form stays folded until it is asked for rather than standing between the reader and
+// the numbers. A note reads as text and becomes an input on contact, the way every property in this
+// panel does (EP-B25), and the delete stays out of sight until the row is hovered or focused.
 export function KpiReadings({ kpi, editable }: { kpi: KpiDetail; editable: boolean }) {
   const t = useTranslations('kpis');
   const mutations = useReadingMutations(kpi.id);
+  const [adding, setAdding] = useState(false);
   const remove = useMutation({ mutationFn: (readingId: string) => mutations.remove(readingId) });
   return (
     <div className="grid gap-4">
-      {editable && <ReadingForm kpi={kpi} />}
-      {remove.error && <ErrorPanel error={remove.error} />}
+      {editable &&
+        (adding ? (
+          <ReadingForm kpi={kpi} close={() => setAdding(false)} />
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="justify-self-start"
+            onClick={() => setAdding(true)}
+          >
+            <CirclePlus className="size-4" aria-hidden={true} />
+            {t('addReadingOpen')}
+          </Button>
+        ))}
+      <div role="status">{remove.error && <ErrorPanel error={remove.error} />}</div>
       {kpi.readings.length === 0 ? (
         <p className="text-sm text-text-muted">{t('noReadings')}</p>
       ) : (
@@ -33,7 +48,7 @@ export function KpiReadings({ kpi, editable }: { kpi: KpiDetail; editable: boole
   );
 }
 type Draft = { day: string; value: string; note: string };
-function ReadingForm({ kpi }: { kpi: KpiDetail }) {
+function ReadingForm({ kpi, close }: { kpi: KpiDetail; close: () => void }) {
   const t = useTranslations('kpis');
   const c = useTranslations('common');
   const date = usePlainDate();
@@ -49,16 +64,14 @@ function ReadingForm({ kpi }: { kpi: KpiDetail }) {
         ? mutations.overwrite(draft.day, { value, note: draft.note })
         : mutations.add({ readingDate: draft.day, value, note: draft.note });
     },
-    onSuccess: () => {
-      setClash(false);
-      setDraft({ day: today, value: '', note: '' });
-    },
+    onSuccess: close,
     onError: (failure) => setClash(failure instanceof ApiError && failure.code === 'conflict'),
   });
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3 rounded-xl border px-3 py-3">
       <form
-        className="grid items-end gap-3 @md:grid-cols-[auto_8rem_minmax(0,1fr)_auto]"
+        aria-busy={add.isPending}
+        className="grid items-end gap-3 @md:grid-cols-[auto_7rem_minmax(0,1fr)_auto_auto]"
         onSubmit={(event) => {
           event.preventDefault();
           add.mutate(false);
@@ -66,18 +79,23 @@ function ReadingForm({ kpi }: { kpi: KpiDetail }) {
       >
         <ReadingInputs draft={draft} today={today} change={setDraft} />
         <Button type="submit" disabled={add.isPending}>
-          {t('addReading')}
+          {add.isPending ? c('saving') : t('addReading')}
+        </Button>
+        <Button type="button" variant="ghost" onClick={close}>
+          {c('cancel')}
         </Button>
       </form>
-      {clash && (
-        <p className="flex flex-wrap items-center gap-3 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
-          {t('duplicateReading', { date: date(draft.day) })}
-          <Button variant="outline" size="sm" onClick={() => add.mutate(true)}>
-            {t('overwriteReading')}
-          </Button>
-        </p>
-      )}
-      {add.error && !clash && <ErrorPanel error={add.error} />}
+      <div role="status">
+        {clash && (
+          <p className="flex flex-wrap items-center gap-3 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
+            {t('duplicateReading', { date: date(draft.day) })}
+            <Button variant="outline" size="sm" onClick={() => add.mutate(true)}>
+              {t('overwriteReading')}
+            </Button>
+          </p>
+        )}
+        {add.error && !clash && <ErrorPanel error={add.error} />}
+      </div>
     </div>
   );
 }
@@ -107,6 +125,7 @@ function ReadingInputs({
           <Input
             {...control}
             required
+            autoComplete="off"
             inputMode="decimal"
             value={draft.value}
             onChange={(event) => change((value) => ({ ...value, value: event.target.value }))}
@@ -118,6 +137,7 @@ function ReadingInputs({
           <Input
             {...control}
             dir="auto"
+            autoComplete="off"
             maxLength={2000}
             value={draft.note}
             onChange={(event) => change((value) => ({ ...value, note: event.target.value }))}
@@ -125,125 +145,5 @@ function ReadingInputs({
         )}
       </Field>
     </>
-  );
-}
-function ReadingsTable({
-  kpi,
-  editable,
-  remove,
-}: {
-  kpi: KpiDetail;
-  editable: boolean;
-  remove: (readingId: string) => void;
-}) {
-  const t = useTranslations('kpis');
-  const c = useTranslations('common');
-  return (
-    <table className="w-full text-sm">
-      <caption className="sr-only">{t('readingsCaption', { name: kpi.name })}</caption>
-      <thead className="text-xs text-text-muted">
-        <tr>
-          <th scope="col" className="px-2 py-2 text-start font-normal">
-            {t('date')}
-          </th>
-          <th scope="col" className="px-2 py-2 text-end font-normal">
-            {t('reading')}
-          </th>
-          <th scope="col" className="px-2 py-2 text-start font-normal">
-            {t('note')}
-          </th>
-          {editable && (
-            <th scope="col" className="sr-only">
-              {c('delete')}
-            </th>
-          )}
-        </tr>
-      </thead>
-      <tbody>
-        {kpi.readings.map((reading) => (
-          <ReadingRow
-            key={reading.id}
-            kpi={kpi}
-            reading={reading}
-            editable={editable}
-            remove={remove}
-          />
-        ))}
-      </tbody>
-    </table>
-  );
-}
-// The note is the only part of a reading that is edited in place, so it carries its own save.
-function ReadingNote({
-  kpiId,
-  reading,
-  editable,
-}: {
-  kpiId: string;
-  reading: Reading;
-  editable: boolean;
-}) {
-  const t = useTranslations('kpis');
-  const mutations = useReadingMutations(kpiId);
-  if (!editable) return <span dir="auto">{reading.note}</span>;
-  return (
-    <Input
-      aria-label={t('note')}
-      dir="auto"
-      maxLength={2000}
-      defaultValue={reading.note}
-      onBlur={(event) => {
-        if (event.target.value !== reading.note)
-          void mutations.patch(reading.id, {
-            revision: reading.revision,
-            note: event.target.value,
-          });
-      }}
-    />
-  );
-}
-function ReadingRow({
-  kpi,
-  reading,
-  editable,
-  remove,
-}: {
-  kpi: KpiDetail;
-  reading: Reading;
-  editable: boolean;
-  remove: (readingId: string) => void;
-}) {
-  const t = useTranslations('kpis');
-  const labels = useKpiLabels();
-  const date = usePlainDate();
-  return (
-    <tr className="border-t">
-      <td className="px-2 py-2 whitespace-nowrap">
-        <time dateTime={reading.readingDate}>{date(reading.readingDate)}</time>
-        {reading.future && (
-          <span className="ms-2 rounded-full bg-surface-raised px-1.5 py-0.5 text-xs text-text-muted">
-            {t('futureReading')}
-          </span>
-        )}
-      </td>
-      <td className="px-2 py-2 text-end whitespace-nowrap tabular-nums">
-        {labels.value(reading.value, kpi.unit)}
-      </td>
-      <td className="px-2 py-2">
-        <ReadingNote kpiId={kpi.id} reading={reading} editable={editable} />
-      </td>
-      {editable && (
-        <td className="px-2 py-2 text-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={t('deleteReading', { date: date(reading.readingDate) })}
-            onClick={() => remove(reading.id)}
-          >
-            <Trash2 className="size-4" aria-hidden={true} />
-          </Button>
-        </td>
-      )}
-    </tr>
   );
 }

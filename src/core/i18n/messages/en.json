@@ -578,6 +578,25 @@
     "targetValue": "Target {value}",
     "quarterShort": "Q{quarter}",
     "owner": "Owner",
-    "noOwner": "Unassigned"
+    "noOwner": "Unassigned",
+    "ofTarget": "of target",
+    "summary": "{value} against a {target} target for {period} — {status}, last read {age}.",
+    "summaryNoTarget": "{value} for {period} — no target set, last read {age}.",
+    "summaryNoReading": "No reading recorded for {period}.",
+    "definition": "Definition",
+    "latestNote": "Latest note",
+    "notedOn": "{date}",
+    "addReadingOpen": "Add a reading",
+    "cancel": "Cancel",
+    "ownership": "Ownership",
+    "period": "Period",
+    "targetsHint": "Clear a period and save to remove its target. Values are in {unit}.",
+    "readingCount": "{count, plural, =0 {no readings} one {# reading} other {# readings}}",
+    "targetCount": "{count, plural, =0 {no targets} one {# target} other {# targets}}",
+    "previousYear": "Previous year",
+    "nextYear": "Next year",
+    "readingsIntro": "Everything recorded against {name}, newest first.",
+    "targetsIntro": "What {name} is measured against, one year at a time.",
+    "maintain": "Maintain"
   }
 }
