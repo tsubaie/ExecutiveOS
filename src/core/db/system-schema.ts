@@ -265,6 +265,7 @@ export const notifications = pgTable(
   },
   (t) => [
     index('notifications_feed_idx').on(t.userId, t.readAt, t.createdAt.desc()),
+    index('notifications_actor_idx').on(t.actorId),
     // NOTIF-I02: at most one unread row per subject and kind, which is what makes emission an
     // idempotent upsert — a task reassigned four times is one unread line, not four.
     uniqueIndex('notifications_unread_subject_idx')

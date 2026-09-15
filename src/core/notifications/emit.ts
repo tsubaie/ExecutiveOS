@@ -33,8 +33,3 @@ export async function emit(ctx: Context, event: Emit) {
   }));
   return insertNotifications(ctx.db, rows);
 }
-// The scheduled kinds have no actor: the clock is not a person (NOTIF-B05). They address users
-// directly, because the job already resolved who owns what.
-export async function emitScheduled(ctx: Context, rows: readonly Emission[]) {
-  return insertNotifications(ctx.db, rows);
-}

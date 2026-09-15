@@ -666,21 +666,11 @@
     "markAllRead": "Mark all as read",
     "unread": "{count, plural, one {Notifications, one unread} other {Notifications, # unread}}",
     "someone": "Someone",
-    "kind": {
-      "task": {
-        "assigned": "{actor} assigned you {title}",
-        "due_today": "Due today: {title}",
-        "overdue": "Overdue: {title}"
-      },
-      "note": {
-        "mentioned": "{actor} added you to {title}"
-      },
-      "kpi": {
-        "off_target": "Off target: {title}"
-      },
-      "job": {
-        "finished": "Finished: {title}"
-      }
-    }
+    "taskAssigned": "{actor} assigned you {title}",
+    "taskDueToday": "Due today: {title}",
+    "taskOverdue": "Overdue: {title}",
+    "noteMentioned": "{actor} added you to {title}",
+    "kpiOffTarget": "Off target: {title}",
+    "jobFinished": "Finished: {title}"
   }
 }

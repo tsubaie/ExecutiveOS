@@ -38,26 +38,27 @@ export function NotificationRow({ item, onOpen }: { item: Notification; onOpen: 
 // Each kind names its own message key rather than one built from the kind at runtime. next-intl
 // can check a literal key against the arguments it interpolates and cannot check a computed one,
 // and these six sentences are exactly the place where a missing argument would show up as a
-// half-written line in front of the reader.
+// half-written line in front of the reader. The keys carry no dots: a kind is `task.assigned`
+// because that is what the database stores, but next-intl reads a dot as a path and the catalogue
+// is two levels deep by audit (`scripts/audit/i18n.ts`).
 function Sentence({ item }: { item: Notification }) {
   const t = useTranslations('notifications');
-  const kind = useTranslations('notifications.kind');
   // Only the two kinds someone caused name an actor; the clock and the scorecard are nobody, and
   // the compiler holds each sentence to the arguments its own message actually interpolates.
   const by = { actor: item.actorName ?? t('someone'), title: item.title };
   const about = { title: item.title };
   switch (item.kind) {
     case 'task.assigned':
-      return kind('task.assigned', by);
+      return t('taskAssigned', by);
     case 'note.mentioned':
-      return kind('note.mentioned', by);
+      return t('noteMentioned', by);
     case 'task.due_today':
-      return kind('task.due_today', about);
+      return t('taskDueToday', about);
     case 'task.overdue':
-      return kind('task.overdue', about);
+      return t('taskOverdue', about);
     case 'kpi.off_target':
-      return kind('kpi.off_target', about);
+      return t('kpiOffTarget', about);
     case 'job.finished':
-      return kind('job.finished', about);
+      return t('jobFinished', about);
   }
 }
