@@ -26,7 +26,10 @@ export function ShellHeader({ user }: { user: { name: string; email: string } })
           typed and no state to hand over when it opens. */}
       <Button
         variant="outline"
-        className="w-full max-w-md justify-start gap-2 font-normal text-text-muted"
+        // `w-full` on a flex item is 100% of the row, not "the space that is left", and the button
+        // variant is `shrink-0` — so beside the bell and the avatar it pushed the header wider than
+        // a 390px screen. It takes the remaining width and is allowed to give it back instead.
+        className="min-w-0 flex-1 shrink basis-0 justify-start gap-2 font-normal text-text-muted sm:max-w-md"
         onClick={() => setSearching(true)}
       >
         <Search aria-hidden={true} className="size-4" />
