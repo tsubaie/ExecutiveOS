@@ -26,5 +26,6 @@ One decision per file. Format: **Status**, **Context**, **Decision**, **Conseque
 | 0020 | The entity detail is a non-modal slide-over | accepted |
 | 0021 | Global search fans out over module providers | accepted |
 | 0022 | Notifications are a stored, per-user, pull-only feed | accepted |
+| 0023 | The route bundle budget is 272 KB | accepted |
 
 Open decisions awaiting an ADR: license (see roadmap); chart library confirmation (`recharts`).

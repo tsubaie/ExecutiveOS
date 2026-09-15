@@ -22,7 +22,10 @@ const BuildManifest = z.object({
   rootMainFiles: z.array(z.string()).default([]),
   polyfillFiles: z.array(z.string()).default([]),
 });
-export const limitBytes = 250 * 1024;
+// ADR 0023: 272 KB, raised from 250 once the shell header became reachable from every route. The
+// metric counts what a route can reach rather than what it loads, so a lazy boundary does not move
+// it; the headroom is deliberate so the gate is a budget and not a snapshot of the worst route.
+export const limitBytes = 272 * 1024;
 export function parseClientManifest(text: string) {
   const match = text.match(/__RSC_MANIFEST\[["']([^"']+)["']\]\s*=\s*(\{[\s\S]*\});?\s*$/u);
   if (!match) throw new Error('unrecognized client reference manifest');
