@@ -96,6 +96,9 @@ Singleton system table: `id integer primary key default 1 CHECK (id = 1)`, `prov
 ### files
 `id, storage_key unique, original_name, mime, size_bytes, sha256, page_count int null, availability (available|purged|missing), purged_at, uploaded_by, created_at`. Rows are never soft-deleted; binaries are purged.
 
+### notifications
+`id, user_id, kind, subject_type, subject_id, payload jsonb, actor_id null, created_at, read_at null`. One row per recipient, addressed to a user and never to a person (ADR 0022). Indexed `(user_id, read_at, created_at desc)` for the feed, with a unique partial index `(user_id, kind, subject_id) where read_at is null` that makes emission an idempotent upsert. `subject_type`/`subject_id` are a soft reference resolved through the owning module at read time, so there is no foreign key to five module tables and a deleted subject drops out of the feed rather than dangling. Rows are never soft-deleted; retention removes them (`features/notifications.md`).
+
 ## Module tables
 
 Field semantics live in the feature specs; this section fixes shape and constraints.

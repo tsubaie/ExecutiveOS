@@ -1,0 +1,137 @@
+# Feature: Search (workspace-wide)
+
+**Status:** accepted
+**Spec reviewed:** 2026-09-15
+**Implementation verified:** not yet
+**Owner module:** `src/core/search`
+
+## Purpose
+
+One question asked of every module at once, for the reader who remembers a phrase but not where it
+lives. It does not replace a list's own search: that one filters the list in place and is the right
+tool once the reader knows the module. This one answers "where is this" and hands them a record.
+
+## Concepts and vocabulary
+
+- **Provider** — a module's implementation of the search capability, over its own tables. Declared
+  on `ServerManifest` and collected by `core/modules/registry.ts` (ADR 0021).
+- **Hit** — one record a provider matched: `{ module, id, title, subtitle, href, kind }`. `title`
+  is what the record is called, `subtitle` the one line that disambiguates two records with similar
+  names (a task's committee, a person's organisation).
+- **Corpus** — the `search_text` generated column each searchable table already carries. The
+  covered fields are listed under Data model and are part of this spec, not a private detail of
+  each repo.
+
+## Data model
+
+No tables and no migration. The corpus is what migration `0001` and each module's own migration
+already created:
+
+| Module | Column | Covers |
+|---|---|---|
+| People | `people.search_text` | full name, display name, organization, role title, email |
+| Tasks | `tasks.search_text` | title, description |
+| Notes | `notes.search_text` | title, content — plus tags and participant names by join (NOTES-B04) |
+| Committees | `committees.search_text` | name, description, ownership |
+| KPIs | `kpis.search_text` | name, category, notes |
+
+Every one is `GENERATED ALWAYS AS (eos_normalize(...)) STORED` with a GIN `gin_trgm_ops` index.
+`eos_normalize` lowercases, strips Arabic diacritics and folds `أإآٱى` onto `ا`/`ي`.
+
+- SEARCH-I01 A module that adds a searchable field changes this table in the same PR. The corpus is
+  a contract: what a column covers is what global search finds.
+
+## Behaviors
+
+- SEARCH-B01 The query is normalised in the application through `core/search/normalize.ts` — the
+  same function the repos already use — and matched as a substring against `search_text`. `%` and
+  `_` in reader input are escaped, so a query of `100%` searches for the characters.
+- SEARCH-B02 A query shorter than two normalised characters returns nothing and the palette says
+  so. A single character matches most of the corpus and is never the question being asked.
+- SEARCH-B03 Providers run concurrently. Each returns at most 5 hits; the merged list is at most
+  20. Results interleave by module round-robin so no single module fills the palette and every
+  module that matched is visible. Within a module, order is the module's own: a prefix match on the
+  title before a match anywhere, then the module's default list order.
+- SEARCH-B04 A provider that throws is reported as that module being unavailable for this query and
+  the remaining results are returned. The palette names the module that failed; it never shows an
+  empty result because one module is broken.
+- SEARCH-B05 Providers apply the same visibility their lists apply: soft-deleted records and
+  anything in trash are excluded. A reader cannot reach through search what they cannot reach
+  through the list.
+- SEARCH-B06 Counts are of what is shown, never of what exists. The palette says "showing 12"; it
+  never says "of 340".
+- SEARCH-B07 Opening a hit navigates to the owning module's route with the record open —
+  `routes.tasks({ id })` and its siblings — so a hit lands on the same surface the list would have
+  opened, with the entity framework's own detail panel (EP-B03 covers the record being outside the
+  current view).
+- SEARCH-B08 The palette is opened with `⌘K` / `Ctrl+K`, or from the header control. `Esc` closes
+  it, `↑/↓` move, `Enter` opens. Opening it does not change the URL; it is a way to get somewhere,
+  not a place.
+- SEARCH-B09 Typing debounces at 200 ms and a superseded request never overwrites a newer one's
+  results.
+- SEARCH-B10 Recent hits: the last 5 records opened from the palette are shown when it opens with
+  an empty query, stored per user in `localStorage`. They are a convenience, not state anything
+  depends on, and they render as normal hits with their subjects re-resolved.
+
+## API
+
+`GET /api/v1/search?q=<string>&limit=<1..20>` → `{ data: { hits: SearchHit[], unavailable: string[] } }`
+
+- Authenticated; no idempotency (read-only).
+- Invalidation: none. The palette's query key is `["search", q]` with a 30-second stale time.
+
+## UI
+
+- A control in the shell header showing a search icon, the word, and `⌘K` as a hint. It is a button
+  that opens the palette, not an input: the palette owns the input, so there is one place text is
+  typed and no state to hand over.
+- The palette is a dialog from `src/ui/primitives/dialog`, with the input as its heading row and
+  hits grouped by module under a module label. Each hit shows title, subtitle and the module's own
+  icon from its manifest.
+- Empty query → recent hits. No results → the query echoed and the modules searched. A failed
+  provider → an inline line naming the module, above the results that did arrive.
+- Mobile: the header control collapses to the icon alone; the palette is a sheet.
+- The input is `type="search"`, `autocomplete="off"`, `spellCheck={false}`, and `autoFocus` on
+  desktop only.
+
+## i18n notes
+
+- Every string through `t()` under `common.search.*`. Module labels come from each manifest's
+  existing `nav.key`, so a module is named the same in the palette as in the sidebar.
+- Normalisation is script-agnostic; an Arabic query matches an Arabic record with different
+  diacritics, and the palette renders mixed-direction hits with `dir="auto"` per `05`.
+- `⌘K` renders with a non-breaking space and `translate="no"`.
+
+## Acceptance criteria
+
+- SEARCH-A01 `⌘K`, type three characters present in a note body and a task title, and both appear
+  under their module headings; `Enter` on the note opens `/notes?id=…` with the record open. (en, ar)
+- SEARCH-A02 An Arabic query written without diacritics finds the record written with them. (ar)
+- SEARCH-A03 With one provider forced to throw, the palette shows the other modules' hits and names
+  the failed one. (en)
+- SEARCH-A04 A trashed task is not reachable from the palette. (en)
+
+## Required scenarios
+
+- `src/core/search/tests/merge.test.ts`: B03 round-robin interleave, the per-module and total caps,
+  prefix-before-substring ordering; B04 one provider rejecting.
+- `src/core/search/tests/normalize.test.ts`: B01 escaping of `%` and `_`; B02 the minimum length.
+- `src/core/modules/tests/registry.test.ts`: the search providers are collected like home sections
+  and a module declaring none is skipped.
+- Per module, `tests/search.test.ts`: B05 visibility — a soft-deleted record does not match.
+- e2e `search.spec.ts`: A01, A02, A04 in both locales.
+- Mutation targets: `mergeHits`, `normalizeQuery`, `collectSearchProviders`.
+
+## Audit items
+
+- `src/core/search` has zero imports from `src/modules`; providers reach it through the registry.
+- Every module in `serverModules` that owns a searchable table declares a provider.
+- The corpus table above matches the `search_text` definitions in the module schemas (checked by
+  `audit:docs`).
+
+## Out of scope
+
+- Ranking across modules by a single score (ADR 0021; principle 3 forbids opaque scoring).
+- Stemming, synonyms, spelling correction.
+- Searching file contents or AI invocation text.
+- Saved searches; a search is not a place (SEARCH-B08).
