@@ -29,8 +29,37 @@ export function EntityTable<T extends Entity, P extends object, C>({
   const selectable = Boolean(config.bulkActions?.length) && c.selecting;
   return (
     <div className="w-full overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+      {/* Fixed layout, not auto. A data table wants columns that hold still: auto layout measures
+          content on every relayout, so the widths moved when a record opened — the EP-B23 softening
+          puts a filter on the list, the filter forces a relayout, and the algorithm settled on a
+          different distribution of the same total. Nothing the reader did should move a column, and
+          the title column shrinking by two thirds because a panel opened beside it is the loudest
+          possible version of that. The primary column takes a third and the rest share what is
+          left; the table keeps a floor so the columns cannot be squeezed into unreadability, and
+          the container scrolls when they reach it. */}
+      <table className="w-full min-w-[52rem] table-fixed border-collapse text-sm">
         <caption className="sr-only">{config.title}</caption>
+        {/* The columns are declared, not measured. Measured widths came from the content and moved
+            whenever anything forced a relayout — opening a record puts the EP-B23 softening on the
+            list, and under it the title column lost two thirds of itself. Nothing the reader does
+            should move a column.
+            The widths are absolute rather than percentages for the same reason. A percentage on a
+            `col` resolves against a base that is not the table's own box: the same declaration
+            measured 32 % of 1727 px with the panel shut and 32 % of 1226 px with it open, which put
+            the shift back by another route. Lengths cannot drift like that, and `table-layout:
+            fixed` shares out whatever is left over them in proportion. */}
+        <colgroup>
+          {selectable && <col className="w-11" />}
+          {config.rowAction && <col className="w-11" />}
+          {columns.map((column) => (
+            <col
+              key={column.key}
+              className={cn(
+                column.primary ? 'w-[22rem]' : column.numeric ? 'w-[7rem]' : 'w-[10rem]',
+              )}
+            />
+          ))}
+        </colgroup>
         <thead>
           <tr className="border-b">
             {selectable && <th scope="col" className="w-11" />}
@@ -40,7 +69,7 @@ export function EntityTable<T extends Entity, P extends object, C>({
                 key={column.key}
                 scope="col"
                 className={cn(
-                  'px-3 py-2 text-xs font-medium whitespace-nowrap text-text-muted',
+                  'truncate px-3 py-2 text-xs font-medium whitespace-nowrap text-text-muted',
                   column.numeric ? 'text-end' : 'text-start',
                 )}
               >
@@ -90,7 +119,7 @@ function EntityTableRow<T extends Entity, P extends object, C>({
         <EntityTableLead config={config} controller={c} item={item} />
         {columns.map((column) =>
           column.primary ? (
-            <th key={column.key} scope="row" className="max-w-xs px-3 py-2 text-start font-normal">
+            <th key={column.key} scope="row" className="px-3 py-2 text-start font-normal">
               <Button
                 data-row-id={leaving ? undefined : item.id}
                 aria-current={current ? 'true' : undefined}

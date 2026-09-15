@@ -357,14 +357,17 @@
     transition: none;
   }
 }
-/* Selected row: tinted ground plus a start-edge bar that reads in both directions and themes. */
-.entity-row[data-current]::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 3px;
-  background: var(--color-accent);
+/* Selected row: tinted ground plus a start-edge bar that reads in both directions and themes.
+   Drawn as an inset shadow rather than a positioned pseudo-element, because a row is sometimes a
+   `tr` (EP-B29) and a table row wraps out-of-flow pseudo content in an anonymous cell. That cell is
+   a column: opening a record grew the table by its width and pushed every body cell one column
+   along, so the name under the reader's pointer slid sideways the moment they clicked it. A shadow
+   paints and occupies nothing. The inline start edge flips with `dir` through the logical inset. */
+.entity-row[data-current] {
+  box-shadow: inset 3px 0 0 0 var(--color-accent);
+}
+[dir='rtl'] .entity-row[data-current] {
+  box-shadow: inset -3px 0 0 0 var(--color-accent);
 }
 /* Text that may be Arabic inside an English list (or the reverse) keeps its own direction while
    staying aligned with the row (docs/05 § Mixed direction). */
@@ -391,15 +394,6 @@
   [data-slot='popover-content'] {
     transition: none;
   }
-}
-/* Selected row: tinted ground plus a start-edge bar that reads in both directions and themes. */
-.entity-row[data-current]::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 3px;
-  background: var(--color-accent);
 }
 /* Text that may be Arabic inside an English list (or the reverse) keeps its own direction while
    staying aligned with the row (docs/05 § Mixed direction). */
