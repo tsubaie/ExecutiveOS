@@ -7,7 +7,9 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/ui/prim
 import { cn } from '@/ui/cn';
 import { useEntityController } from './use-entity-controller';
 import { EntityNavigationProvider } from './navigation';
-import { EntityToolbar, EntityFacets, EntityOutside } from './EntityControls';
+import { EntityToolbar } from './EntityControls';
+import { EntityOutside } from './EntityOutside';
+import { EntityFacets } from './EntityFacets';
 import { EntityViews, EntityStats } from './EntityViews';
 import { EntityList } from './EntityList';
 import { EntityContent } from './EntityContent';
