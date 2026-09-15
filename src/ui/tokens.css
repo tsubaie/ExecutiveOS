@@ -535,6 +535,15 @@
     stroke-dashoffset: 0;
   }
 }
+/* EP-B29: one control opens the record and the whole row is its hit area. The row is the
+   positioned ancestor and the control's own pseudo-element covers it, so the accessible name and
+   the focus ring stay on a single button — a row of nested buttons is a row the keyboard has to
+   walk through cell by cell to get past. Cells holding controls of their own are lifted above it. */
+.entity-table-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
 /* EP-B27: a grid of tiles arrives as a cascade rather than all at once, for the reason Home's lead
    rows do — it walks the eye across the page in reading order instead of presenting a finished
    wall. The delays are the same step every other entrance in the app is timed from, they are set

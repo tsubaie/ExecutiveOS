@@ -1,6 +1,5 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { Inbox } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
@@ -9,6 +8,8 @@ import { cn } from '@/ui/cn';
 import type { Entity } from './types';
 import type { Surface } from './EntityControls';
 import { useRowMotion, rowMotionClass, type Rendered } from './use-row-motion';
+import { EntityTable } from './EntityTable';
+import { EntityListSkeleton, EntityEmpty } from './EntityStates';
 export function EntityList<T extends Entity, P extends object, C>(props: Surface<T, P, C>) {
   const t = useTranslations('common');
   const { list } = props.controller;
@@ -16,6 +17,19 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
   if (list.pending) return <EntityListSkeleton />;
   if (list.error) return <ErrorPanel error={list.error} retry={list.refetch} />;
   if (!rows.length) return <EntityEmpty {...props} />;
+  // EP-B29: the table is the same records, the same selection and the same keyboard; only the
+  // arrangement differs, so it branches here rather than anywhere the rest of the surface can see.
+  if (props.controller.state.layout === 'table' && props.config.renderers.columns?.length)
+    return (
+      <>
+        <EntityTable {...props} rows={rows} />
+        {list.more && (
+          <Button variant="ghost" className="m-4" onClick={() => void list.fetchMore()}>
+            {t('more')}
+          </Button>
+        )}
+      </>
+    );
   return (
     <>
       {/* EP-B27: the grid is declared on the list itself and its column count comes from container
@@ -38,60 +52,6 @@ export function EntityList<T extends Entity, P extends object, C>(props: Surface
         </Button>
       )}
     </>
-  );
-}
-// Placeholder rows at the real row height keep the layout stable while the first page loads.
-function EntityListSkeleton() {
-  const t = useTranslations('common');
-  const rows = ['a', 'b', 'c', 'd', 'e', 'f'];
-  return (
-    <div role="status" className="animate-pulse">
-      <span className="sr-only">{t('loading')}</span>
-      {rows.map((row, index) => (
-        <div key={row} aria-hidden className="flex h-11 items-center gap-3 border-b px-4">
-          <span className="size-4 rounded-full bg-surface-raised" />
-          <span
-            className={cn(
-              'h-3 rounded bg-surface-raised',
-              index % 3 === 0 ? 'w-2/3' : index % 3 === 1 ? 'w-1/2' : 'w-3/5',
-            )}
-          />
-          <span className="ms-auto h-3 w-12 rounded bg-surface-raised" />
-        </div>
-      ))}
-    </div>
-  );
-}
-function isFiltered<T extends Entity, P extends object, C>(c: Surface<T, P, C>['controller']) {
-  return Boolean(
-    c.state.q || c.state.sort || c.state.view !== 'all' || Object.values(c.facets).some(Boolean),
-  );
-}
-export function EntityEmpty<T extends Entity, P extends object, C>({
-  config,
-  controller: c,
-}: Surface<T, P, C>) {
-  const t = useTranslations('common');
-  const filtered = isFiltered(c);
-  const custom = filtered ? {} : (config.emptyState ?? {});
-  const Icon = config.emptyState?.icon ?? Inbox;
-  const copy = {
-    title: custom.title ?? t(filtered ? 'noMatches' : 'empty'),
-    description: custom.description ?? t(filtered ? 'noMatchesDescription' : 'emptyDescription'),
-    action: custom.action ?? {
-      label: t(filtered ? 'clear' : 'create'),
-      onSelect: () => (filtered ? c.clearFilters() : c.navigate({ new: '1' })),
-    },
-  };
-  return (
-    <div className="grid justify-items-center gap-3 px-6 py-16 text-center">
-      <Icon className="size-7 text-text-muted" />
-      <h2 className="text-base font-medium">{copy.title}</h2>
-      <p className="max-w-sm text-sm text-text-muted">{copy.description}</p>
-      <Button variant="outline" className="mt-1" onClick={copy.action.onSelect}>
-        {copy.action.label}
-      </Button>
-    </div>
   );
 }
 function EntityListRow<T extends Entity, P extends object, C>({

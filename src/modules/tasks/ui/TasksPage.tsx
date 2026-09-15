@@ -24,6 +24,7 @@ const TaskDetail = dynamic(() => import('./TaskDetail').then((module) => module.
 import { TaskToggle } from './TaskToggle';
 const CreateTask = dynamic(() => import('./CreateTask').then((module) => module.CreateTask));
 import { GroupTasksDialog, canGroup } from './GroupTasks';
+import { useTaskColumns } from './TaskColumns';
 // Rail icons, the count strip (featured) and the archive divider per view.
 const presentation: Record<string, Partial<ViewDef>> = {
   all: { icon: ListChecks },
@@ -73,6 +74,7 @@ export function TasksPage() {
   const t = useTranslations('tasks');
   const c = useTranslations('common');
   const mutations = useTaskMutations();
+  const columns = useTaskColumns();
   const filters = useTaskFilters();
   return (
     <EntityPage
@@ -96,6 +98,7 @@ export function TasksPage() {
       ]}
       renderers={{
         rowStyle: 'card',
+        columns,
         name: (task) => task.title,
         row: (task) => <TaskRow task={task} />,
         rowTrail: (task) => <TaskTrail task={task} />,

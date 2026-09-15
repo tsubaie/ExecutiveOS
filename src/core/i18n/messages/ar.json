@@ -83,7 +83,10 @@
     "clickToWrite": "انقر للكتابة…",
     "mentionCreate": "إضافة \"{name}\"",
     "sort": "ترتيب حسب",
-    "committees": "اللجان"
+    "committees": "اللجان",
+    "layout": "العرض",
+    "layoutCards": "بطاقات",
+    "layoutTable": "جدول"
   },
   "people": {
     "fullName": "الاسم الكامل",
@@ -313,7 +316,8 @@
     "subtaskDetails": "تفاصيل المهمة الفرعية",
     "subtaskDetailsDescription": "المسؤول وتاريخ الاستحقاق والترتيب والإجراءات لهذه المهمة الفرعية.",
     "dragHandle": "اسحب لإعادة الترتيب",
-    "noteTrashed": "الملاحظة في المحذوفات"
+    "noteTrashed": "الملاحظة في المحذوفات",
+    "committeeColumn": "اللجنة"
   },
   "notes": {
     "title": "عنوان الملاحظة",
@@ -373,7 +377,8 @@
     "updated": "آخر تحديث {date}",
     "personNotes": "الملاحظات",
     "viewNotes": "عرض الملاحظات ({count})",
-    "noType": "بدون نوع"
+    "noType": "بدون نوع",
+    "committeeColumn": "اللجنة"
   },
   "ai": {
     "working": "يعمل الذكاء الاصطناعي الآن. يمكنك مغادرة الصفحة والعودة لاحقًا.",
@@ -483,7 +488,8 @@
     "actionRestore": "استعادة",
     "actionReorder": "إعادة ترتيب",
     "actionUpdate": "تحديث",
-    "lastNote": "آخر ملاحظة: {date}"
+    "lastNote": "آخر ملاحظة: {date}",
+    "lastNoteColumn": "آخر ملاحظة"
   },
   "kpis": {
     "title": "مؤشرات الأداء",
@@ -601,6 +607,8 @@
     "maintain": "الصيانة",
     "comparePrevious": "السابقة",
     "compareCurrent": "الحالية",
-    "compareNext": "التالية"
+    "compareNext": "التالية",
+    "statusColumn": "الحالة",
+    "achievement": "الإنجاز"
   }
 }

@@ -6,6 +6,7 @@ import type { Entity, EntityPageProps, FiltersDef } from './types';
 import { useEntityNavigation } from './navigation';
 import { useEntityNeighbors } from './use-entity-neighbors';
 import { useEntityKeyboard } from './use-entity-keyboard';
+import { useEntityLayout } from './use-layout';
 export function useEntityController<T extends Entity, P extends object, C>(
   props: EntityPageProps<T, P, C>,
   root: RefObject<HTMLElement | null>,
@@ -43,8 +44,11 @@ export function useEntityController<T extends Entity, P extends object, C>(
     setSelecting,
   });
   const { creating, submit } = useEntityCreate(props.mutations.create, navigate);
+  const offered = Boolean(props.renderers.columns?.length);
+  const { layout, setLayout } = useEntityLayout(props.module, state.layout, offered, navigate);
   return {
-    state: { ...state, sort },
+    state: { ...state, sort, layout },
+    setLayout,
     facets,
     searchReset,
     clearFilters: (id: string | null = null) => {

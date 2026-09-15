@@ -33,6 +33,7 @@ import { NoteRow, NoteTrail } from './NoteRow';
 const NoteDetail = dynamic(() => import('./NoteDetail').then((module) => module.NoteDetail));
 import { CreateNote } from './CreateNote';
 import { AddTagDialog } from './AddTagDialog';
+import { useNoteColumns } from './NoteColumns';
 const presentation: Record<string, Partial<ViewDef>> = {
   all: { icon: NotebookPen },
   this_week: { icon: CalendarDays, featured: 'compact', tone: 'accent' },
@@ -105,6 +106,7 @@ export function NotesPage() {
   const t = useTranslations('notes');
   const c = useTranslations('common');
   const mutations = useNoteMutations();
+  const columns = useNoteColumns();
   const filters = useNoteFilters();
   return (
     <EntityPage
@@ -136,6 +138,7 @@ export function NotesPage() {
       ]}
       renderers={{
         rowStyle: 'card',
+        columns,
         name: (note) => note.title,
         row: (note) => <NoteRow note={note} />,
         rowTrail: (note) => <NoteTrail note={note} />,

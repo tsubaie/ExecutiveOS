@@ -9,10 +9,12 @@ import { cn } from '@/ui/cn';
 import { Scope, Sort, type Committee } from '../schema/validation';
 import { useCommittees, useCommittee, useCommitteeMutations } from './queries';
 import { CreateCommittee } from './CreateCommittee';
+import { useCommitteeColumns } from './CommitteeColumns';
 const CommitteeDetail = dynamic(() => import('./CommitteeDetail').then((module) => module.CommitteeDetail));
 export function CommitteesPage() {
   const t = useTranslations('committees');
   const mutations = useCommitteeMutations();
+  const columns = useCommitteeColumns();
   return <EntityPage module="committees" title={t('title')} description={t('intro')}
     filters={{ views: [
       { id: 'active', label: t('active'), icon: Landmark }, { id: 'all', label: t('all'), icon: Landmark },
@@ -23,7 +25,7 @@ export function CommitteesPage() {
       { id: 'archived', label: t('archived'), icon: Archive, separated: true }, { id: 'trash', label: t('trash'), icon: Trash2 },
     ], sort: sortOptions(Sort.options, t), facets: [{ key: 'scope', label: t('scope'), options: [{ value: '', label: t('all') }, ...Scope.options.map((scope) => ({ value: scope, label: t(scope) }))] }] }}
     useList={useCommittees} useDetail={useCommittee} mutations={mutations} group={(item) => item.deletedAt ? null : t(item.scope)}
-    renderers={{ rowStyle: 'card', name: (item) => item.name, row: (item) => <CommitteeRow committee={item} />,
+    renderers={{ rowStyle: 'card', columns, name: (item) => item.name, row: (item) => <CommitteeRow committee={item} />,
       rowTrail: (item) => <CommitteeStats committee={item} />, detail: (item, api) => <CommitteeDetail committee={item} api={api} />,
       create: (api) => <CreateCommittee api={api} /> }} />;
 }

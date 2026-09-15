@@ -77,6 +77,32 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   does not become a ticker. Rows are keyed by identity, so a refetch returning the same records
   re-renders without replaying it; a new view, filter or reading (EP-B28) is a new screen and does
   replay it. Nothing cascades under reduced motion.
+- EP-B29 `renderers.columns` declares the same records as a table, and declaring them is what
+  offers the reader the choice: a module with no columns has no toggle. A column carries a `head`,
+  a `cell`, and `numeric` — the only styling a module may ask for, because it is the one that means
+  something: a column of figures is read down, so it takes tabular figures and sits against the
+  column's end edge. Exactly one column is `primary`; it names the record, it is the row header,
+  and it carries the control that opens it.
+  It is a real `<table>` with a caption, a header row and one row header per record, because that
+  is what lets a screen reader say which column a cell belongs to and no arrangement of divs earns
+  that back. The whole row opens the record but only one thing in it is focusable: the control in
+  the row header, stretched over the row by a pseudo-element. A row of nested buttons is a row the
+  keyboard has to walk through cell by cell to get past, and every cell would need a name of its
+  own. Controls belonging to the record rather than to opening it — the selection box, the row
+  action — sit above that overlay and keep their own hit area. A group heading is a row spanning
+  every column (EP-B14).
+  The table keeps its own horizontal scroll: columns hold their widths, so an open record covers
+  the end of the table rather than reflowing it, which is the whole point of the panel it sits
+  under (EP-B26).
+  The choice lives in two places on purpose. `?layout=table` is the truth while it says anything,
+  so a link opens in the layout it was sent in; local storage remembers the last explicit choice
+  per module, so returning to a module tomorrow does not undo it. The URL is not written until the
+  reader actually chooses, which keeps the common link short and keeps a remembered preference out
+  of every link they share. The remembered value is read through `useSyncExternalStore` rather than
+  an effect: local storage is the external store that primitive exists for, it has no value on the
+  server, and reading it that way keeps the first client render agreeing with the markup instead of
+  correcting it a frame later. Clearing filters does not clear it — that returns the reader to the
+  unfiltered list, it does not take away the presentation they chose to read it in.
 - EP-B28 `filters.mode` is one reading the whole list is taken under: a segmented control in the
   toolbar whose first option is the default and carries the empty value. It keeps URL state exactly
   as a facet does — same key, same query, same clearing — but it is not a filter and must not be
@@ -192,6 +218,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - `row-trail.test.tsx`: B20 the trailing control renders outside the row button, never nested inside it.
 - `grid.test.tsx`: B27 the grid's arrows move by track row and by tile, `←/→` are inert on a list of lines, and a group heading spans every track; B14 a chosen sort suppresses the headings.
 - `mode.test.tsx`: B28 the mode reaches the list query under its own key, is cleared with the filters, and is not rendered among them.
+- `table.test.tsx`: B29 the table is a real table with one row header per record and one focusable control in it, numeric columns take tabular figures and the end edge, a group heading spans every column, and the layout resolves URL over storage without clearing with the filters.
 - `field.test.tsx`: B19 label, hint, error and invalid associations; first invalid field focused on submit.
 - `multiselect.test.tsx`: selection clearing rules, bulk action confirm.
 - `bulk-actions.test.tsx`: confirm flow runs once, render escape hatch, disabled predicates.

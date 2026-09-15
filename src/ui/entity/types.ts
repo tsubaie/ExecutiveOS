@@ -20,6 +20,18 @@ export type View = {
   tone?: 'danger' | 'accent' | 'good' | 'warn' | 'bad';
 };
 export type Facet = { key: string; label: string; options: { value: string; label: string }[] };
+// EP-B29: one column of the table presentation. `head` names it, `cell` renders it, and `numeric`
+// is the only styling a module may ask for, because it is the one that carries meaning: a column
+// of figures is read down, so it takes tabular figures and sits against the column's end edge.
+// `primary` marks the column that names the record and carries the control that opens it; exactly
+// one column is primary, and it is the row header.
+export type Column<T> = {
+  key: string;
+  head: string;
+  cell: (item: T) => ReactNode;
+  numeric?: boolean;
+  primary?: boolean;
+};
 export type SortOption = { id: string; label: string };
 // Views, facets, sort and mode are declared together; the framework owns their URL state.
 export type FiltersDef = {
@@ -103,8 +115,10 @@ export type EntityPageProps<T extends Entity, P, C> = {
   };
   renderers: {
     // 'card' spaces the rows as full-width containers; 'grid' lays them out as tiles in columns
-    // (EP-B27), for a list whose rows are figures rather than sentences.
+    // (EP-B27), for a list whose rows are figures rather than sentences. Either way this is the
+    // presentation the reader can switch away from, and `columns` is what they switch to (EP-B29).
     rowStyle?: 'card' | 'grid';
+    columns?: Column<T>[];
     row: (item: T) => ReactNode;
     // Rendered beside the row button rather than inside it, so it may hold its own control.
     rowTrail?: (item: T) => ReactNode;

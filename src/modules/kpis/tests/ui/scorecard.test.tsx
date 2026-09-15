@@ -80,19 +80,26 @@ it('KPIS-B07 a tile states its status in words and pairs every figure with its u
   expect(screen.getByText('Net promoter score')).toBeTruthy();
   expect(screen.getByText('42.5 pts')).toBeTruthy();
   expect(screen.getByText('+25%')).toBeTruthy();
-  // What it serves and who holds it: the two facts the tile is acted on from.
-  expect(screen.getByText(`Grow the base · ${en.kpis.noOwner}`)).toBeTruthy();
+  // The objective it serves is the one piece of filing the tile keeps; the owner is read in the
+  // record, not from a column of proper nouns between the eye and the figures.
+  expect(screen.getByText('Grow the base')).toBeTruthy();
+  expect(screen.queryByText(en.kpis.noOwner)).toBeNull();
 });
 it('KPIS-B07 a tile says how far through the target the measure is, as a mark and as a figure', () => {
   const { container } = mount(<KpiCard kpi={kpi()} />);
   expect(screen.getByText('85%')).toBeTruthy();
   expect(screen.getByText('Target 50 pts · Q3 2026')).toBeTruthy();
-  expect(container.querySelector('.meter-arc')).toBeTruthy();
-  // Past the target the arc stays full, the way the record's own gauge does.
-  const full = mount(<KpiCard kpi={kpi({}, { achievement: 3.4 })} />);
-  expect(full.container.querySelector('.meter-arc')?.getAttribute('d')).toBe(
-    container.querySelector('svg path')?.getAttribute('d'),
-  );
+  // Two arcs in the one mark: the track the measure is read against, and how far along it it is.
+  const fill = container.querySelector('.meter-arc');
+  const track = fill?.parentElement?.querySelector('path');
+  expect(fill?.getAttribute('d')).not.toBe(track?.getAttribute('d'));
+});
+it('KPIS-B07 past its target the arc stays full, the way the record gauge does', () => {
+  const { container } = mount(<KpiCard kpi={kpi({}, { achievement: 3.4 })} />);
+  const fill = container.querySelector('.meter-arc');
+  const track = fill?.parentElement?.querySelector('path');
+  expect(screen.getByText('340%')).toBeTruthy();
+  expect(fill?.getAttribute('d')).toBe(track?.getAttribute('d'));
 });
 it('KPIS-B07 a measure with no target reports that instead of leaving the answer blank', () => {
   const { container } = mount(
@@ -119,9 +126,9 @@ it('KPIS-B07 each status carries its own mark and word from the one status scale
     ['on_target', 'bg-status-good', 'text-status-good-ink'],
     ['near_target', 'bg-status-warn', 'text-status-warn-ink'],
     ['off_target', 'bg-status-bad', 'text-status-bad-ink'],
-    ['no_data', 'bg-text-muted', 'text-text-muted'],
-    ['stale', 'bg-text-muted', 'text-text-muted'],
-    ['no_target', 'bg-text-muted', 'text-text-muted'],
+    ['no_data', 'bg-surface-raised', 'text-text-muted'],
+    ['stale', 'bg-surface-raised', 'text-text-muted'],
+    ['no_target', 'bg-surface-raised', 'text-text-muted'],
   ];
   for (const [status, mark, ink] of marks) {
     mount(<KpiCard kpi={kpi({}, { status })} />);
@@ -134,7 +141,7 @@ it('KPIS-B07 each status carries its own mark and word from the one status scale
 });
 it('KPIS-B06 KPIS-A07 a row whose objective was deleted still names it, as archived', () => {
   mount(<KpiCard kpi={kpi({ objectiveDeleted: true })} />);
-  expect(screen.getByText(`Grow the base (archived) · ${en.kpis.noOwner}`)).toBeTruthy();
+  expect(screen.getByText('Grow the base (archived)')).toBeTruthy();
 });
 it('KPIS-B07 a KPI with no reading says so instead of showing a number', () => {
   mount(

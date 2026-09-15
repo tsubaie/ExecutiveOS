@@ -19,10 +19,12 @@ import { Sort } from '../schema/validation';
 import { useKpis, useKpi, useKpiMutations, useKpiFacets } from './queries';
 import { KpiCard } from './KpiCard';
 import { CreateKpi } from './CreateKpi';
+import { useKpiColumns } from './KpiColumns';
 const KpiRecord = dynamic(() => import('./KpiRecord').then((module) => module.KpiRecord));
 export function KpisPage() {
   const t = useTranslations('kpis');
   const mutations = useKpiMutations();
+  const columns = useKpiColumns();
   const filters = useKpiFilters();
   return (
     <EntityPage
@@ -43,6 +45,7 @@ export function KpisPage() {
       }
       renderers={{
         rowStyle: 'grid',
+        columns,
         name: (item) => item.name,
         row: (item) => <KpiCard kpi={item} />,
         detail: (item, api) => <KpiRecord kpi={item} api={api} />,
