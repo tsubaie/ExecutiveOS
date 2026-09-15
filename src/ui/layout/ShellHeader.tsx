@@ -1,9 +1,14 @@
 'use client';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { Suspense, lazy, useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
-import { SearchPalette } from './SearchPalette';
+// The palette is a whole dialog, a query and a result list, and it is loaded by every route in the
+// product for a control most visits never open. It arrives when it is first opened instead
+// (the pattern ChoiceSelect already uses for its searchable variant).
+const SearchPalette = lazy(() =>
+  import('./SearchPalette').then((module) => ({ default: module.SearchPalette })),
+);
 import { AccountMenu } from './AccountMenu';
 import { NotificationBell } from '@/modules/notifications/ui';
 // 05 § Layout shell: the header carries three things and no fourth — search, notifications and the
@@ -38,7 +43,11 @@ export function ShellHeader({ user }: { user: { name: string; email: string } })
         <NotificationBell />
         <AccountMenu user={user} />
       </div>
-      <SearchPalette open={searching} onOpenChange={setSearching} />
+      {searching && (
+        <Suspense fallback={null}>
+          <SearchPalette open={searching} onOpenChange={setSearching} />
+        </Suspense>
+      )}
     </header>
   );
 }

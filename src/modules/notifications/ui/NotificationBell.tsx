@@ -1,14 +1,17 @@
 'use client';
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Bell } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/ui/primitives/popover';
+import { Popover, PopoverTrigger } from '@/ui/primitives/popover';
 import { useCount } from '@/ui/format';
-import { useNotifications, useMarkAllRead } from './queries';
-import type { Notification } from '../schema/validation';
-import { NotificationRow } from './NotificationRow';
+import { useNotifications } from './queries';
+// Same reasoning as the palette: the bell and its count are small and belong on every route; the
+// list behind it is not, and arrives when the reader opens it.
+const NotificationList = lazy(() =>
+  import('./NotificationList').then((module) => ({ default: module.NotificationList })),
+);
 // ADR 0022: pull-only. The bell is read when the reader opens it; nothing here reaches them
 // outside the application. NOTIF-B07: opening the centre marks nothing read.
 export function NotificationBell() {
@@ -44,63 +47,19 @@ export function NotificationBell() {
           </span>
         )}
       </PopoverTrigger>
-      <NotificationList
-        items={items}
-        unread={unread}
-        pending={feed.isPending}
-        onOpen={(href) => {
-          setOpen(false);
-          router.push(href);
-        }}
-      />
+      {open && (
+        <Suspense fallback={null}>
+          <NotificationList
+            items={items}
+            unread={unread}
+            pending={feed.isPending}
+            onOpen={(href) => {
+              setOpen(false);
+              router.push(href);
+            }}
+          />
+        </Suspense>
+      )}
     </Popover>
-  );
-}
-// The centre itself. NOTIF-B12: the empty state names the purpose and offers nothing, because
-// there is no action a reader can take that creates a notification.
-function NotificationList({
-  items,
-  unread,
-  pending,
-  onOpen,
-}: {
-  items: Notification[];
-  unread: number;
-  pending: boolean;
-  onOpen: (href: string) => void;
-}) {
-  const t = useTranslations('notifications');
-  const markAll = useMarkAllRead();
-  return (
-      <PopoverContent align="end" className="w-[22rem] p-0">
-          <div className="flex items-center justify-between gap-2 border-b px-3 py-2.5">
-            <h2 className="font-medium">{t('title')}</h2>
-            {unread > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={markAll.isPending}
-                onClick={() => markAll.mutate(undefined)}
-              >
-                {t('markAllRead')}
-              </Button>
-            )}
-          </div>
-          <div className="max-h-[60dvh] overflow-y-auto overscroll-contain p-1.5">
-            {items.length === 0 ? (
-              <p className="px-2 py-8 text-center text-sm text-text-muted">
-                {pending ? t('loading') : t('empty')}
-              </p>
-            ) : (
-              items.map((item) => (
-                <NotificationRow
-                  key={item.id}
-                  item={item}
-                  onOpen={() => onOpen(item.href)}
-                />
-              ))
-            )}
-          </div>
-        </PopoverContent>
   );
 }
