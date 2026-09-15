@@ -20,6 +20,31 @@ import { rowMotionClass, type Rendered } from './use-row-motion';
 // The table keeps its own horizontal scroll (docs/05): columns hold their widths, so an open
 // record covers the end of the table rather than reflowing it, which is the whole point of the
 // slide-over it sits under (EP-B26).
+// The columns are declared, not measured. Measured widths came from the content and moved whenever
+// anything forced a relayout, so a column could change width for reasons that had nothing to do
+// with what was in it. Nothing the reader does should move a column.
+//
+// The widths are absolute rather than percentages for the same reason: a percentage on a `col`
+// resolves against a base that is not the table's own box, and the same declaration measured 32 %
+// of two different numbers depending on whether a record was open. Lengths cannot drift like that,
+// and `table-layout: fixed` shares out whatever is left over them in proportion.
+function EntityColumns<T extends Entity, P extends object, C>({
+  config,
+  controller: c,
+}: Surface<T, P, C>) {
+  return (
+    <colgroup>
+      {Boolean(config.bulkActions?.length) && c.selecting && <col className="w-11" />}
+      {config.rowAction && <col className="w-11" />}
+      {(config.renderers.columns ?? []).map((column) => (
+        <col
+          key={column.key}
+          className={cn(column.primary ? 'w-[22rem]' : column.numeric ? 'w-[7rem]' : 'w-[10rem]')}
+        />
+      ))}
+    </colgroup>
+  );
+}
 export function EntityTable<T extends Entity, P extends object, C>({
   config,
   controller: c,
@@ -29,37 +54,12 @@ export function EntityTable<T extends Entity, P extends object, C>({
   const selectable = Boolean(config.bulkActions?.length) && c.selecting;
   return (
     <div className="w-full overflow-x-auto">
-      {/* Fixed layout, not auto. A data table wants columns that hold still: auto layout measures
-          content on every relayout, so the widths moved when a record opened — the EP-B23 softening
-          puts a filter on the list, the filter forces a relayout, and the algorithm settled on a
-          different distribution of the same total. Nothing the reader did should move a column, and
-          the title column shrinking by two thirds because a panel opened beside it is the loudest
-          possible version of that. The primary column takes a third and the rest share what is
-          left; the table keeps a floor so the columns cannot be squeezed into unreadability, and
-          the container scrolls when they reach it. */}
+      {/* Fixed layout, not auto: a data table wants columns that hold still (see EntityColumns).
+          The table fills its container and keeps a floor, so the columns cannot be squeezed into
+          unreadability and the container scrolls once they reach it. */}
       <table className="w-full min-w-[52rem] table-fixed border-collapse text-sm">
         <caption className="sr-only">{config.title}</caption>
-        {/* The columns are declared, not measured. Measured widths came from the content and moved
-            whenever anything forced a relayout — opening a record puts the EP-B23 softening on the
-            list, and under it the title column lost two thirds of itself. Nothing the reader does
-            should move a column.
-            The widths are absolute rather than percentages for the same reason. A percentage on a
-            `col` resolves against a base that is not the table's own box: the same declaration
-            measured 32 % of 1727 px with the panel shut and 32 % of 1226 px with it open, which put
-            the shift back by another route. Lengths cannot drift like that, and `table-layout:
-            fixed` shares out whatever is left over them in proportion. */}
-        <colgroup>
-          {selectable && <col className="w-11" />}
-          {config.rowAction && <col className="w-11" />}
-          {columns.map((column) => (
-            <col
-              key={column.key}
-              className={cn(
-                column.primary ? 'w-[22rem]' : column.numeric ? 'w-[7rem]' : 'w-[10rem]',
-              )}
-            />
-          ))}
-        </colgroup>
+        <EntityColumns config={config} controller={c} />
         <thead>
           <tr className="border-b">
             {selectable && <th scope="col" className="w-11" />}
