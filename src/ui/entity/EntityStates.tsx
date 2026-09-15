@@ -4,7 +4,7 @@ import { Inbox } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/cn';
 import type { Entity } from './types';
-import type { Surface } from './EntityControls';
+import type { Surface } from './surface';
 // What the list shows when it has no rows to show: the shape of the rows while the first page
 // loads, and the two empty states — nothing here at all, versus nothing matching (EP-B15).
 // Placeholder rows at the real row height keep the layout stable while the first page loads.

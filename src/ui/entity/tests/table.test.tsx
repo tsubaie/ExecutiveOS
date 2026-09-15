@@ -22,7 +22,9 @@ function renderTable(group?: (row: TestRow) => string) {
     <NextIntlClientProvider locale="en" messages={en}>
       <EntityTable
         config={config}
-        controller={testController()}
+        controller={testController({
+          state: { creating: false, id: null, view: 'all', q: '', sort: '', layout: 'table' },
+        })}
         rows={rows.map((item) => ({ item, leaving: false, entering: false }))}
       />
     </NextIntlClientProvider>,

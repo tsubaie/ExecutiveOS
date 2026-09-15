@@ -8,12 +8,9 @@ import { EntityBulkBar } from './EntityBulkBar';
 import { ChoiceSelect } from '@/ui/layout/ChoiceSelect';
 import { useCount } from '@/ui/format';
 import { cn } from '@/ui/cn';
-import type { Entity, EntityPageProps } from './types';
-import type { EntityController } from './use-entity-controller';
-export type Surface<T extends Entity, P extends object, C> = {
-  config: EntityPageProps<T, P, C>;
-  controller: EntityController<T, P, C>;
-};
+import type { Entity } from './types';
+import type { Surface } from './surface';
+
 // EP-B22: one header, the same on every entity surface. Create used to move into the views rail
 // for card lists and stay in the bar for everything else, which made where the primary action
 // lives a function of how the rows happen to be drawn — two modules of the same framework putting

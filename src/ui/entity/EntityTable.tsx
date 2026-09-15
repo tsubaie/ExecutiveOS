@@ -2,10 +2,10 @@
 import { useTranslations } from 'next-intl';
 import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
-import { useCount } from '@/ui/format';
 import { cn } from '@/ui/cn';
 import type { Column, Entity } from './types';
-import type { Surface } from './EntityControls';
+import type { Surface } from './surface';
+import { EntityGroupHeading, selectRow } from './rows';
 import { rowMotionClass, type Rendered } from './use-row-motion';
 // EP-B29: the same records as a table, for reading down a column rather than across a row. It is a
 // real table — a caption, a header row, one row header per record — because that is what lets a
@@ -20,12 +20,6 @@ import { rowMotionClass, type Rendered } from './use-row-motion';
 // The table keeps its own horizontal scroll (docs/05): columns hold their widths, so an open
 // record covers the end of the table rather than reflowing it, which is the whole point of the
 // slide-over it sits under (EP-B26).
-function leadingCells<T extends Entity, P extends object, C>(
-  config: Surface<T, P, C>['config'],
-  c: Surface<T, P, C>['controller'],
-) {
-  return (config.bulkActions?.length && c.selecting ? 1 : 0) + (config.rowAction ? 1 : 0);
-}
 export function EntityTable<T extends Entity, P extends object, C>({
   config,
   controller: c,
@@ -83,7 +77,7 @@ function EntityTableRow<T extends Entity, P extends object, C>({
   const columns = config.renderers.columns ?? [];
   return (
     <>
-      <EntityTableHeading config={config} controller={c} rows={rows} index={index} />
+      <EntityGroupHeading config={config} controller={c} rows={rows} index={index} />
       <tr
         className={cn(
           'entity-row relative border-b transition-colors',
@@ -122,16 +116,6 @@ function EntityTableLead<T extends Entity, P extends object, C>({
   item,
 }: Surface<T, P, C> & { item: T }) {
   const t = useTranslations('common');
-  const toggle = (checked: boolean) =>
-    c.navigate(
-      {
-        sel: (checked
-          ? [...c.selected, item.id]
-          : c.selected.filter((id) => id !== item.id)
-        ).join(','),
-      },
-      true,
-    );
   return (
     <>
       {config.bulkActions?.length && c.selecting ? (
@@ -140,7 +124,7 @@ function EntityTableLead<T extends Entity, P extends object, C>({
             className="entity-check"
             aria-label={t('selectItem', { name: config.renderers.name(item) })}
             checked={c.selected.includes(item.id)}
-            onCheckedChange={toggle}
+            onCheckedChange={(checked) => selectRow(c, item.id, checked)}
           />
         </td>
       ) : null}
@@ -158,32 +142,5 @@ function EntityTableCell<T extends Entity>({ column, item }: { column: Column<T>
     >
       {column.cell(item)}
     </td>
-  );
-}
-// EP-B14 in a table: the heading is a row of its own spanning every column, so the grouping is
-// part of the table rather than a block floating between two of them.
-function EntityTableHeading<T extends Entity, P extends object, C>({
-  config,
-  controller: c,
-  rows,
-  index,
-}: Surface<T, P, C> & { rows: Rendered<T>[]; index: number }) {
-  const count = useCount();
-  const item = rows[index]?.item;
-  const before = rows[index - 1]?.item;
-  const heading = item && !c.state.sort ? config.group?.(item) : null;
-  if (!heading || (before && heading === config.group?.(before))) return null;
-  const size = rows.filter((row) => !row.leaving && config.group?.(row.item) === heading).length;
-  return (
-    <tr>
-      <th
-        scope="colgroup"
-        colSpan={leadingCells(config, c) + (config.renderers.columns?.length ?? 0)}
-        className="border-b bg-surface-raised/60 px-3 py-1.5 text-start text-[11px] font-semibold tracking-wider text-text-muted uppercase"
-      >
-        {heading}
-        <span className="ms-2 text-[10px] tabular-nums">{count(size)}</span>
-      </th>
-    </tr>
   );
 }

@@ -3,10 +3,10 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
-import { useCount } from '@/ui/format';
 import { cn } from '@/ui/cn';
 import type { Entity } from './types';
-import type { Surface } from './EntityControls';
+import type { Surface } from './surface';
+import { EntityGroupHeading, selectRow } from './rows';
 import { useRowMotion, rowMotionClass, type Rendered } from './use-row-motion';
 import { EntityTable } from './EntityTable';
 import { EntityListSkeleton, EntityEmpty } from './EntityStates';
@@ -157,17 +157,7 @@ function EntityRowLead<T extends Entity, P extends object, C>({
           )}
           aria-label={t('selectItem', { name: config.renderers.name(item) })}
           checked={c.selected.includes(item.id)}
-          onCheckedChange={(checked) =>
-            c.navigate(
-              {
-                sel: (checked
-                  ? [...c.selected, item.id]
-                  : c.selected.filter((id) => id !== item.id)
-                ).join(','),
-              },
-              true,
-            )
-          }
+          onCheckedChange={(checked) => selectRow(c, item.id, checked)}
         />
       ) : null}
       {config.rowAction && !c.selecting && (
@@ -181,51 +171,5 @@ function EntityRowLead<T extends Entity, P extends object, C>({
         </div>
       )}
     </>
-  );
-}
-
-// Group headers carry the count of loaded rows in the group (EP-B14).
-function EntityGroupHeading<T extends Entity, P extends object, C>({
-  config,
-  controller: c,
-  rows,
-  index,
-}: Surface<T, P, C> & { rows: Rendered<T>[]; index: number }) {
-  const count = useCount();
-  const item = rows[index]?.item;
-  const before = rows[index - 1]?.item;
-  // EP-B14: a heading only means something while the list is in the order the grouping describes.
-  // Once the reader has chosen a sort of their own the rows no longer arrive grouped, and the
-  // headings would repeat down the page marking nothing.
-  const heading = item && !c.state.sort ? config.group?.(item) : null;
-  if (!heading || (before && heading === config.group?.(before))) return null;
-  const size = rows.filter((row) => !row.leaving && config.group?.(row.item) === heading).length;
-  // EP-B14: the heading is its own list item rather than a block inside the first row's, so a
-  // grid can hand it the whole track row and a row that fades out never takes its heading with it.
-  if (config.renderers.rowStyle === 'grid')
-    return (
-      <li className="col-span-full flex items-center gap-2 pt-2 text-xs font-medium text-text-muted">
-        <h2>{heading}</h2>
-        <span className="text-[10px] tabular-nums">{count(size)}</span>
-      </li>
-    );
-  if (config.renderers.rowStyle === 'card')
-    return (
-      <li>
-        <h2 className="flex items-center gap-2 px-4 pt-5 pb-2 text-xs font-medium text-text-muted">
-          {heading}
-          <span className="text-[10px] tabular-nums">{count(size)}</span>
-        </h2>
-      </li>
-    );
-  return (
-    <li>
-      <h2 className="flex h-7 items-center gap-2 border-b bg-surface-raised/60 px-4 text-[11px] leading-none font-semibold tracking-wider text-text-muted uppercase">
-        {heading}
-        <span className="rounded-full bg-surface-raised px-1.5 py-0.5 text-[10px] font-semibold tracking-normal text-text tabular-nums">
-          {count(size)}
-        </span>
-      </h2>
-    </li>
   );
 }

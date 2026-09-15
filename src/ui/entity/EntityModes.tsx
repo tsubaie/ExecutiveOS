@@ -4,7 +4,7 @@ import { LayoutGrid, Table2 } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/cn';
 import type { Entity } from './types';
-import type { Surface } from './EntityControls';
+import type { Surface } from './surface';
 // The two toolbar controls that change how the list is read rather than what is in it: the
 // presentation it is drawn in (EP-B29) and the reading every row is taken under (EP-B28). Neither
 // removes a record, which is why neither lives in the filter sheet.

@@ -4,7 +4,7 @@ import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/cn';
 import { useCount } from '@/ui/format';
 import type { Entity } from './types';
-import type { Surface } from './EntityControls';
+import type { Surface } from './surface';
 const toneInk: Record<string, string> = {
   danger: 'text-danger',
   accent: 'text-accent',
