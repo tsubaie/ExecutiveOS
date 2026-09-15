@@ -37,7 +37,7 @@ export const View = z.enum([
   'no_target',
   'trash',
 ]);
-export const Sort = z.enum(['default', 'name', 'change']);
+export const Sort = z.enum(['default', 'status', 'name', 'change']);
 export const ComparePeriod = z.enum(['', 'previous', 'next']); // KPIS-B26; '' is the effective one
 // docs/03 § Numbers: numeric(14,4) with an absolute value under 10^10, so the value survives the
 // JSON boundary exactly. Rounding here keeps the stored value and the validated value identical.

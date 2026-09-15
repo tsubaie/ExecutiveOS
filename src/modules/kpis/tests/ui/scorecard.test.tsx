@@ -11,6 +11,7 @@ import {
   type Target,
 } from '../../schema/validation';
 import { KpiCard } from '../../ui/KpiCard';
+import { useKpiLabels } from '../../ui/use-kpi-labels';
 import { KpiHeadline, KpiSummary, LatestNote } from '../../ui/KpiHeadline';
 import { KpiTrend } from '../../ui/KpiTrend';
 import { KpiTargets } from '../../ui/KpiTargets';
@@ -74,16 +75,19 @@ const kpi = (overrides: Partial<typeof base> = {}, metaOverrides: Partial<KpiMet
     meta: derived,
   });
 };
+function ObjectiveLabel({ kpi: item }: { kpi: ReturnType<typeof kpi> }) {
+  return <>{useKpiLabels().objective(item)}</>;
+}
 it('KPIS-B07 a tile states its status in words and pairs every figure with its unit', () => {
   mount(<KpiCard kpi={kpi()} />);
   expect(screen.getByText(en.kpis.near_target)).toBeTruthy();
   expect(screen.getByText('Net promoter score')).toBeTruthy();
   expect(screen.getByText('42.5 pts')).toBeTruthy();
   expect(screen.getByText('+25%')).toBeTruthy();
-  // The objective it serves is the one piece of filing the tile keeps; the owner is read in the
-  // record, not from a column of proper nouns between the eye and the figures.
-  expect(screen.getByText('Grow the base')).toBeTruthy();
+  // Neither the owner nor the objective is on the tile: one is read inside the record, and the
+  // other is the heading the tile already sits under (KPIS-B07).
   expect(screen.queryByText(en.kpis.noOwner)).toBeNull();
+  expect(screen.queryByText('Grow the base')).toBeNull();
 });
 it('KPIS-B07 a tile says how far through the target the measure is, as a mark and as a figure', () => {
   const { container } = mount(<KpiCard kpi={kpi()} />);
@@ -139,9 +143,14 @@ it('KPIS-B07 each status carries its own mark and word from the one status scale
     expect(chip.className).toContain(ink);
   }
 });
-it('KPIS-B06 KPIS-A07 a row whose objective was deleted still names it, as archived', () => {
-  mount(<KpiCard kpi={kpi({ objectiveDeleted: true })} />);
-  expect(screen.getByText('Grow the base (archived)')).toBeTruthy();
+it('KPIS-B06 KPIS-A07 an objective that was deleted still names its group, as archived', () => {
+  // The scorecard groups under the objective, so that heading is where the name has to survive a
+  // deletion: a group of measures under a heading that said nothing would lose where they came from.
+  const label = mount(<ObjectiveLabel kpi={kpi({ objectiveDeleted: true })} />);
+  expect(label.container.textContent).toBe('Grow the base (archived)');
+  // `mount` clears what came before it, so the second reading stands on its own.
+  const unfiled = { ...kpi(), objectiveName: null };
+  expect(mount(<ObjectiveLabel kpi={unfiled} />).container.textContent).toBe(en.kpis.noObjective);
 });
 it('KPIS-B07 a KPI with no reading says so instead of showing a number', () => {
   mount(

@@ -51,11 +51,28 @@ function DueCell({ task }: { task: Task }) {
 export function useTaskColumns(): Column<Task>[] {
   const t = useTranslations('tasks');
   return [
-    { key: 'title', head: t('title'), primary: true, cell: (task) => <TitleCell task={task} /> },
+    {
+      key: 'title',
+      head: t('title'),
+      primary: true,
+      sort: 'title',
+      cell: (task) => <TitleCell task={task} />,
+    },
     { key: 'status', head: t('status'), cell: (task) => t(task.status) },
-    { key: 'priority', head: t('priority'), cell: (task) => task.priority && t(task.priority) },
+    {
+      key: 'priority',
+      head: t('priority'),
+      sort: 'priority',
+      cell: (task) => task.priority && t(task.priority),
+    },
     { key: 'owner', head: t('owner'), cell: (task) => <OwnerCell task={task} /> },
-    { key: 'due', head: t('dueDate'), numeric: true, cell: (task) => <DueCell task={task} /> },
+    {
+      key: 'due',
+      head: t('dueDate'),
+      numeric: true,
+      sort: 'due_date',
+      cell: (task) => <DueCell task={task} />,
+    },
     {
       key: 'subtasks',
       head: t('subtasks'),

@@ -31,6 +31,10 @@ export type Column<T> = {
   cell: (item: T) => ReactNode;
   numeric?: boolean;
   primary?: boolean;
+  // EP-B31: the id of the sort this column maps to, from the module's own `filters.sort` options.
+  // A column that names one gets a header that orders by it; a column that does not stays plain
+  // text, because a header that looks orderable and is not is worse than one that never offered.
+  sort?: string;
 };
 export type SortOption = { id: string; label: string };
 // Views, facets, sort and mode are declared together; the framework owns their URL state.

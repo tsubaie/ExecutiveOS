@@ -21,12 +21,14 @@ import { KpiCard } from './KpiCard';
 import { CreateKpi } from './CreateKpi';
 import { useKpiColumns } from './KpiColumns';
 import { usePrefetch } from '@/ui/entity/use-prefetch';
+import { useKpiLabels } from './use-kpi-labels';
 const importRecord = () => import('./KpiRecord');
 const KpiRecord = dynamic(() => importRecord().then((module) => module.KpiRecord));
 export function KpisPage() {
   const t = useTranslations('kpis');
   const mutations = useKpiMutations();
   const columns = useKpiColumns();
+  const labels = useKpiLabels();
   usePrefetch(importRecord);
   const filters = useKpiFilters();
   return (
@@ -39,13 +41,7 @@ export function KpisPage() {
       useDetail={useKpi}
       mutations={mutations}
       emptyState={{ title: t('emptyTitle'), description: t('emptyDescription'), icon: Target }}
-      group={(item) =>
-        item.objectiveName
-          ? item.objectiveDeleted
-            ? t('archivedObjective', { name: item.objectiveName })
-            : item.objectiveName
-          : t('noObjective')
-      }
+      group={labels.objective}
       renderers={{
         rowStyle: 'grid',
         columns,

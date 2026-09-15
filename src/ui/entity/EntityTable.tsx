@@ -1,5 +1,6 @@
 'use client';
 import { useTranslations } from 'next-intl';
+import { ArrowDownUp } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
 import { cn } from '@/ui/cn';
@@ -65,16 +66,7 @@ export function EntityTable<T extends Entity, P extends object, C>({
             {selectable && <th scope="col" className="w-11" />}
             {config.rowAction && <th scope="col" className="w-11" />}
             {columns.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={cn(
-                  'truncate px-3 py-2 text-xs font-medium whitespace-nowrap text-text-muted',
-                  column.numeric ? 'text-end' : 'text-start',
-                )}
-              >
-                {column.head}
-              </th>
+              <EntityColumnHead key={column.key} column={column} config={config} controller={c} />
             ))}
           </tr>
         </thead>
@@ -92,6 +84,46 @@ export function EntityTable<T extends Entity, P extends object, C>({
         </tbody>
       </table>
     </div>
+  );
+}
+// EP-B31: a column that maps to one of the module's sorts orders by it from its own header, which
+// is the thing a table is expected to do and the dropdown could never be — its options are named
+// orderings ("Needs attention first"), not the columns in front of the reader. Pressing the column
+// already ordering by returns to the module's default, so the control is its own undo.
+//
+// `aria-sort` says `other` rather than ascending or descending on purpose: these are named orders
+// owned by the module, and some of them (severity, then name) have no single direction to claim.
+function EntityColumnHead<T extends Entity, P extends object, C>({
+  column,
+  controller: c,
+}: Surface<T, P, C> & { column: Column<T> }) {
+  const active = Boolean(column.sort) && c.state.sort === column.sort;
+  const head = cn(
+    'truncate px-3 py-2 text-xs font-medium whitespace-nowrap text-text-muted',
+    column.numeric ? 'text-end' : 'text-start',
+  );
+  if (!column.sort)
+    return (
+      <th scope="col" className={head}>
+        {column.head}
+      </th>
+    );
+  return (
+    <th scope="col" aria-sort={active ? 'other' : 'none'} className={cn(head, 'p-0')}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn(
+          'h-auto w-full min-w-0 rounded-none px-3 py-2 text-xs font-medium text-text-muted',
+          column.numeric ? 'justify-end' : 'justify-start',
+          active && 'text-text',
+        )}
+        onClick={() => c.navigate({ sort: active ? null : (column.sort ?? null) }, true)}
+      >
+        <span className="truncate">{column.head}</span>
+        <ArrowDownUp className={cn('size-3 shrink-0', !active && 'opacity-0')} aria-hidden={true} />
+      </Button>
+    </th>
   );
 }
 function EntityTableRow<T extends Entity, P extends object, C>({

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, renderHook, screen, act } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import en from '@/core/i18n/messages/en.json';
 import { EntityTable } from '../EntityTable';
@@ -10,7 +10,7 @@ import type { Column } from '../types';
 import { testConfig, testController, testRow, type TestRow } from './fixtures';
 const rows = [testRow('a', 'Alpha', 12), testRow('b', 'Beta', 34)];
 const columns: Column<TestRow>[] = [
-  { key: 'name', head: 'Name', primary: true, cell: (row) => row.name },
+  { key: 'name', head: 'Name', primary: true, sort: 'name', cell: (row) => row.name },
   { key: 'score', head: 'Score', numeric: true, cell: (row) => row.score },
 ];
 function renderTable(group?: (row: TestRow) => string) {
@@ -46,8 +46,9 @@ describe('entity table', () => {
   });
   it('EP-B29 exactly one control per row opens the record, and it lives in the row header', () => {
     renderTable();
-    const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(rows.length);
+    // One per record, in the body. A sortable column header is a control of the table, not of a row.
+    const openers = screen.getAllByRole('rowheader').map((cell) => cell.querySelector('button'));
+    expect(openers.filter(Boolean)).toHaveLength(rows.length);
     const opener = screen.getByRole('button', { name: 'Alpha' });
     expect(opener.closest('th')?.getAttribute('scope')).toBe('row');
     // The hit area is the row's, and it comes from the one control rather than from nested ones.
@@ -64,6 +65,48 @@ describe('entity table', () => {
     const heading = screen.getByText('First').closest('th');
     expect(heading?.getAttribute('scope')).toBe('colgroup');
     expect(heading?.getAttribute('colspan')).toBe(String(columns.length));
+  });
+});
+describe('entity column sorting', () => {
+  afterEach(cleanup);
+  function renderWith(sort: string) {
+    const config = testConfig({ renderers: { ...testConfig().renderers, columns } });
+    const controller = testController({
+      state: { creating: false, id: null, view: 'all', q: '', sort, layout: 'table' },
+    });
+    render(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <EntityTable
+          config={config}
+          controller={controller}
+          rows={rows.map((item) => ({ item, leaving: false, entering: false }))}
+        />
+      </NextIntlClientProvider>,
+    );
+    return controller;
+  }
+  it('EP-B31 a column that names a sort orders by it; one that does not offers no control', () => {
+    renderWith('');
+    expect(screen.getByRole('columnheader', { name: 'Name' }).getAttribute('aria-sort')).toBe(
+      'none',
+    );
+    expect(screen.getByRole('button', { name: 'Name' })).toBeTruthy();
+    // The unsorted column is text, not a control that would promise an order it cannot deliver.
+    expect(screen.queryByRole('button', { name: 'Score' })).toBeNull();
+    expect(screen.getByRole('columnheader', { name: 'Score' }).getAttribute('aria-sort')).toBeNull();
+  });
+  it('EP-B31 pressing the column already ordering the list returns to the default', () => {
+    const idle = renderWith('');
+    fireEvent.click(screen.getByRole('button', { name: 'Name' }));
+    expect(idle.navigate).toHaveBeenCalledWith({ sort: 'name' }, true);
+    cleanup();
+    const active = renderWith('name');
+    // Active reports its state, and the same press is the undo.
+    expect(screen.getByRole('columnheader', { name: 'Name' }).getAttribute('aria-sort')).toBe(
+      'other',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Name' }));
+    expect(active.navigate).toHaveBeenCalledWith({ sort: null }, true);
   });
 });
 describe('entity layout', () => {

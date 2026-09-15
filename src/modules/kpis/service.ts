@@ -50,11 +50,13 @@ async function scope(ctx: Context): Promise<Scope> {
 const toKpi = (row: NonNullable<Row>, at: Scope) =>
   Kpi.parse({ ...row, meta: deriveMeta(row, at) });
 // KPIS-B07: the sort keys are the cursor tuple. The default files the scorecard under its
-// objectives, alphabetically, severity first inside each, unfiled last. `rank` holds severity to
-// today's reading so a comparison never reshuffles the page (KPIS-B26).
+// objectives, alphabetically, severity first inside each, unfiled last; `status` ranks severity
+// across all of them, against the compared period. `rank` holds severity to today's reading so a
+// comparison never reshuffles the default order (KPIS-B26).
 function keyOf(item: Kpi, sort: string, rank?: number): Tuple {
   const name = item.name.toLocaleLowerCase();
   if (sort === 'name') return [name, item.id];
+  if (sort === 'status') return [severityRank[item.meta.status], name, item.id];
   if (sort === 'change') {
     const change = item.meta.percentChange;
     return [change === null ? 1 : 0, change === null ? 0 : -change, name, item.id];
@@ -74,9 +76,7 @@ export async function listKpis(ctx: Context, query: KpiListQuery) {
   const at = await scope(ctx);
   const window = { today: at.today, fromYear: Number(at.today.slice(0, 4)) - 1 };
   const rows = await repo.selectKpis(ctx.db, query, window);
-  // KPIS-B26: one period for the page, ahead of every status and count — never the order. A
-  // comparison changes what a measure says, not where it sits, so severity is ranked to today's
-  // reading and stepping leaves every card exactly where the reader last saw it.
+  // KPIS-B26: one period for the page, ahead of every status and count.
   const shift = query.period === 'previous' ? -1 : query.period === 'next' ? 1 : 0;
   const rank = new Map(rows.map((row) => [row.id, severityRank[deriveMeta(row, at).status]]));
   const all = rows.map((row) => toKpi(row, { ...at, offset: shift }));

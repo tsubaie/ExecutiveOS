@@ -610,6 +610,7 @@
     "compareNext": "Next",
     "statusColumn": "Status",
     "achievement": "Progress",
-    "changeColumn": "Change"
+    "changeColumn": "Change",
+    "status": "Worst status first"
   }
 }

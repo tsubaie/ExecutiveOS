@@ -103,6 +103,14 @@ export function useKpiLabels() {
   const value = (amount: number, unit: Unit) => t(valueForms[unit], { value: decimal(amount) });
   return {
     status: (status: KpiStatus) => t(status),
+    // KPIS-B06, KPIS-A07: a deleted objective keeps its measures and is still named, as archived —
+    // otherwise a group of them would sit under a heading that says nothing about where they went.
+    objective: (kpi: { objectiveName: string | null; objectiveDeleted: boolean }) =>
+      kpi.objectiveName
+        ? kpi.objectiveDeleted
+          ? t('archivedObjective', { name: kpi.objectiveName })
+          : kpi.objectiveName
+        : t('noObjective'),
     tone: (status: KpiStatus) => tones[status],
     dot: (status: KpiStatus) => dots[tones[status]],
     ink: (status: KpiStatus) => inks[tones[status]],

@@ -77,6 +77,18 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   does not become a ticker. Rows are keyed by identity, so a refetch returning the same records
   re-renders without replaying it; a new view, filter or reading (EP-B28) is a new screen and does
   replay it. Nothing cascades under reduced motion.
+- EP-B31 A column that names one of the module's sorts orders by it from its own header, and one
+  that does not stays plain text: a header that looks orderable and is not is worse than one that
+  never offered. This is the thing a table is expected to do and the sort dropdown could never be —
+  its options are named orderings ("Needs attention first"), not the columns in front of the reader,
+  and the two never lined up. They remain one control over one piece of URL state, so a table header
+  and the dropdown cannot disagree, and the sort survives a switch back to cards. Pressing the column
+  already ordering the list returns to the module's default, so the control is its own undo, and
+  EP-B14's grouping is suppressed for as long as a sort is chosen either way.
+  `aria-sort` reports `other` rather than ascending or descending, which is accurate: these are
+  named orders owned by the module and some of them (severity, then name) have no one direction to
+  claim. Only sorts the module already implements are offered — a column cannot invent a server
+  ordering, and the cursor's tuple is that ordering (`04-api-conventions.md`).
 - EP-B30 The surface is read and re-read without being reloaded. Two things made it look otherwise.
   Every piece of this URL — the view, the facets, the sort, the layout, the open record, the
   selection — is read by the client surface and by nothing on the server, so it is written with the
@@ -237,7 +249,7 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - `row-trail.test.tsx`: B20 the trailing control renders outside the row button, never nested inside it.
 - `grid.test.tsx`: B27 the grid's arrows move by track row and by tile, `←/→` are inert on a list of lines, and a group heading spans every track; B14 a chosen sort suppresses the headings.
 - `mode.test.tsx`: B28 the mode reaches the list query under its own key, is cleared with the filters, and is not rendered among them.
-- `table.test.tsx`: B29 the table is a real table with one row header per record and one focusable control in it, numeric columns take tabular figures and the end edge, a group heading spans every column, and the layout resolves URL over storage without clearing with the filters.
+- `table.test.tsx`: B31 a column that names a sort orders from its header, toggles back to the default, and reports `aria-sort`; a column without one renders no control. B29 the table is a real table with one row header per record and one focusable control in it, numeric columns take tabular figures and the end edge, a group heading spans every column, and the layout resolves URL over storage without clearing with the filters.
 - `field.test.tsx`: B19 label, hint, error and invalid associations; first invalid field focused on submit.
 - `multiselect.test.tsx`: selection clearing rules, bulk action confirm.
 - `bulk-actions.test.tsx`: confirm flow runs once, render escape hatch, disabled predicates.

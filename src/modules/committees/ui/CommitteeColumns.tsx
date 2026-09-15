@@ -40,6 +40,7 @@ export function useCommitteeColumns(): Column<Committee>[] {
       key: 'name',
       head: t('name'),
       primary: true,
+      sort: 'name',
       cell: (committee) => (
         <span dir="auto" className="line-clamp-2 font-medium">
           {committee.name}
@@ -56,6 +57,7 @@ export function useCommitteeColumns(): Column<Committee>[] {
       key: 'tasks',
       head: t('tasks'),
       numeric: true,
+      sort: 'open_tasks',
       cell: ({ stats }) => `${count(stats.completed)}/${count(stats.open + stats.completed)}`,
     },
     {
@@ -63,7 +65,9 @@ export function useCommitteeColumns(): Column<Committee>[] {
       head: t('overdue'),
       numeric: true,
       cell: ({ stats }) =>
-        stats.overdue > 0 && <span className="font-medium text-danger">{count(stats.overdue)}</span>,
+        stats.overdue > 0 && (
+          <span className="font-medium text-danger">{count(stats.overdue)}</span>
+        ),
     },
     {
       key: 'lastNote',
@@ -76,6 +80,11 @@ export function useCommitteeColumns(): Column<Committee>[] {
           </time>
         ),
     },
-    { key: 'status', head: t('status'), cell: (committee) => <StatusCell committee={committee} /> },
+    {
+      key: 'status',
+      head: t('status'),
+      sort: 'status',
+      cell: (committee) => <StatusCell committee={committee} />,
+    },
   ];
 }

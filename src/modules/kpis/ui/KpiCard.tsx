@@ -9,7 +9,8 @@ import type { Kpi } from '../schema/validation';
 // measure is this; how far through its target is it; what does it actually read against what was
 // promised, and which way has it moved since the last reading. Who holds it is not one of them at
 // this distance: an owner is read once a measure has been opened, and a name on every tile is a
-// column of proper nouns between the eye and the figures.
+// column of proper nouns between the eye and the figures. Nor is the objective — the tiles sit
+// under it as a heading (KPIS-B07), and printing it again on each one says the same thing twice.
 //
 // The instrument is an arc rather than a row of figures because the answer is a proportion, and a
 // column of arcs is scanned without reading anything: the short ones are the ones to open. The
@@ -19,25 +20,12 @@ import type { Kpi } from '../schema/validation';
 // saturated ground gives up the contrast the status scale was measured to hold (src/ui/tokens.css).
 // The surface stays neutral so the marks can carry the state.
 export function KpiCard({ kpi }: { kpi: Kpi }) {
-  const t = useTranslations('kpis');
   const labels = useKpiLabels();
-  const objective = kpi.objectiveName
-    ? kpi.objectiveDeleted
-      ? t('archivedObjective', { name: kpi.objectiveName })
-      : kpi.objectiveName
-    : null;
   return (
     <span className="flex min-w-0 flex-1 flex-col gap-4">
       <span className="flex min-w-0 items-start justify-between gap-3">
-        <span className="grid min-w-0 gap-1">
-          <span dir="auto" className="line-clamp-2 text-[15px] leading-snug font-medium">
-            {kpi.name}
-          </span>
-          {objective && (
-            <span dir="auto" className="truncate text-xs text-text-muted">
-              {objective}
-            </span>
-          )}
+        <span dir="auto" className="line-clamp-2 min-w-0 text-[15px] leading-snug font-medium">
+          {kpi.name}
         </span>
         <span
           className={cn(

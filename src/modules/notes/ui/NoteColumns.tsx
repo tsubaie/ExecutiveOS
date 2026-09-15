@@ -17,6 +17,7 @@ export function useNoteColumns(): Column<Note>[] {
       key: 'title',
       head: t('title'),
       primary: true,
+      sort: 'title',
       cell: (note) => <span className="plaintext line-clamp-2 font-medium">{note.title}</span>,
     },
     { key: 'type', head: t('type'), cell: (note) => (note.type ? typeLabel(note.type) : null) },

@@ -610,6 +610,7 @@
     "compareNext": "التالية",
     "statusColumn": "الحالة",
     "achievement": "الإنجاز",
-    "changeColumn": "التغير"
+    "changeColumn": "التغير",
+    "status": "الأسوأ حالة أولاً"
   }
 }

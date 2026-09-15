@@ -21,9 +21,7 @@ function ChangeCell({ kpi }: { kpi: Kpi }) {
   const labels = useKpiLabels();
   const change = kpi.meta.percentChange;
   if (change === null) return null;
-  return (
-    <span className={labels.changeInk(change, kpi.direction)}>{labels.change(change)}</span>
-  );
+  return <span className={labels.changeInk(change, kpi.direction)}>{labels.change(change)}</span>;
 }
 export function useKpiColumns(): Column<Kpi>[] {
   const t = useTranslations('kpis');
@@ -35,13 +33,19 @@ export function useKpiColumns(): Column<Kpi>[] {
       key: 'name',
       head: t('name'),
       primary: true,
+      sort: 'name',
       cell: (kpi) => (
         <span dir="auto" className="line-clamp-2 font-medium">
           {kpi.name}
         </span>
       ),
     },
-    { key: 'status', head: t('statusColumn'), cell: (kpi) => <StatusCell kpi={kpi} /> },
+    {
+      key: 'status',
+      head: t('statusColumn'),
+      sort: 'status',
+      cell: (kpi) => <StatusCell kpi={kpi} />,
+    },
     {
       key: 'current',
       head: t('currentReading'),
@@ -60,15 +64,12 @@ export function useKpiColumns(): Column<Kpi>[] {
       numeric: true,
       cell: (kpi) => kpi.meta.achievement !== null && labels.percent(kpi.meta.achievement),
     },
-    { key: 'change', head: t('changeColumn'), numeric: true, cell: (kpi) => <ChangeCell kpi={kpi} /> },
     {
-      key: 'objective',
-      head: t('objective'),
-      cell: (kpi) => (
-        <span dir="auto" className="truncate">
-          {kpi.objectiveName}
-        </span>
-      ),
+      key: 'change',
+      head: t('changeColumn'),
+      numeric: true,
+      sort: 'change',
+      cell: (kpi) => <ChangeCell kpi={kpi} />,
     },
   ];
 }
