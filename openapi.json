@@ -12372,6 +12372,7 @@
               "default": "default",
               "enum": [
                 "default",
+                "status",
                 "name",
                 "change"
               ],

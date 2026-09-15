@@ -32,7 +32,8 @@ import { useTypeLabel } from './use-note-labels';
 import { NoteRow, NoteTrail } from './NoteRow';
 const importRecord = () => import('./NoteDetail');
 const NoteDetail = dynamic(() => importRecord().then((module) => module.NoteDetail));
-import { CreateNote } from './CreateNote';
+// The create form is only ever shown on demand, so it loads that way too — as Tasks does.
+const CreateNote = dynamic(() => import('./CreateNote').then((module) => module.CreateNote));
 import { AddTagDialog } from './AddTagDialog';
 import { useNoteColumns } from './NoteColumns';
 import { usePrefetch } from '@/ui/entity/use-prefetch';
