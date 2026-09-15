@@ -1,9 +1,10 @@
 'use client';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
 import { PersonList, PersonCreated, personDraft } from '@/modules/people/schema/validation';
 import type { Filters } from '@/ui/entity/types';
+import { listResult } from '@/ui/entity/queries';
 import {
   NoteDetail,
   NoteList,
@@ -24,21 +25,9 @@ export function useNotes(filters: Filters) {
     queryFn: ({ pageParam }) =>
       request(`/notes?${query({ ...filters, cursor: pageParam })}`, NoteList),
     getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
   });
-  const counts: Record<string, number> = list.data?.pages[0]?.meta.counts ?? {};
-  return {
-    items: list.data?.pages.flatMap((page) => page.data) ?? [],
-    counts,
-    pending: list.isPending,
-    error: list.error,
-    more: list.hasNextPage,
-    fetchMore: async () => {
-      await list.fetchNextPage();
-    },
-    refetch: () => {
-      void list.refetch();
-    },
-  };
+  return listResult(list);
 }
 export function useNote(id: string | null, trash: boolean) {
   const detail = useQuery({

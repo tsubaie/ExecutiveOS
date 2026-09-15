@@ -12352,12 +12352,27 @@
           },
           {
             "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "",
+              "enum": [
+                "",
+                "previous",
+                "next"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "sort",
             "required": false,
             "schema": {
               "default": "default",
               "enum": [
                 "default",
+                "status",
                 "name",
                 "change"
               ],

@@ -4,7 +4,7 @@ import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { EntityPanel } from './EntityPanel';
 import type { Entity } from './types';
-import type { Surface } from './EntityControls';
+import type { Surface } from './surface';
 // The shape of a detail (title, a few property rows, a text block) while the item loads, so the
 // panel reads as arriving rather than empty.
 function EntityDetailSkeleton() {

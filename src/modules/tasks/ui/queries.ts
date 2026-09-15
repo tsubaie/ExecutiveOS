@@ -1,10 +1,11 @@
 'use client';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
 import { TaskDetail, TaskList, type TaskCreate, type TaskPatch } from '../schema/validation';
 import { PersonList } from '@/modules/people/schema/validation';
 import type { Filters } from '@/ui/entity/types';
+import { listResult } from '@/ui/entity/queries';
 const response = z.object({ data: TaskDetail });
 export function useTasks(filters: Filters) {
   const query = useInfiniteQuery({
@@ -16,23 +17,10 @@ export function useTasks(filters: Filters) {
         TaskList,
       ),
     getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
     refetchInterval: 30000,
   });
-  const counts: Record<string, number> = query.data?.pages[0]?.meta.counts ?? {};
-  return {
-    items: query.data?.pages.flatMap((page) => page.data) ?? [],
-    counts,
-    defaultView: query.data?.pages[0]?.meta.defaultView,
-    pending: query.isPending,
-    error: query.error,
-    more: query.hasNextPage,
-    fetchMore: async () => {
-      await query.fetchNextPage();
-    },
-    refetch: () => {
-      void query.refetch();
-    },
-  };
+  return { ...listResult(query), defaultView: query.data?.pages[0]?.meta.defaultView };
 }
 // TASKS-B17: the shell badge needs the view counts, not the rows, so it asks for one row and
 // reads `meta.counts`. It shares the documented counts key, so any task mutation refreshes it.

@@ -163,7 +163,11 @@ it('KPIS-B05 KPIS-B04 the derived meta carries the series, the change and the ch
       direction: 'higher',
       frequency: 'quarterly',
       current: { date: '2026-09-09', value: 90 },
-      previous: 75,
+      // The reading before this one and the last reading of the period before it are different
+      // numbers whenever a measure is read more often than it is reported. The change a scorecard
+      // states is the one against the period (KPIS-B04), so 80 is never what it compares to.
+      previous: 80,
+      previousPeriodValue: 75,
       sparkline: [
         { date: '2026-08-09', value: 75 },
         { date: '2026-09-09', value: 90 },
@@ -183,6 +187,47 @@ it('KPIS-B05 KPIS-B04 the derived meta carries the series, the change and the ch
   expect(meta.percentChange).toBeCloseTo(0.2);
   expect(meta.achievement).toBeCloseTo(0.9);
   expect(meta.sparkline).toHaveLength(2);
+});
+// KPIS-B26: one comparison period applies to the whole scorecard, and a shifted reading answers
+// about that period and no other.
+const shiftable = {
+  direction: 'higher',
+  frequency: 'quarterly',
+  current: { date: TODAY, value: 90 },
+  previous: 80,
+  previousPeriodValue: 75,
+  sparkline: [],
+  targets: [
+    { year: 2026, period: 2, value: 60 },
+    { year: 2026, period: 3, value: 100 },
+    { year: 2026, period: 4, value: 120 },
+  ],
+};
+it('KPIS-B26 a shifted reading is taken against its own period, not the nearest plan', () => {
+  const now = deriveMeta(shiftable, { today: TODAY, thresholds });
+  const back = deriveMeta(shiftable, { today: TODAY, thresholds, offset: -1 });
+  const next = deriveMeta(shiftable, { today: TODAY, thresholds, offset: 1 });
+  expect([now.effectiveTarget, back.effectiveTarget, next.effectiveTarget]).toEqual([100, 60, 120]);
+  expect(back.effectiveTargetPeriod).toMatchObject({ year: 2026, period: 2 });
+  expect(next.effectiveTargetPeriod).toMatchObject({ year: 2026, period: 4 });
+  // Everything read off the target moves with it, which is what makes the whole page agree.
+  expect(back.achievement).toBeCloseTo(1.5);
+  expect(back.status).toBe('on_target');
+  expect(next.status).toBe('off_target');
+});
+it('KPIS-B26 a period nobody planned reads as having no target, never as the next one', () => {
+  const only = { ...shiftable, targets: [{ year: 2026, period: 3, value: 100 }] };
+  const back = deriveMeta(only, { today: TODAY, thresholds, offset: -1 });
+  expect(back.effectiveTarget).toBeNull();
+  expect(back.effectiveTargetPeriod).toBeNull();
+  expect(back.status).toBe('no_target');
+  // The effective reading still rolls forward to the nearest plan; only a shifted one does not.
+  expect(deriveMeta(only, { today: TODAY, thresholds }).effectiveTarget).toBe(100);
+});
+it('KPIS-B26 a target already past does not go stale the way the current one does', () => {
+  const old = { ...shiftable, current: { date: '2026-01-05', value: 90 } };
+  expect(deriveMeta(old, { today: TODAY, thresholds }).status).toBe('stale');
+  expect(deriveMeta(old, { today: TODAY, thresholds, offset: -1 }).status).toBe('on_target');
 });
 it('KPIS-I04 thresholds are rejected when a band is ordered against its direction', () => {
   expect(

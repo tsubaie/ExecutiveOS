@@ -3,7 +3,7 @@ import { db, pool } from '@/core/db/client';
 import { migrateDatabase } from '@/core/db/migrate';
 import { writeSetting } from '@/core/db/settings-repo';
 import { addDays } from '@/core/time/days';
-import { periodOf, shiftPeriod } from '@/core/time/kpis';
+import { periodOf, periodRange, shiftPeriod } from '@/core/time/kpis';
 import { KpiListQuery } from '../schema/validation';
 import * as service from '../service';
 import { harness, workspaceToday } from './fixtures';
@@ -46,14 +46,18 @@ it('KPIS-B05 KPIS-B04 KPIS-B08 the record carries the last eight readings, the p
     await harness.reading(kpi.id, addDays(today, -index * 3), 10 + index);
   const before = shiftPeriod(await periodOfToday(), -1, 'quarterly');
   await harness.targets(kpi.id, [{ ...before, targetValue: 5 }]);
+  // The ten readings above all sit inside the current quarter, three days apart. This one closes
+  // the quarter before it, and it is the only figure the change may be measured against
+  // (KPIS-B04): 11 is three days old and belongs to the period being reported, not to the last one.
+  await harness.reading(kpi.id, periodRange(before, 'quarterly').to, 20);
   const detail = await run((ctx) => service.getKpiDetail(ctx, kpi.id));
   expect(detail.meta.sparkline).toHaveLength(8);
   expect(detail.meta.sparkline.at(-1)?.value).toBe(10);
   expect(detail.meta.current).toBe(10);
-  expect(detail.meta.previous).toBe(11);
-  expect(detail.meta.percentChange).toBeCloseTo(-1 / 11);
-  expect(detail.previousPeriod).toMatchObject({ ...before, target: 5 });
-  expect(detail.readings).toHaveLength(10);
+  expect(detail.meta.previous).toBe(20);
+  expect(detail.meta.percentChange).toBeCloseTo(-0.5);
+  expect(detail.previousPeriod).toMatchObject({ ...before, target: 5, value: 20 });
+  expect(detail.readings).toHaveLength(11);
 });
 it('KPIS-I02 KPIS-A05 setting a year writes four quarters and replaces the ones already there', async () => {
   const kpi = await harness.kpi('Margin');

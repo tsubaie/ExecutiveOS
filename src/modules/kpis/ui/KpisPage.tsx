@@ -17,12 +17,19 @@ import { sortOptions } from '@/ui/entity/filters';
 import type { Facet, FiltersDef, View } from '@/ui/entity/types';
 import { Sort } from '../schema/validation';
 import { useKpis, useKpi, useKpiMutations, useKpiFacets } from './queries';
-import { KpiRow, KpiTrail } from './KpiRow';
+import { KpiCard } from './KpiCard';
 import { CreateKpi } from './CreateKpi';
-const KpiRecord = dynamic(() => import('./KpiRecord').then((module) => module.KpiRecord));
+import { useKpiColumns } from './KpiColumns';
+import { usePrefetch } from '@/ui/entity/use-prefetch';
+import { useKpiLabels } from './use-kpi-labels';
+const importRecord = () => import('./KpiRecord');
+const KpiRecord = dynamic(() => importRecord().then((module) => module.KpiRecord));
 export function KpisPage() {
   const t = useTranslations('kpis');
   const mutations = useKpiMutations();
+  const columns = useKpiColumns();
+  const labels = useKpiLabels();
+  usePrefetch(importRecord);
   const filters = useKpiFilters();
   return (
     <EntityPage
@@ -34,11 +41,12 @@ export function KpisPage() {
       useDetail={useKpi}
       mutations={mutations}
       emptyState={{ title: t('emptyTitle'), description: t('emptyDescription'), icon: Target }}
+      group={labels.objective}
       renderers={{
-        rowStyle: 'card',
+        rowStyle: 'grid',
+        columns,
         name: (item) => item.name,
-        row: (item) => <KpiRow kpi={item} />,
-        rowTrail: (item) => <KpiTrail kpi={item} />,
+        row: (item) => <KpiCard kpi={item} />,
         detail: (item, api) => <KpiRecord kpi={item} api={api} />,
         create: (api) => <CreateKpi api={api} />,
       }}
@@ -76,7 +84,20 @@ function useKpiFilters(): FiltersDef {
       ],
     },
   ];
-  return { views: useKpiViews(), facets: options, sort: sortOptions(Sort.options, t) };
+  return {
+    views: useKpiViews(),
+    facets: options,
+    sort: sortOptions(Sort.options, t),
+    mode: {
+      label: t('measuredAgainst'),
+      key: 'period',
+      options: [
+        { id: 'previous', label: t('comparePrevious') },
+        { id: '', label: t('compareCurrent') },
+        { id: 'next', label: t('compareNext') },
+      ],
+    },
+  };
 }
 function useKpiViews(): View[] {
   const t = useTranslations('kpis');

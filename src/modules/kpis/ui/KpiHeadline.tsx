@@ -41,12 +41,32 @@ export function KpiSummary({ kpi }: { kpi: KpiDetail }) {
 // The period is a choice, because a target is: the toggle moves the comparison a period either way
 // and everything the arc says moves with it. It opens on the effective period, so the record starts
 // on the same answer the row the reader came from was showing.
+//
+// Stepping it is deliberately not animated. Capturing or remounting this block to slide it tears
+// the gauge down and stands a new one up, and a chart that re-mounts reads as a chart that is
+// loading — the one thing the reader must not think when they have only asked to compare a
+// quarter. The arc moves between the two values in place instead, which is the movement that
+// actually means something here: the mark travelling from one reading to the other.
 export function KpiHeadline({ kpi }: { kpi: KpiDetail }) {
-  const t = useTranslations('kpis');
-  const labels = useKpiLabels();
   const [chosen, setChosen] = useState(1);
   const view = kpi.periods[chosen] ?? kpi.periods[1];
   if (!view) return null;
+  return (
+    <div className="grid justify-items-center gap-3">
+      <PeriodReading kpi={kpi} view={view} />
+      <PeriodToggle
+        periods={kpi.periods}
+        frequency={kpi.frequency}
+        chosen={chosen}
+        choose={setChosen}
+      />
+    </div>
+  );
+}
+// Everything the chosen period answers: the arc, the two figures it spans, and the status in words.
+function PeriodReading({ kpi, view }: { kpi: KpiDetail; view: PeriodView }) {
+  const t = useTranslations('kpis');
+  const labels = useKpiLabels();
   const spoken =
     view.achievement === null
       ? labels.status(view.status)
@@ -55,7 +75,7 @@ export function KpiHeadline({ kpi }: { kpi: KpiDetail }) {
           status: labels.status(view.status),
         });
   return (
-    <div className="grid justify-items-center gap-3">
+    <>
       <Gauge
         achievement={view.achievement}
         tone={labels.tone(view.status)}
@@ -89,13 +109,7 @@ export function KpiHeadline({ kpi }: { kpi: KpiDetail }) {
       >
         {labels.status(view.status)}
       </span>
-      <PeriodToggle
-        periods={kpi.periods}
-        frequency={kpi.frequency}
-        chosen={chosen}
-        choose={setChosen}
-      />
-    </div>
+    </>
   );
 }
 // One figure under one foot of the arc: what it is, and the number.

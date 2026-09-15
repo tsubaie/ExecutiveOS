@@ -6,6 +6,7 @@ export function resolveUrlState(params: URLSearchParams) {
     view: params.get('view') ?? 'all',
     q: params.get('q') ?? '',
     sort: params.get('sort') ?? '',
+    layout: params.get('layout') ?? '',
   };
 }
 export function changeUrl(params: URLSearchParams, patch: Record<string, string | null>) {
@@ -25,6 +26,8 @@ export function changeUrl(params: URLSearchParams, patch: Record<string, string 
   return result.toString();
 }
 
+// EP-B29: the layout is deliberately absent here. Clearing filters puts the reader back to the
+// unfiltered list; it does not take away the presentation they chose to read it in.
 export function clearEntityFilters(keys: string[]) {
   return Object.fromEntries([
     ...keys.map((key) => [key, null]),

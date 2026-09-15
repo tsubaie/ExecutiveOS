@@ -1,8 +1,9 @@
 'use client';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
 import type { Filters } from '@/ui/entity/types';
+import { listResult } from '@/ui/entity/queries';
 import {
   KpiDetail,
   KpiList,
@@ -34,21 +35,13 @@ export function useKpis(filters: Filters) {
       ),
     getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
     refetchInterval: 60000,
+    // EP-B30: the reader changed which question is being asked of the same records, not which
+    // records they are looking at. Holding the previous page means the rows change where they
+    // stand instead of the list emptying to a placeholder and filling again, which reads as the
+    // page reloading. The first load has nothing to hold and still shows the placeholder.
+    placeholderData: keepPreviousData,
   });
-  return {
-    items: query.data?.pages.flatMap((page) => page.data) ?? [],
-    counts: query.data?.pages[0]?.meta.counts ?? {},
-    defaultView: 'all',
-    pending: query.isPending,
-    error: query.error,
-    more: query.hasNextPage,
-    fetchMore: async () => {
-      await query.fetchNextPage();
-    },
-    refetch: () => {
-      void query.refetch();
-    },
-  };
+  return { ...listResult(query), defaultView: 'all' };
 }
 // The detail endpoint answers with the whole record, so the framework's row object and the panel's
 // readings and targets come from one request and one cache entry.

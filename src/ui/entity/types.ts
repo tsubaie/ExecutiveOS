@@ -20,12 +20,33 @@ export type View = {
   tone?: 'danger' | 'accent' | 'good' | 'warn' | 'bad';
 };
 export type Facet = { key: string; label: string; options: { value: string; label: string }[] };
+// EP-B29: one column of the table presentation. `head` names it, `cell` renders it, and `numeric`
+// is the only styling a module may ask for, because it is the one that carries meaning: a column
+// of figures is read down, so it takes tabular figures and sits against the column's end edge.
+// `primary` marks the column that names the record and carries the control that opens it; exactly
+// one column is primary, and it is the row header.
+export type Column<T> = {
+  key: string;
+  head: string;
+  cell: (item: T) => ReactNode;
+  numeric?: boolean;
+  primary?: boolean;
+  // EP-B31: the id of the sort this column maps to, from the module's own `filters.sort` options.
+  // A column that names one gets a header that orders by it; a column that does not stays plain
+  // text, because a header that looks orderable and is not is worse than one that never offered.
+  sort?: string;
+};
 export type SortOption = { id: string; label: string };
-// Views, facets and sort are declared together; the framework owns their URL state.
+// Views, facets, sort and mode are declared together; the framework owns their URL state.
 export type FiltersDef = {
   views: View[];
   facets?: Facet[];
   sort?: { options: SortOption[]; default: string };
+  // EP-B28: one reading the whole list is taken under, as a segmented control in the toolbar. It
+  // travels with the facets — same URL key, same query, same clearing — but it is not a filter and
+  // does not read as one: it removes nothing from the list, it changes what every row of it says.
+  // Its first option is the default and carries the empty value.
+  mode?: { key: string; label: string; options: SortOption[] };
 };
 export type Filters = { view: string; q: string; sort: string; [key: string]: string };
 export type ListResult<T> = {
@@ -97,7 +118,11 @@ export type EntityPageProps<T extends Entity, P, C> = {
     restore: (id: string, opId: string) => Promise<T>;
   };
   renderers: {
-    rowStyle?: 'card';
+    // 'card' spaces the rows as full-width containers; 'grid' lays them out as tiles in columns
+    // (EP-B27), for a list whose rows are figures rather than sentences. Either way this is the
+    // presentation the reader can switch away from, and `columns` is what they switch to (EP-B29).
+    rowStyle?: 'card' | 'grid';
+    columns?: Column<T>[];
     row: (item: T) => ReactNode;
     // Rendered beside the row button rather than inside it, so it may hold its own control.
     rowTrail?: (item: T) => ReactNode;

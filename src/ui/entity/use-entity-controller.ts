@@ -1,23 +1,23 @@
 'use client';
 import { useState, useEffect, useCallback, type RefObject } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { resolveUrlState, changeUrl, clearEntityFilters } from './url-state';
-import type { Entity, EntityPageProps } from './types';
+import type { Entity, EntityPageProps, FiltersDef } from './types';
 import { useEntityNavigation } from './navigation';
 import { useEntityNeighbors } from './use-entity-neighbors';
 import { useEntityKeyboard } from './use-entity-keyboard';
+import { useEntityLayout } from './use-layout';
 export function useEntityController<T extends Entity, P extends object, C>(
   props: EntityPageProps<T, P, C>,
   root: RefObject<HTMLElement | null>,
 ) {
-  const router = useRouter();
   const path = usePathname();
   const params = useSearchParams();
   const guarded = useEntityNavigation();
   const state = resolveUrlState(new URLSearchParams(params));
   const sort = state.sort || (props.filters.sort?.default ?? '');
   const facets = Object.fromEntries(
-    (props.filters.facets ?? []).map((f) => [f.key, params.get(f.key) ?? '']),
+    keyedFilters(props.filters).map((f) => [f.key, params.get(f.key) ?? '']),
   );
   const list = props.useList({ view: state.view, q: state.q, sort, ...facets });
   const detail = props.useDetail(state.id, state.view === 'trash');
@@ -27,7 +27,7 @@ export function useEntityController<T extends Entity, P extends object, C>(
   const [selecting, setSelecting] = useState(false);
   const [railOpen, setRailOpen] = useState(true);
   const [searchReset, setSearchReset] = useState(0);
-  const navigate = useGuardedNavigate(guarded, path, router);
+  const navigate = useGuardedNavigate(guarded, path);
   const close = useCallback(() => navigate({ id: null, new: null }), [navigate]);
   const neighbors = useEntityNeighbors(list, state.id, navigate);
   useDefaultView(list.defaultView, Boolean(state.id || state.creating));
@@ -43,8 +43,11 @@ export function useEntityController<T extends Entity, P extends object, C>(
     setSelecting,
   });
   const { creating, submit } = useEntityCreate(props.mutations.create, navigate);
+  const offered = Boolean(props.renderers.columns?.length);
+  const { layout, setLayout } = useEntityLayout(props.module, state.layout, offered, navigate);
   return {
-    state: { ...state, sort },
+    state: { ...state, sort, layout },
+    setLayout,
     facets,
     searchReset,
     clearFilters: (id: string | null = null) => {
@@ -67,21 +70,21 @@ export type EntityController<T extends Entity, P extends object, C> = ReturnType
   typeof useEntityController<T, P, C>
 >;
 
-function useGuardedNavigate(
-  guarded: (action: () => void) => void,
-  path: string,
-  router: ReturnType<typeof useRouter>,
-) {
+// EP-B30: every piece of state in this URL — the view, the filters, the open record, the selection
+// — is read by this client surface and by nothing on the server. Routing it through the router made
+// each of them a server round-trip for a route whose output never changes, which is why opening a
+// record fetched the page again before the panel appeared. The native history methods integrate
+// with the router and with `useSearchParams` (Next's linking guide, § Native History API), so back
+// and forward still work and the address bar still says what is on screen, without asking the
+// server to re-render a page it has no say in.
+function useGuardedNavigate(guarded: (action: () => void) => void, path: string) {
   return useCallback(
     (patch: Record<string, string | null>, replace = false) => {
       const query = changeUrl(new URLSearchParams(window.location.search), patch);
-      guarded(() =>
-        router[replace ? 'replace' : 'push'](`${path}${query ? '?' + query : ''}`, {
-          scroll: false,
-        }),
-      );
+      const url = `${path}${query ? '?' + query : ''}`;
+      guarded(() => window.history[replace ? 'replaceState' : 'pushState'](null, '', url));
     },
-    [guarded, path, router],
+    [guarded, path],
   );
 }
 type KeyboardArgs<T extends Entity> = {
@@ -121,16 +124,17 @@ function useControllerKeyboard<T extends Entity>(
 }
 function useDefaultView(defaultView: string | undefined, panel: boolean) {
   const params = useSearchParams();
-  const router = useRouter();
   const path = usePathname();
+  // EP-B30: this is client state, so the history entry is written directly rather than asking the
+  // server to re-render a route whose output it cannot change.
   // sync: record the module default view in the URL once counts arrive.
   useEffect(() => {
     if (!params.has('view') && !params.has('q') && defaultView && !panel) {
       const next = new URLSearchParams(params);
       next.set('view', defaultView);
-      router.replace(`${path}?${next}`, { scroll: false });
+      window.history.replaceState(null, '', `${path}?${next}`);
     }
-  }, [params, router, path, defaultView, panel]);
+  }, [params, path, defaultView, panel]);
 }
 function useEntityCreate<T extends Entity, C>(
   create: (input: C) => Promise<T | null>,
@@ -148,4 +152,11 @@ function useEntityCreate<T extends Entity, C>(
     }
   };
   return { creating, submit };
+}
+
+// EP-B28: everything the list is read with that lives under its own URL key. The mode is not a
+// filter, but its state is kept the same way, so it is collected here rather than threaded
+// separately through the query, the clearing and the cursor.
+function keyedFilters(filters: FiltersDef) {
+  return [...(filters.facets ?? []), ...(filters.mode ? [filters.mode] : [])];
 }

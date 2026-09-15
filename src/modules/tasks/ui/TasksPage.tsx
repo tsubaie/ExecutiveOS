@@ -20,10 +20,13 @@ import { sortOptions } from '@/ui/entity/filters';
 import { View, Priority, Sort } from '../schema/validation';
 import { useTasks, useTask, useTaskMutations, useOwners } from './queries';
 import { TaskRow, TaskTrail } from './TaskRow';
-const TaskDetail = dynamic(() => import('./TaskDetail').then((module) => module.TaskDetail));
+const importRecord = () => import('./TaskDetail');
+const TaskDetail = dynamic(() => importRecord().then((module) => module.TaskDetail));
 import { TaskToggle } from './TaskToggle';
 const CreateTask = dynamic(() => import('./CreateTask').then((module) => module.CreateTask));
 import { GroupTasksDialog, canGroup } from './GroupTasks';
+import { useTaskColumns } from './TaskColumns';
+import { usePrefetch } from '@/ui/entity/use-prefetch';
 // Rail icons, the count strip (featured) and the archive divider per view.
 const presentation: Record<string, Partial<ViewDef>> = {
   all: { icon: ListChecks },
@@ -73,6 +76,8 @@ export function TasksPage() {
   const t = useTranslations('tasks');
   const c = useTranslations('common');
   const mutations = useTaskMutations();
+  const columns = useTaskColumns();
+  usePrefetch(importRecord);
   const filters = useTaskFilters();
   return (
     <EntityPage
@@ -96,6 +101,7 @@ export function TasksPage() {
       ]}
       renderers={{
         rowStyle: 'card',
+        columns,
         name: (task) => task.title,
         row: (task) => <TaskRow task={task} />,
         rowTrail: (task) => <TaskTrail task={task} />,

@@ -1,5 +1,5 @@
 'use client';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
 import type { Filters } from '@/ui/entity/types';
@@ -8,7 +8,8 @@ const response = z.object({ data: Committee });
 export function useCommittees(filters: Filters) {
   const query = useInfiniteQuery({ queryKey: ['committees', 'list', filters], initialPageParam: '',
     queryFn: ({ pageParam }) => request(`/committees?${new URLSearchParams(Object.entries({ ...filters, cursor: pageParam }).filter(([, value]) => value !== ''))}`, CommitteeList),
-    getNextPageParam: (last) => last.meta.nextCursor ?? undefined, refetchInterval: 30000 });
+    getNextPageParam: (last) => last.meta.nextCursor ?? undefined, refetchInterval: 30000,
+    placeholderData: keepPreviousData });
   return { items: query.data?.pages.flatMap((page) => page.data) ?? [], counts: query.data?.pages[0]?.meta.counts ?? {},
     summaryCounts: query.data?.pages[0]?.meta.taskStats, defaultView: 'active', pending: query.isPending, error: query.error,
     more: query.hasNextPage, fetchMore: async () => { await query.fetchNextPage(); }, refetch: () => { void query.refetch(); } };

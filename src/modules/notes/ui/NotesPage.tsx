@@ -30,9 +30,13 @@ import {
 } from './queries';
 import { useTypeLabel } from './use-note-labels';
 import { NoteRow, NoteTrail } from './NoteRow';
-const NoteDetail = dynamic(() => import('./NoteDetail').then((module) => module.NoteDetail));
-import { CreateNote } from './CreateNote';
+const importRecord = () => import('./NoteDetail');
+const NoteDetail = dynamic(() => importRecord().then((module) => module.NoteDetail));
+// The create form is only ever shown on demand, so it loads that way too — as Tasks does.
+const CreateNote = dynamic(() => import('./CreateNote').then((module) => module.CreateNote));
 import { AddTagDialog } from './AddTagDialog';
+import { useNoteColumns } from './NoteColumns';
+import { usePrefetch } from '@/ui/entity/use-prefetch';
 const presentation: Record<string, Partial<ViewDef>> = {
   all: { icon: NotebookPen },
   this_week: { icon: CalendarDays, featured: 'compact', tone: 'accent' },
@@ -105,6 +109,8 @@ export function NotesPage() {
   const t = useTranslations('notes');
   const c = useTranslations('common');
   const mutations = useNoteMutations();
+  const columns = useNoteColumns();
+  usePrefetch(importRecord);
   const filters = useNoteFilters();
   return (
     <EntityPage
@@ -136,6 +142,7 @@ export function NotesPage() {
       ]}
       renderers={{
         rowStyle: 'card',
+        columns,
         name: (note) => note.title,
         row: (note) => <NoteRow note={note} />,
         rowTrail: (note) => <NoteTrail note={note} />,

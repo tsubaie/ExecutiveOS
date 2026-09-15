@@ -3,17 +3,20 @@ import { useTranslations } from 'next-intl';
 import { SlidersHorizontal, ListChecks, PanelLeftClose, CirclePlus, X } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { EntitySearch } from './EntitySearch';
+import { EntityModes } from './EntityModes';
 import { EntityBulkBar } from './EntityBulkBar';
 import { ChoiceSelect } from '@/ui/layout/ChoiceSelect';
 import { useCount } from '@/ui/format';
 import { cn } from '@/ui/cn';
-import type { Entity, EntityPageProps } from './types';
-import type { EntityController } from './use-entity-controller';
-export type Surface<T extends Entity, P extends object, C> = {
-  config: EntityPageProps<T, P, C>;
-  controller: EntityController<T, P, C>;
-};
-// Card lists use a compact desktop toolbar; title and Create remain visible without a rail.
+import type { Entity } from './types';
+import type { Surface } from './surface';
+
+// EP-B22: one header, the same on every entity surface. Create used to move into the views rail
+// for card lists and stay in the bar for everything else, which made where the primary action
+// lives a function of how the rows happen to be drawn — two modules of the same framework putting
+// it in two places. It is at the head of the rail on all of them now, and the bar carries it only
+// where there is no rail to carry it: a heading row with a lone button at the far end leaves a
+// thousand pixels of nothing between the two on a wide screen.
 export function EntityToolbar<T extends Entity, P extends object, C>({
   config,
   controller: c,
@@ -21,8 +24,7 @@ export function EntityToolbar<T extends Entity, P extends object, C>({
   const t = useTranslations('common');
   return (
     <div className="sticky top-0 z-10 space-y-3 border-b bg-surface p-3">
-      {config.renderers.rowStyle === 'card' && c.railOpen && <h1 className="sr-only hidden xl:block">{config.title}</h1>}
-      <div className={cn('flex min-w-0 items-center gap-2', config.renderers.rowStyle === 'card' && c.railOpen && 'xl:hidden')}>
+      <div className="flex min-w-0 items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
@@ -37,7 +39,10 @@ export function EntityToolbar<T extends Entity, P extends object, C>({
           <p className="sr-only">{config.description}</p>
           <EntityToolbarSummary config={config} controller={c} />
         </div>
-        <Button className="shrink-0" onClick={() => c.navigate({ new: '1' })}>
+        <Button
+          className={cn('shrink-0', c.railOpen && 'xl:hidden')}
+          onClick={() => c.navigate({ new: '1' })}
+        >
           <CirclePlus className="size-5" strokeWidth={2.25} />
           {t('create')}
         </Button>
@@ -143,9 +148,8 @@ function EntityToolbarControls<T extends Entity, P extends object, C>({
   const filtered = count > 0 || Boolean(c.state.q) || c.state.view !== 'all';
   return (
     <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
-      {config.renderers.rowStyle === 'card' && c.railOpen && <Button variant="ghost" size="icon" className="hidden xl:inline-flex"
-        aria-label={t('collapseViews')} onClick={() => c.setRailOpen(false)}><PanelLeftClose className="size-4 rtl:rotate-180" /></Button>}
       <div className="flex min-w-0 flex-1 basis-full @lg:basis-0"><EntitySearch key={c.searchReset} query={c.state.q} navigate={c.navigate} /></div>
+      <EntityModes config={config} controller={c} />
       {config.filters.sort && <div className="min-w-0 max-w-44">
         <ChoiceSelect label={t('sort')} value={c.state.sort}
           items={config.filters.sort.options.map((option) => ({ value: option.id, text: option.label, label: option.label }))}

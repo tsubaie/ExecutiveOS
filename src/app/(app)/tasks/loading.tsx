@@ -1,1 +1,1 @@
-export { default } from '@/ui/layout/Loading';
+export { default } from '@/ui/entity/EntityPlaceholder';

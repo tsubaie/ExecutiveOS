@@ -83,7 +83,10 @@
     "clickToWrite": "Click to write…",
     "mentionCreate": "Add “{name}”",
     "sort": "Sort by",
-    "committees": "Committees"
+    "committees": "Committees",
+    "layout": "Layout",
+    "layoutCards": "Cards",
+    "layoutTable": "Table"
   },
   "people": {
     "fullName": "Full name",
@@ -313,7 +316,8 @@
     "subtaskDetails": "Subtask details",
     "subtaskDetailsDescription": "Owner, due date, order and actions for this subtask.",
     "dragHandle": "Drag to reorder",
-    "noteTrashed": "Note in trash"
+    "noteTrashed": "Note in trash",
+    "committeeColumn": "Committee"
   },
   "notes": {
     "title": "Note title",
@@ -373,7 +377,8 @@
     "updated": "Updated {date}",
     "personNotes": "Notes",
     "viewNotes": "View notes ({count})",
-    "noType": "No type"
+    "noType": "No type",
+    "committeeColumn": "Committee"
   },
   "ai": {
     "working": "AI is working. You can leave this page and return later.",
@@ -483,7 +488,8 @@
     "actionRestore": "Restored",
     "actionReorder": "Reordered",
     "actionUpdate": "Updated",
-    "lastNote": "Last note: {date}"
+    "lastNote": "Last note: {date}",
+    "lastNoteColumn": "Last note"
   },
   "kpis": {
     "title": "KPIs",
@@ -516,6 +522,7 @@
     "quarterLabel": "Q{quarter} {year}",
     "noReading": "No reading",
     "targetOf": "Target {value} · {quarter}",
+    "targetProgress": "{percent} of target · {quarter}",
     "targetOfShort": "Target {value}",
     "trendOf": "Recent readings for {name}",
     "achievementOf": "{percent} of target · {status}",
@@ -597,6 +604,13 @@
     "nextYear": "Next year",
     "readingsIntro": "Everything recorded against {name}, newest first.",
     "targetsIntro": "What {name} is measured against, one year at a time.",
-    "maintain": "Maintain"
+    "maintain": "Maintain",
+    "comparePrevious": "Previous",
+    "compareCurrent": "Current",
+    "compareNext": "Next",
+    "statusColumn": "Status",
+    "achievement": "Progress",
+    "changeColumn": "Change",
+    "status": "Worst status first"
   }
 }
