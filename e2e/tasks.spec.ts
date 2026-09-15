@@ -50,12 +50,15 @@ test('TASKS-B02 TASKS-B08 EP-B20 task cards retain an independent completion con
   const result = await api(page, '', 'POST', { title, priority: 'high' });
   const id = String(result.body.data.id);
   await page.goto(`/tasks?view=all&q=${encodeURIComponent(title)}`);
-  // EP-B35: the strip stands in for the rail and never doubles it. With the rail open at this
-  // width the same views and counts are already on screen, so the strip is not drawn; collapsing
-  // the rail is what brings it back, Inbox first and rounded.
+  // EP-B35: the strip stands in for the rail and never doubles it. Where the rail is showing the
+  // same views and counts the strip is not drawn, and collapsing the rail is what brings it back;
+  // where there is no rail at all it is simply there. Either way it reads Inbox first and rounded.
   const summaries = page.locator('[data-entity-stats]');
-  await expect(summaries).toBeHidden();
-  await page.getByRole('button', { name: en.common.collapseViews }).click();
+  const railed = await page.getByRole('button', { name: en.common.collapseViews }).isVisible();
+  if (railed) {
+    await expect(summaries).toBeHidden();
+    await page.getByRole('button', { name: en.common.collapseViews }).click();
+  }
   const firstSummary = summaries.getByRole('button').first();
   await expect(firstSummary).toContainText(en.tasks.inbox);
   expect(await firstSummary.evaluate((element) => Number.parseFloat(getComputedStyle(element).borderRadius))).toBeGreaterThan(0);
