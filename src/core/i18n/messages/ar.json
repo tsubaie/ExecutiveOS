@@ -658,5 +658,29 @@
     "western": "غربية (0-9)",
     "arabicNumerals": "عربية هندية (٠-٩)",
     "unknownDevice": "جهاز غير معروف"
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "empty": "لم يصلك شيء بعد.",
+    "loading": "جارٍ التحميل…",
+    "markAllRead": "تعليم الكل كمقروء",
+    "unread": "{count, plural, zero {الإشعارات، لا يوجد غير مقروء} one {الإشعارات، واحد غير مقروء} two {الإشعارات، اثنان غير مقروءين} few {الإشعارات، # غير مقروءة} many {الإشعارات، # غير مقروءًا} other {الإشعارات، # غير مقروء}}",
+    "someone": "أحدهم",
+    "kind": {
+      "task": {
+        "assigned": "أسند إليك {actor} المهمة {title}",
+        "due_today": "تستحق اليوم: {title}",
+        "overdue": "متأخرة: {title}"
+      },
+      "note": {
+        "mentioned": "أضافك {actor} إلى {title}"
+      },
+      "kpi": {
+        "off_target": "خارج المستهدف: {title}"
+      },
+      "job": {
+        "finished": "انتهت: {title}"
+      }
+    }
   }
 }

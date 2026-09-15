@@ -6,6 +6,7 @@ import {
   isNotNull,
   sql,
   arrayContains,
+  inArray,
   getTableColumns,
   type SQL,
 } from 'drizzle-orm';
@@ -163,4 +164,14 @@ export async function selectPersonForUser(database: Database, userId: string) {
     .from(people)
     .where(and(eq(people.userId, userId), isNull(people.deletedAt)));
   return row ?? null;
+}
+// NOTIF-B04: the accounts behind a set of directory records (ADR 0011). A person with no login —
+// every external person — contributes nothing, which is how they never accumulate a feed.
+export async function selectUserIdsForPeople(database: Database, personIds: readonly string[]) {
+  if (!personIds.length) return [];
+  const rows = await database
+    .select({ userId: people.userId })
+    .from(people)
+    .where(and(inArray(people.id, [...personIds]), isNull(people.deletedAt)));
+  return rows.flatMap((row) => (row.userId ? [row.userId] : []));
 }

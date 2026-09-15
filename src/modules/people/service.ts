@@ -124,3 +124,8 @@ export async function aiPeople(ctx: Context) {
 export async function personForUser(ctx: Context, userId: string) {
   return repo.selectPersonForUser(ctx.db, userId);
 }
+// NOTIF-B04: exposed so an emitting module can turn the people an event concerns into the accounts
+// that can be told about it. Core may not read this table, so the resolution lives here.
+export async function userIdsForPeople(ctx: Context, personIds: readonly string[]) {
+  return repo.selectUserIdsForPeople(ctx.db, personIds);
+}

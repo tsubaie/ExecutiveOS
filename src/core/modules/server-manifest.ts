@@ -38,4 +38,17 @@ export type ServerManifest = {
   // owns what its records are visible to whom and what counts as a match -- notes widen theirs to
   // tags and participant names, and that knowledge does not belong in core.
   search?: SearchProvider;
+  // ADR 0022: the kinds a module emits and how it turns a subject id back into something the feed
+  // can draw. Core owns the rows, the read state and the query; it never learns what a task is.
+  notifications?: NotificationContribution;
+};
+// NOTIF-B06: the feed resolves subjects at read time, and a subject the reader can no longer see
+// resolves to null so the line is dropped rather than rendered as a dead link.
+export type NotificationSubject = { title: string; href: string };
+export type NotificationContribution = {
+  kinds: readonly string[];
+  resolve: (
+    ctx: Context,
+    ids: readonly string[],
+  ) => Promise<Map<string, NotificationSubject>>;
 };

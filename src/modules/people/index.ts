@@ -12,5 +12,6 @@ export {
   restorePerson,
   personNameSql,
   personForUser,
+  userIdsForPeople,
 } from './service';
 export const server: ServerManifest = { id: 'people', search: searchProvider };

@@ -5,6 +5,7 @@ import { Search } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { SearchPalette } from './SearchPalette';
 import { AccountMenu } from './AccountMenu';
+import { NotificationBell } from '@/modules/notifications/ui';
 // 05 § Layout shell: the header carries three things and no fourth — search, notifications and the
 // account. It used to carry the workspace name, which the sidebar foot already says in a heavier
 // weight on the same screen, and two loose preference toggles. A band that spans every page at
@@ -34,6 +35,7 @@ export function ShellHeader({ user }: { user: { name: string; email: string } })
         </kbd>
       </Button>
       <div className="ms-auto flex shrink-0 items-center gap-1">
+        <NotificationBell />
         <AccountMenu user={user} />
       </div>
       <SearchPalette open={searching} onOpenChange={setSearching} />

@@ -658,5 +658,29 @@
     "western": "Western (0-9)",
     "arabicNumerals": "Arabic-Indic (٠-٩)",
     "unknownDevice": "Unrecognised device"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Nothing has arrived for you.",
+    "loading": "Loading…",
+    "markAllRead": "Mark all as read",
+    "unread": "{count, plural, one {Notifications, one unread} other {Notifications, # unread}}",
+    "someone": "Someone",
+    "kind": {
+      "task": {
+        "assigned": "{actor} assigned you {title}",
+        "due_today": "Due today: {title}",
+        "overdue": "Overdue: {title}"
+      },
+      "note": {
+        "mentioned": "{actor} added you to {title}"
+      },
+      "kpi": {
+        "off_target": "Off target: {title}"
+      },
+      "job": {
+        "finished": "Finished: {title}"
+      }
+    }
   }
 }

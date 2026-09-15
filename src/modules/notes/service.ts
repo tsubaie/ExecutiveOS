@@ -12,7 +12,8 @@ import { AppError } from '@/core/http/errors';
 import { routes } from '@/core/routes';
 import type { HomeSection } from '@/core/modules/server-manifest';
 import { dayAt, addDays, bandOf } from '@/core/time/notes';
-import { aiPeople, getPerson } from '@/modules/people';
+import { aiPeople, getPerson, userIdsForPeople } from '@/modules/people';
+import { emit } from '@/core/notifications/emit';
 import en from '@/core/i18n/messages/en.json';
 import ar from '@/core/i18n/messages/ar.json';
 import {
@@ -126,6 +127,7 @@ export async function createNote(ctx: Context, input: NoteCreate) {
     updatedBy: ctx.user.id,
   });
   await repo.insertParticipants(ctx.db, row.id, participantIds, ctx.user.id);
+  await notifyMentioned(ctx, row.id, participantIds);
   await writeAudit(ctx.db, ctx.user.id, 'create', 'note', row.id, toJson(input));
   return getNote(ctx, row.id);
 }
@@ -137,6 +139,22 @@ async function setParticipants(ctx: Context, noteId: string, personIds: string[]
   const added = personIds.filter((personId) => !current.includes(personId));
   await repo.removeParticipants(ctx.db, noteId, removed, id());
   await repo.insertParticipants(ctx.db, noteId, added, ctx.user.id);
+  await notifyMentioned(ctx, noteId, added);
+}
+// NOTIF-B04 `note.mentioned`: the people newly added to a note, in the same transaction as the
+// change (NOTIF-B01). Only the additions — someone who was already on the note has not been added
+// to anything — and only those with an account (NOTIF-B04).
+async function notifyMentioned(ctx: Context, noteId: string, added: readonly string[]) {
+  if (!added.length) return;
+  const note = await repo.selectNote(ctx.db, noteId);
+  if (!note) return;
+  await emit(ctx, {
+    kind: 'note.mentioned',
+    subjectType: 'notes',
+    subjectId: noteId,
+    payload: { actorName: ctx.user.name, title: note.title },
+    to: await userIdsForPeople(ctx, added),
+  });
 }
 export async function patchNote(ctx: Context, noteId: string, input: NotePatch) {
   const note = await requireRevision(ctx, ops, noteId, input.revision);

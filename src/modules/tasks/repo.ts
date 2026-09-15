@@ -261,3 +261,12 @@ export async function searchTasks(database: Database, normalized: string, limit:
     .orderBy(searchRank(tasks.title, normalized), sql`${tasks.dueDate} nulls last`, tasks.title)
     .limit(limit);
 }
+// NOTIF-B06: the titles behind a page of notifications. Trashed tasks are absent, which is what
+// drops their lines from the feed rather than leaving a link to nothing.
+export async function selectTaskSubjects(database: Database, ids: readonly string[]) {
+  if (!ids.length) return [];
+  return database
+    .select({ id: tasks.id, title: tasks.title })
+    .from(tasks)
+    .where(and(inArray(tasks.id, [...ids]), isNull(tasks.deletedAt)));
+}

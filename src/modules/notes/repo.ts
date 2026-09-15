@@ -306,3 +306,11 @@ export async function searchNotes(database: Database, normalized: string, limit:
     .orderBy(searchRank(notes.title, normalized), desc(notes.noteDate))
     .limit(limit);
 }
+// NOTIF-B06: the titles behind a page of notifications; trashed notes are absent.
+export async function selectNoteSubjects(database: Database, ids: readonly string[]) {
+  if (!ids.length) return [];
+  return database
+    .select({ id: notes.id, title: notes.title })
+    .from(notes)
+    .where(and(inArray(notes.id, [...ids]), isNull(notes.deletedAt)));
+}
