@@ -2,6 +2,7 @@
 import { type ReactNode } from 'react';
 import Link from 'next/link';
 import { ShellLinks } from './ShellLinks';
+import { MobileNav } from './MobileNav';
 import { useTranslations } from 'next-intl';
 import { Command } from 'lucide-react';
 import { ShellHeader } from './ShellHeader';
@@ -35,7 +36,7 @@ export function AppShell({
         </main>
       </div>
       <nav className="mobile-navigation fixed inset-x-0 bottom-0 z-30 flex justify-around border-t bg-surface px-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
-        <ShellLinks role={user.role} />
+        <MobileNav role={user.role} />
       </nav>
     </div>
   );

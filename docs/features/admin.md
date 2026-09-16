@@ -49,7 +49,7 @@ Everything an administrator needs to run the installation from the browser: setu
 
 ## Shell placement
 
-- ADMIN-B19 The administration entry sits at the foot of the sidebar, above the workspace identity, not among the everyday modules; it is an occasional destination and the rail reads top-down by frequency of use. It stays absent for members (ADMIN-B03) and keeps its place in the mobile bar, where there is no top and bottom to separate.
+- ADMIN-B19 The administration entry sits at the foot of the sidebar, above the workspace identity, not among the everyday modules; it is an occasional destination and the rail reads top-down by frequency of use. It stays absent for members (ADMIN-B03) and keeps its place in the mobile bar, where there is no top and bottom to separate — behind that bar's More sheet rather than as a slot of its own. The bar carries four destinations and the sheet carries the rest, because seven entries drawn as seven 44 px slots put labels of up to 84 px over their neighbours at every width a phone offers: "People" and "Committees" read as one word and "Administration" ran off the end. Administration is still one press from any screen, which is what this rule protects; what it never meant was a name nobody could read.
 
 ## Deployment configuration
 

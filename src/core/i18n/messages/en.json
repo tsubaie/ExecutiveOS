@@ -40,6 +40,8 @@
     "next": "Next",
     "previous": "Previous",
     "more": "Load more",
+    "navMore": "More",
+    "navMoreDescription": "Everything else in this workspace.",
     "edit": "Edit",
     "back": "Back",
     "confirm": "Confirm",

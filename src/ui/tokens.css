@@ -844,7 +844,9 @@
   visibility: hidden;
 }
 
-.mobile-navigation > a {
+/* The bar's last slot is a button (the More sheet, ADMIN-B19), not a link. */
+.mobile-navigation > a,
+.mobile-navigation > button {
   min-width: 44px;
   min-height: 56px;
   flex-direction: column;

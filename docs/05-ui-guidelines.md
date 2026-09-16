@@ -21,7 +21,7 @@ AppShell
 ├── Sidebar (≥ 1024px)        nav from src/ui/layout/nav.ts
 ├── TopBar                    search · notifications · account
 ├── <main>
-└── BottomNav (< 1024px)      Home · Tasks · Meetings · Notes · Menu
+└── BottomNav (< 1024px)      four destinations in nav order · More (ADMIN-B19)
 ```
 
 - **The TopBar carries three things and no fourth.** Workspace-wide search (`features/search.md`),
