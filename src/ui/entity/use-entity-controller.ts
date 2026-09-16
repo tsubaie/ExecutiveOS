@@ -7,6 +7,7 @@ import { useEntityNavigation } from './navigation';
 import { useEntityNeighbors } from './use-entity-neighbors';
 import { useEntityKeyboard } from './use-entity-keyboard';
 import { useEntityLayout } from './use-layout';
+import { setSearchScope } from '@/ui/layout/search-palette-store';
 export function useEntityController<T extends Entity, P extends object, C>(
   props: EntityPageProps<T, P, C>,
   root: RefObject<HTMLElement | null>,
@@ -31,6 +32,7 @@ export function useEntityController<T extends Entity, P extends object, C>(
   const close = useCallback(() => navigate({ id: null, new: null }), [navigate]);
   const neighbors = useEntityNeighbors(list, state.id, navigate);
   useDefaultView(list.defaultView, Boolean(state.id || state.creating));
+  useSearchScope(props.title, navigate);
   useControllerKeyboard(root, {
     list,
     focused,
@@ -121,6 +123,18 @@ function useControllerKeyboard<T extends Entity>(
       root.current?.querySelector<HTMLElement>('[data-entity-bulk] button')?.focus();
     },
   });
+}
+// SEARCH-B12: while this list is on screen, the workspace palette can hand it a phrase. The list
+// registers what it is called and how to take a query, and withdraws when it leaves the screen.
+function useSearchScope(
+  label: string,
+  navigate: (patch: Record<string, string | null>, replace?: boolean) => void,
+) {
+  // sync: external system — the palette store shared with the shell header.
+  useEffect(() => {
+    setSearchScope({ label, search: (q) => navigate({ q }) });
+    return () => setSearchScope(null);
+  }, [label, navigate]);
 }
 function useDefaultView(defaultView: string | undefined, panel: boolean) {
   const params = useSearchParams();

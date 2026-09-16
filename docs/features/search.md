@@ -72,6 +72,16 @@ Every one is `GENERATED ALWAYS AS (eos_normalize(...)) STORED` with a GIN `gin_t
 - SEARCH-B10 Recent hits: the last 5 records opened from the palette are shown when it opens with
   an empty query, stored per user in `localStorage`. They are a convenience, not state anything
   depends on, and they render as normal hits with their subjects re-resolved.
+- SEARCH-B11 One field, one launcher. The header control is drawn as a button at its natural width
+  — the icon, the word and the key hint — beside the notification bell and the account, and on a
+  phone as the icon alone. It is never drawn as a text field: an entity list already carries the
+  one field on the page (EP-B41), and a second field one row above it made the reader guess which
+  one they meant. `⌘K` / `Ctrl+K` and the control open the same palette.
+- SEARCH-B12 Opened over an entity list, the palette's first row offers the typed phrase to that
+  list — "Search in Tasks for “budget”" — and choosing it closes the palette and filters the list in
+  place with the phrase in its own field and in the URL, as a history entry. The list registers
+  itself with the palette while it is on screen and withdraws when it leaves; on any other page the
+  row is absent. The reverse hand-off, from a list's empty state into the palette, is EP-B41.
 
 ## API
 
@@ -83,8 +93,12 @@ Every one is `GENERATED ALWAYS AS (eos_normalize(...)) STORED` with a GIN `gin_t
 ## UI
 
 - A control in the shell header showing a search icon, the word, and `⌘K` as a hint. It is a button
-  that opens the palette, not an input: the palette owns the input, so there is one place text is
-  typed and no state to hand over.
+  that opens the palette, not an input, and it looks like one (SEARCH-B11): a ghost button at its
+  natural width in the header's end cluster, never a bordered field. The palette owns the input, so
+  there is one place text is typed; the only state handed over is a phrase an entity list's empty
+  state carries in (EP-B41).
+- Over an entity list the first row of the palette is the hand-off to that list (SEARCH-B12), drawn
+  as a hit with the search icon; the module groups follow it.
 - The palette is a dialog from `src/ui/primitives/dialog`, with the input as its heading row and
   hits grouped by module under a module label. Each hit shows title, subtitle and the module's own
   icon from its manifest.
@@ -119,7 +133,10 @@ Every one is `GENERATED ALWAYS AS (eos_normalize(...)) STORED` with a GIN `gin_t
 - `src/core/modules/tests/registry.test.ts`: the search providers are collected like home sections
   and a module declaring none is skipped.
 - Per module, `tests/search.test.ts`: B05 visibility — a soft-deleted record does not match.
-- e2e `search.spec.ts`: A01, A02, A04 in both locales.
+- e2e `search.spec.ts`: A01, A02, A04 in both locales; B11 the launcher's two forms and that both
+  it and the chord open the palette; B12 the hand-off row filters the list on screen.
+- `src/ui/layout/tests/search-palette-store.test.ts`: B12 a list registers and withdraws its scope;
+  EP-B41 the palette opens carrying the phrase a list handed it.
 - Mutation targets: `mergeHits`, `normalizeQuery`, `collectSearchProviders`.
 
 ## Audit items

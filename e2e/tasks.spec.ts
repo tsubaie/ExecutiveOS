@@ -394,7 +394,7 @@ test('EP-B01 EP-B02 search keeps typing focus, debounces and follows browser his
   const title = `UX search ${crypto.randomUUID()}`;
   await api(page, '', 'POST', { title });
   await page.goto('/tasks?view=all');
-  const search = page.getByRole('textbox', { name: en.common.search });
+  const search = page.getByRole('textbox', { name: en.tasks.searchList });
   await search.pressSequentially(title, { delay: 10 });
   await expect(search).toBeFocused();
   await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe(title);

@@ -2,6 +2,7 @@
 import { useTranslations } from 'next-intl';
 import { Inbox } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
+import { openSearchPalette } from '@/ui/layout/search-palette-store';
 import { cn } from '@/ui/cn';
 import type { Entity } from './types';
 import type { Surface } from './surface';
@@ -57,9 +58,18 @@ export function EntityEmpty<T extends Entity, P extends object, C>({
       <Icon className="size-7 text-text-muted" />
       <h2 className="text-base font-medium">{copy.title}</h2>
       <p className="max-w-sm text-sm text-text-muted">{copy.description}</p>
-      <Button variant="outline" className="mt-1" onClick={copy.action.onSelect}>
-        {copy.action.label}
-      </Button>
+      <div className="mt-1 flex flex-wrap justify-center gap-2">
+        <Button variant="outline" onClick={copy.action.onSelect}>
+          {copy.action.label}
+        </Button>
+        {/* EP-B41: a phrase this list does not contain may live in another module. The empty state
+            says what to do next and carries the phrase over, so nobody retypes it one row up. */}
+        {c.state.q && (
+          <Button variant="ghost" onClick={() => openSearchPalette(c.state.q)}>
+            {t('searchWorkspace')}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

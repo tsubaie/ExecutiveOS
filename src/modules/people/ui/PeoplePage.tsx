@@ -16,6 +16,7 @@ export function PeoplePage() {
     <EntityPage
       module="people"
       title={t('people')}
+      searchLabel={p('searchList')}
       description={p('directoryDescription')}
       filters={{ views: View.options.map((view) => ({ id: view, label: t(view) })) }}
       useList={usePeople}

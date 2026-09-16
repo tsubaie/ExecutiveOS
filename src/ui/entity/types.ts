@@ -104,6 +104,10 @@ export type EntityPageProps<T extends Entity, P, C> = {
   module: string;
   title: string;
   description: string;
+  // EP-B41: what the list's own search field is called — "Search tasks", in the module's words.
+  // The shell header carries a workspace search one row above it, so the field names its module
+  // and reads as a filter on this list rather than as a second copy of that.
+  searchLabel: string;
   filters: FiltersDef;
   bulkActions?: BulkAction<T>[];
   emptyState?: Partial<EmptyState>;

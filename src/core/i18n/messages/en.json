@@ -1,5 +1,8 @@
 {
   "common": {
+    "searchOpen": "Search",
+    "searchWorkspace": "Search the workspace",
+    "searchScope": "Search in {module} for “{query}”",
     "brand": "ExecutiveOS",
     "tagline": "A clear view of your office.",
     "home": "Home",
@@ -102,6 +105,7 @@
     "searchShortcutMac": "⌘ K"
   },
   "people": {
+    "searchList": "Search people",
     "fullName": "Full name",
     "displayName": "Display name",
     "honorific": "Honorific",
@@ -272,6 +276,7 @@
     "ai_failed": "AI request failed. Please try again."
   },
   "tasks": {
+    "searchList": "Search tasks",
     "title": "Task title",
     "description": "Description",
     "status": "Status",
@@ -338,6 +343,7 @@
     "completedWithSubtasksToast": "Task completed with {count, plural, one {# subtask} other {# subtasks}}"
   },
   "notes": {
+    "searchList": "Search notes",
     "title": "Note title",
     "content": "Content",
     "type": "Type",
@@ -471,6 +477,7 @@
     "updated": "Updated {count} notes."
   },
   "committees": {
+    "searchList": "Search committees",
     "title": "Committees",
     "committee": "Committee",
     "intro": "Manage committees and their linked tasks and notes.",
@@ -517,6 +524,7 @@
     "deletedToast": "Committee moved to trash"
   },
   "kpis": {
+    "searchList": "Search KPIs",
     "title": "KPIs",
     "intro": "Objectives, measures, readings and quarterly targets.",
     "name": "Name",

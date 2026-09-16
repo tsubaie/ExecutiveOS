@@ -115,7 +115,7 @@ function EntityToolbarControls<T extends Entity, P extends object, C>({
   return (
     <div className="flex min-w-0 flex-[2_1_30rem] flex-wrap items-center gap-2">
       <div className="flex min-w-0 flex-1 basis-56">
-        <EntitySearch key={c.searchReset} query={c.state.q} navigate={c.navigate} />
+        <EntitySearch key={c.searchReset} query={c.state.q} label={config.searchLabel} navigate={c.navigate} />
       </div>
       {/* EP-B39: the settings group wraps and gives width back like everything else in the bar. It
           was `shrink-0`, which on a module carrying a period as well as a sort (KPIs) made the

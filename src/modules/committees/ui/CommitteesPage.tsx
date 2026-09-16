@@ -18,7 +18,7 @@ export function CommitteesPage() {
   const mutations = useCommitteeMutations();
   const columns = useCommitteeColumns();
   usePrefetch(importRecord);
-  return <EntityPage module="committees" title={t('title')} description={t('intro')}
+  return <EntityPage module="committees" title={t('title')} searchLabel={t('searchList')} description={t('intro')}
     filters={{ views: [
       { id: 'active', label: t('active'), icon: Landmark }, { id: 'all', label: t('all'), icon: Landmark },
       { id: 'overdue', label: t('overdue'), icon: AlertCircle, featured: true, tone: 'danger' },
