@@ -1,8 +1,8 @@
 # Feature: Search (workspace-wide)
 
 **Status:** accepted
-**Spec reviewed:** 2026-09-15
-**Implementation verified:** not yet
+**Spec reviewed:** 2026-09-16
+**Implementation verified:** 2026-09-16 for B01, B03, B04 (unit), B08, B11, B12 (browser); B02, B05–B07, B09, B10 and A01–A04 remain open
 **Owner module:** `src/core/search`
 
 ## Purpose

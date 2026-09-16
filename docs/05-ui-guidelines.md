@@ -32,6 +32,11 @@ AppShell
   (the entity framework's bar owns it, EP-B07), breadcrumbs have nowhere to go in a two-level
   product, and the workspace name is identity, not navigation, so it stays in the sidebar with the
   reader's own.
+- **The search control is a launcher, not a field** (SEARCH-B11): a ghost button at its natural
+  width in the header's end cluster — icon, the word, the key hint — and the icon alone on a phone.
+  The only search field on an entity page is the list's own, which names its module ("Search
+  tasks", EP-B41); the two hand a phrase to each other rather than asking for it twice (EP-B41,
+  SEARCH-B12).
 - Theme and locale move into the account menu. They are the reader's preferences, they are set
   once, and `features/account.md` owns the page that also sets them; two controls permanently on
   screen for a decision made twice a year is the wrong trade against the height.
