@@ -2,7 +2,13 @@
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
-import { TaskDetail, TaskList, type TaskCreate, type TaskPatch } from '../schema/validation';
+import {
+  TaskDetail,
+  TaskList,
+  Completed,
+  type TaskCreate,
+  type TaskPatch,
+} from '../schema/validation';
 import { PersonList } from '@/modules/people/schema/validation';
 import type { Filters } from '@/ui/entity/types';
 import { listResult } from '@/ui/entity/queries';
@@ -76,6 +82,10 @@ export function useTaskMutations() {
     patch: (id: string, revision: number, patch: Omit<TaskPatch, 'revision'>, key: string) =>
       write(`/tasks/${id}`, z.json().parse({ ...patch, revision }), 'PATCH', key),
     create: (input: TaskCreate) => write('/tasks', input),
+    // The caller reports the deletion the moment the server has taken it: the row is already gone
+    // from the screen, and a receipt that arrives once five query trees have refetched arrives
+    // after the reader has stopped looking for it. The invalidation still runs, it just no longer
+    // stands between the delete and the word about it.
     remove: async (id: string, revision: number) => {
       try {
         return await request(`/tasks/${id}`, z.object({ opId: z.string() }), {
@@ -83,12 +93,25 @@ export function useTaskMutations() {
           body: { revision },
         });
       } finally {
-        await refresh();
+        void refresh();
       }
     },
     restore: (id: string, opId: string) => write(`/tasks/${id}/restore`, { opId }),
     action: (id: string, action: string, body: z.infer<ReturnType<typeof z.json>>) =>
       write(`/tasks/${id}/${action}`, body),
+    // TASKS-B02: completing hands back the operation the toast's Undo will address, so the caller
+    // keeps the envelope rather than the task alone.
+    complete: async (id: string, revision: number, force: boolean) => {
+      try {
+        return await request(`/tasks/${id}/complete`, Completed, {
+          method: 'POST',
+          body: { revision, force },
+        });
+      } finally {
+        void refresh();
+      }
+    },
+    undoComplete: (id: string, opId: string) => write(`/tasks/${id}/complete/undo`, { opId }),
     group: (title: string, childIds: string[]) => write('/tasks/group', { title, childIds }),
     reorder: (parentId: string, orderedIds: string[], revisions: Record<string, number>) =>
       write('/tasks/reorder', { parentId, orderedIds, revisions }, 'PATCH'),

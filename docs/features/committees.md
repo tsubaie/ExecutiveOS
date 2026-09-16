@@ -22,7 +22,7 @@ See `03-data-model.md` § committees. Invariants:
 - COMM-B01 **Create**: name required; scope default `internal`; status `active`.
 - COMM-B02 **List** cards: name, scope chip, ownership, open tasks, overdue tasks, next meeting date, last note date. Views `active` (default), `archived`, `all`, `trash`. Facets scope, `linkedTo`. Search name, description, ownership. Sort name (default), open tasks desc, next meeting asc, manual.
 - COMM-B03 **Detail** tabs: Tasks (`tasks?committeeId=` with band grouping, "+ Task" pre-filled), Meetings (`meetings?committeeId=` upcoming then past, "+ Meeting" pre-filled), Notes (`notes?committeeId=`; one row per note), Activity (`GET /committees/:id/activity`: audit entries where `entity` is the committee or an entity whose structural column references it, newest first, cursor paged, 50 per page; visible to all members; private tables never appear), Linked section.
-- COMM-B04 **Archive / unarchive / delete / restore**; reorder by drag with keyboard alternative (`PATCH /committees/reorder`).
+- COMM-B04 **Archive / unarchive / delete / restore**; reorder by drag with keyboard alternative (`PATCH /committees/reorder`). Deletion is offered from the shared entity footer (EP-B37) and is undoable from its toast (EP-B36), not confirmed.
 - COMM-B05 **Stats** computed in one aggregated query over tasks, meetings, notes.
 - COMM-B06 **Home**: the module provides the Home page's "Committees with open work" section through its
   server manifest (HOME-B01, HOME-B03): active, non-deleted committees carrying at least one open top-level

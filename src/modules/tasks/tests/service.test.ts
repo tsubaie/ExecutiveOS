@@ -104,7 +104,7 @@ it('TASKS-I03 TASKS-B02 TASKS-A03 completion refuses open children, force comple
   await expect(
     run((ctx) => service.patchTask(ctx, parent.id, { revision: 1, status: 'completed' })),
   ).rejects.toMatchObject({ code: 'rule_violation', details: { rule: 'TASKS-B02' } });
-  const complete = await run((ctx) => service.completeTask(ctx, parent.id, 1, true));
+  const { task: complete } = await run((ctx) => service.completeTask(ctx, parent.id, 1, true));
   expect(complete.completedAt).not.toBeNull();
   expect(complete.subtasks.every((task) => task.status === 'completed')).toBe(true);
   const reopened = await run((ctx) => service.reopenTask(ctx, parent.id, complete.revision));
@@ -265,4 +265,62 @@ it('TASKS-I04 TASKS-I05 restoring after reorder never collides with active sibli
   expect(detail.deletedSubtasks.map((task) => task.id)).toEqual([one.id]);
   await run((ctx) => service.restoreTask(ctx, one.id, deletion.opId));
   expect((await run((ctx) => service.getTask(ctx, parent.id))).subtasks).toHaveLength(3);
+});
+it('TASKS-B02 undo restores the exact status a task was completed from, not next_action', async () => {
+  // `reopen` always writes `next_action`, so it cannot undo a completion: a task ticked off in the
+  // inbox would come back as the next action, which is a status the reader never chose.
+  const task = await create('Read the board pack', { status: 'waiting_on' });
+  const { task: done, opId } = await run((ctx) => service.completeTask(ctx, task.id, 1));
+  expect(done.status).toBe('completed');
+  const undone = await run((ctx) => service.undoCompleteTask(ctx, task.id, opId));
+  expect(undone.status).toBe('waiting_on');
+  expect(undone.completedAt).toBeNull();
+});
+it('TASKS-B02 undoing a forced completion restores only the rows that completion changed', async () => {
+  const parent = await create('Assemble the pack', { status: 'someday' });
+  const open = await create('Collect minutes', { parentId: parent.id, status: 'inbox' });
+  const already = await create('Book the room', { parentId: parent.id, status: 'next_action' });
+  // A separate operation completes one child first; undoing the parent's must leave it alone.
+  await run((ctx) => service.completeTask(ctx, already.id, 1));
+  const fresh = await run((ctx) => service.getTask(ctx, parent.id));
+  const { opId } = await run((ctx) => service.completeTask(ctx, parent.id, fresh.revision, true));
+  const undone = await run((ctx) => service.undoCompleteTask(ctx, parent.id, opId));
+  expect(undone.status).toBe('someday');
+  const byId = new Map(undone.subtasks.map((child) => [child.id, child.status]));
+  expect(byId.get(open.id)).toBe('inbox');
+  expect(byId.get(already.id)).toBe('completed');
+});
+it('TASKS-B02 undo is refused once a completed row has moved on, and writes nothing', async () => {
+  const task = await create('Sign the minutes', { status: 'inbox' });
+  const { task: done, opId } = await run((ctx) => service.completeTask(ctx, task.id, 1));
+  await run((ctx) => service.patchTask(ctx, task.id, { revision: done.revision, priority: 'high' }));
+  await expect(run((ctx) => service.undoCompleteTask(ctx, task.id, opId))).rejects.toMatchObject({
+    code: 'conflict',
+    details: { reason: 'state' },
+  });
+  const current = await run((ctx) => service.getTask(ctx, task.id));
+  expect(current.status).toBe('completed');
+  expect(current.priority).toBe('high');
+});
+it('TASKS-B02 a repeated undo replays, and an operation that is not this task is refused', async () => {
+  const task = await create('Circulate the agenda', { status: 'inbox' });
+  const other = await create('Unrelated');
+  const { opId } = await run((ctx) => service.completeTask(ctx, task.id, 1));
+  const first = await run((ctx) => service.undoCompleteTask(ctx, task.id, opId));
+  const second = await run((ctx) => service.undoCompleteTask(ctx, task.id, opId));
+  expect(second.status).toBe(first.status);
+  expect(second.revision).toBe(first.revision);
+  await expect(run((ctx) => service.undoCompleteTask(ctx, other.id, opId))).rejects.toMatchObject({
+    code: 'conflict',
+    details: { reason: 'state' },
+  });
+});
+it('TASKS-B02 a completion and its undo are audited under one operation id', async () => {
+  const { auditLog } = await import('@/core/db/system-schema');
+  const task = await create('Approve the budget', { status: 'inbox' });
+  const { opId } = await run((ctx) => service.completeTask(ctx, task.id, 1));
+  await run((ctx) => service.undoCompleteTask(ctx, task.id, opId));
+  const rows = await db().select().from(auditLog).where(eq(auditLog.opId, opId));
+  const actions = rows.map((row) => row.action).sort();
+  expect(actions).toEqual(['complete', 'undo_complete']);
 });

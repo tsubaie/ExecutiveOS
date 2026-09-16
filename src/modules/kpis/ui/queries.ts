@@ -94,12 +94,24 @@ function useWrite() {
 }
 export function useKpiMutations() {
   const write = useWrite();
+  const client = useQueryClient();
   return {
     create: async (input: KpiCreate) => (await write('/kpis', record, z.json().parse(input))).data,
     patch: async (id: string, revision: number, fields: Omit<KpiPatch, 'revision'>, key: string) =>
       (await write(`/kpis/${id}`, record, z.json().parse({ ...fields, revision }), 'PATCH', key))
         .data,
-    remove: (id: string, revision: number) => write(`/kpis/${id}`, opId, { revision }, 'DELETE'),
+    // The delete reports itself the moment the server has taken it. Awaiting the invalidation here
+    // put every dependent query's refetch between the press and the panel closing, so the record
+    // sat on screen for a second after it was gone. The refresh still runs, just not in the way.
+    remove: async (id: string, revision: number) => {
+      try {
+        return await request(`/kpis/${id}`, opId, { method: 'DELETE', body: { revision } });
+      } finally {
+        void Promise.all(
+          touched.map((queryKey) => client.invalidateQueries({ queryKey: [queryKey] })),
+        );
+      }
+    },
     restore: async (id: string, opId: string) =>
       (await write(`/kpis/${id}/restore`, record, { opId })).data,
   };

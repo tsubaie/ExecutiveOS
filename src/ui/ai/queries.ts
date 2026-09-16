@@ -5,6 +5,18 @@ import { request } from '@/core/http/client';
 import { AiAvailability, AiCapability } from '@/core/config/ai-capabilities';
 import { AiJobView } from '@/core/config/ai-review-schema';
 const applyResponse = z.object({ data: z.object({ ids: z.array(z.uuid()) }) });
+// What the availability answer means for this one capability, kept out of the hook so the hook does
+// not carry two more branches for it.
+function availabilityOf(
+  data: z.infer<typeof AiAvailability> | undefined,
+  capability: z.infer<typeof AiCapability>,
+) {
+  return {
+    enabled: data?.capabilities.includes(capability) ?? false,
+    configured: data?.configured ?? false,
+    canConfigure: data?.canConfigure ?? false,
+  };
+}
 export function useAiReview(
   capability: z.infer<typeof AiCapability>,
   entityId: string,
@@ -47,7 +59,8 @@ export function useAiReview(
     onSuccess: refresh,
   });
   return {
-    enabled: availability.data?.data.capabilities.includes(capability) ?? false,
+    capability,
+    ...availabilityOf(availability.data?.data, capability),
     cancel,
     cancelling: waiting || persistedCancellation(current, start.isPending),
     requestCancel,

@@ -1,5 +1,5 @@
 'use client';
-import { useId, useState, type KeyboardEvent } from 'react';
+import { useId, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import { Input } from '@/ui/primitives/input';
@@ -7,9 +7,22 @@ import { Tags, Tag } from '../schema/validation';
 import { useTags } from './queries';
 import { Chip } from './NoteRow';
 export const TAG_LIMIT = 10;
+// The label row carries whatever acts on this field, so a tag suggestion sits with the tags it
+// fills rather than in a panel of its own further down the record (NOTES-B22).
+function TagsLabel({ action }: { action?: ReactNode }) {
+  const t = useTranslations('notes');
+  return (
+    <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+      <span className="text-sm font-medium">{t('tags')}</span>
+      {action}
+    </div>
+  );
+}
 // Chips with a remove button and one input that adds on Enter or comma, with the workspace's
 // existing tags as suggestions. Overflow beyond ten is blocked with a count (NOTES-I03).
-export function TagsEditor({ tags, save }: { tags: string[]; save: (tags: string[]) => void }) {
+// `action` is rendered on the label row, beside the field it acts on.
+type TagsEditorProps = { tags: string[]; save: (tags: string[]) => void; action?: ReactNode };
+export function TagsEditor({ tags, save, action }: TagsEditorProps) {
   const t = useTranslations('notes');
   const listId = useId();
   const suggestions = useTags();
@@ -36,7 +49,7 @@ export function TagsEditor({ tags, save }: { tags: string[]; save: (tags: string
   };
   return (
     <div className="grid gap-2">
-      <span className="text-sm font-medium">{t('tags')}</span>
+      <TagsLabel action={action} />
       <div className="flex flex-wrap items-center gap-1.5">
         <TagChips tags={tags} remove={(tag) => save(tags.filter((item) => item !== tag))} />
         <Input

@@ -1,10 +1,10 @@
 'use client';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
-import { useDateTime, useRelativeTime } from '@/ui/format';
+import { EntityFooter, EntityUpdated } from '@/ui/entity/EntityFooter';
 import type { DetailApi } from '@/ui/entity/types';
 import { KpiHeadline, KpiSummary, LatestNote } from './KpiHeadline';
 import { KpiTrend } from './KpiTrend';
@@ -90,27 +90,10 @@ function Fold({ title, children }: { title: string; children: ReactNode }) {
     </details>
   );
 }
-// Freshness at the start, the destructive action at the end, out of the way of the record but
-// still one click away — the footer every other entity closes with.
 function KpiFooter({ updatedAt, remove }: { updatedAt: string; remove: (() => void) | null }) {
-  const t = useTranslations('kpis');
-  const c = useTranslations('common');
-  const dateTime = useDateTime();
-  const relative = useRelativeTime();
   return (
-    <footer className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3 text-xs text-text-muted">
-      <span title={dateTime(updatedAt)}>{t('updated', { date: relative(updatedAt) })}</span>
-      {remove && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-text-muted hover:text-danger focus-visible:text-danger"
-          onClick={remove}
-        >
-          <Trash2 className="size-3.5" aria-hidden={true} />
-          {c('delete')}
-        </Button>
-      )}
-    </footer>
+    <EntityFooter remove={remove}>
+      <EntityUpdated at={updatedAt} />
+    </EntityFooter>
   );
 }

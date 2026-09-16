@@ -12,7 +12,7 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { tasks } from './schema/db';
+import { tasks, taskCompletions, taskCompletionItems } from './schema/db';
 import type { Database } from '@/core/db/client';
 import { normalize } from '@/core/search/normalize';
 import { searchMatch, searchRank } from '@/core/db/search';
@@ -269,4 +269,42 @@ export async function selectTaskSubjects(database: Database, ids: readonly strin
     .select({ id: tasks.id, title: tasks.title })
     .from(tasks)
     .where(and(inArray(tasks.id, [...ids]), isNull(tasks.deletedAt)));
+}
+
+// TASKS-B02 completion operations. The lock is taken on the operation row itself so two Undos of
+// the same completion serialize against each other and the second sees the first's result.
+export async function insertCompletion(
+  database: Database,
+  values: typeof taskCompletions.$inferInsert,
+) {
+  const [row] = await database.insert(taskCompletions).values(values).returning();
+  if (!row) throw new Error('Completion insert failed');
+  return row;
+}
+export async function insertCompletionItems(
+  database: Database,
+  rows: (typeof taskCompletionItems.$inferInsert)[],
+) {
+  if (rows.length) await database.insert(taskCompletionItems).values(rows);
+}
+export async function lockCompletion(database: Database, completionId: string) {
+  const [row] = await database
+    .select()
+    .from(taskCompletions)
+    .where(eq(taskCompletions.id, completionId))
+    .for('update');
+  return row;
+}
+export function selectCompletionItems(database: Database, completionId: string) {
+  return database
+    .select()
+    .from(taskCompletionItems)
+    .where(eq(taskCompletionItems.completionId, completionId))
+    .orderBy(asc(taskCompletionItems.taskId));
+}
+export async function markCompletionUndone(database: Database, completionId: string) {
+  await database
+    .update(taskCompletions)
+    .set({ status: 'undone', undoneAt: new Date() })
+    .where(eq(taskCompletions.id, completionId));
 }

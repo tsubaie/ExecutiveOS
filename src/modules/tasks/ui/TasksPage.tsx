@@ -103,6 +103,7 @@ export function TasksPage() {
         rowStyle: 'card',
         columns,
         name: (task) => task.title,
+        deletedMessage: t('deletedToast'),
         row: (task) => <TaskRow task={task} />,
         rowTrail: (task) => <TaskTrail task={task} />,
         detail: (task, api) => <TaskDetail task={task} api={api} />,

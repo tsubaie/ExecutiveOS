@@ -15,6 +15,7 @@ import { Property } from '@/ui/layout/Property';
 import { SaveStatus } from '@/ui/layout/SaveStatus';
 import type { Task, TaskDetail } from '../schema/validation';
 import { useTaskMutations, useOwners } from './queries';
+import { useUndoToast } from '@/ui/layout/toast/use-undo-toast';
 import { useTaskOperation } from './use-task-operation';
 import { OwnerSelect, DueDateField } from './TaskPickers';
 // The eye button opens a dialog with the subtask's owner, due date, order, conversion and trash.
@@ -56,7 +57,12 @@ export function SubtaskActions({ task, parent }: { task: Task; parent: TaskDetai
           <DialogDescription>{t('subtaskDetailsDescription')}</DialogDescription>
           {operation.error && <ErrorPanel error={operation.error} />}
           <SubtaskFields task={task} operation={operation} />
-          <SubtaskDialogFooter task={task} parent={parent} operation={operation} />
+          <SubtaskDialogFooter
+            task={task}
+            parent={parent}
+            operation={operation}
+            close={() => setOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </>
@@ -97,10 +103,12 @@ function SubtaskDialogFooter({
   task,
   parent,
   operation,
+  close,
 }: {
   task: Task;
   parent: TaskDetail;
   operation: Operation;
+  close: () => void;
 }) {
   const t = useTranslations('tasks');
   const mutations = useTaskMutations();
@@ -118,71 +126,50 @@ function SubtaskDialogFooter({
         <CornerUpRight className="size-4" />
         {t('convert')}
       </Button>
-      <SubtaskDelete task={task} operation={operation} />
+      <SubtaskDelete task={task} operation={operation} close={close} />
       <span className="flex-1" />
       <SaveStatus state={operation.state} />
     </DialogFooter>
   );
 }
-function SubtaskDelete({ task, operation }: { task: Task; operation: Operation }) {
-  const c = useTranslations('common');
-  const [deleting, setDeleting] = useState(false);
-  return (
-    <>
-      <Button
-        variant="ghost"
-        className="text-danger hover:text-danger"
-        disabled={operation.pending}
-        onClick={() => setDeleting(true)}
-      >
-        <Trash2 className="size-4" />
-        {c('delete')}
-      </Button>
-      <SubtaskDeleteDialog
-        task={task}
-        open={deleting}
-        setOpen={setDeleting}
-        operation={operation}
-      />
-    </>
-  );
-}
-function SubtaskDeleteDialog({
+// TASKS-B08: trashing a subtask is reversible, so it runs on the press and reports itself with an
+// Undo beside the list. The dialog it replaces asked a question whose own answer was "you can
+// restore them later", and it asked once the reader had already decided.
+function SubtaskDelete({
   task,
-  open,
-  setOpen,
   operation,
+  close,
 }: {
   task: Task;
-  open: boolean;
-  setOpen: (open: boolean) => void;
   operation: Operation;
+  close: () => void;
 }) {
+  const t = useTranslations('tasks');
   const c = useTranslations('common');
   const mutations = useTaskMutations();
+  const undoToast = useUndoToast();
+  const trash = async () => {
+    const { opId } = await mutations.remove(task.id, task.revision);
+    // The dialog goes first: it belongs to a subtask that no longer exists, and its backdrop would
+    // otherwise sit over the receipt that offers the way back.
+    close();
+    undoToast({
+      message: t('subtaskDeletedToast'),
+      undo: async () => {
+        await mutations.restore(task.id, opId);
+      },
+    });
+    return { opId };
+  };
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogTitle>{c('delete')}</DialogTitle>
-        <DialogDescription>{c('deleteDescription', { name: task.title })}</DialogDescription>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            {c('cancel')}
-          </Button>
-          <Button
-            variant="destructive"
-            disabled={operation.pending}
-            onClick={() =>
-              void operation.run(
-                () => mutations.remove(task.id, task.revision),
-                () => setOpen(false),
-              )
-            }
-          >
-            {c('delete')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Button
+      variant="ghost"
+      className="text-danger hover:text-danger"
+      disabled={operation.pending}
+      onClick={() => void operation.run(trash)}
+    >
+      <Trash2 className="size-4" />
+      {c('delete')}
+    </Button>
   );
 }

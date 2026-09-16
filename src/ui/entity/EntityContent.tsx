@@ -54,6 +54,7 @@ export function EntityContent<T extends Entity, P extends object, C>({
       mutations={config.mutations}
       render={config.renderers.detail}
       name={config.renderers.name(c.detail.data)}
+      deletedMessage={config.renderers.deletedMessage}
       close={c.close}
       reload={c.detail.refetch}
       move={c.move}

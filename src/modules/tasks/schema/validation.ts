@@ -117,6 +117,10 @@ export const TaskList = z.object({
 });
 export const Revision = z.strictObject({ revision: z.number().int().positive() });
 export const Complete = Revision.extend({ force: z.boolean().default(false) });
+// TASKS-B02: completing returns the operation's id beside the task, and Undo addresses it the same
+// way a restore addresses a deletion, so the two reversible actions share one shape.
+export const Completed = z.object({ data: TaskDetail, meta: z.object({ opId: z.uuid() }) });
+export const Operation = z.strictObject({ opId: z.uuid() });
 export const Move = Revision.extend({ parentId: z.uuid() });
 const ids = z
   .array(z.uuid())

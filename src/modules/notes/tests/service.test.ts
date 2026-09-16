@@ -164,7 +164,7 @@ it('NOTES-I05 TASKS-B16 NOTES-B09 attaches only open, top-level, unlinked tasks 
       patchTask(ctx, existing.id, TaskPatch.parse({ revision: 2, sourceNoteId: second.id })),
     ),
   ).rejects.toMatchObject({ details: { rule: 'TASKS-B16' } });
-  const done = await run((ctx) => completeTask(ctx, born.id, 1));
+  const { task: done } = await run((ctx) => completeTask(ctx, born.id, 1));
   await expect(
     run((ctx) =>
       patchTask(ctx, done.id, TaskPatch.parse({ revision: 2, sourceNoteId: second.id })),

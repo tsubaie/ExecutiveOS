@@ -43,6 +43,17 @@ export async function availableCapabilities(ctx: Context) {
     return [];
   }
 }
+// Whether this workspace means to use AI at all: a provider credential exists and at least one
+// capability is turned on. It is the difference between a fault a reader should hear about and a
+// feature this office simply does not use, which is not news on any record, let alone every one.
+// `availableCapabilities` refreshes the connection first, so the state read here is the fresh one.
+export async function aiAvailability(ctx: Context) {
+  const capabilities = await availableCapabilities(ctx);
+  const enabled = await getSetting(ctx.db, 'ai.enabled_capabilities');
+  const configured =
+    env().JOBS_ENABLED && aiConnection().state !== 'disabled' && enabled.length > 0;
+  return { capabilities, configured };
+}
 export async function admitAi(
   ctx: Context,
   capability: z.infer<typeof AiCapability>,

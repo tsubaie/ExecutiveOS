@@ -15,7 +15,7 @@ export function CommitteeTasks({ committeeId, allowCreate = true }: { committeeI
     filters: { views: [{ id: 'all', label: t('all') }, { id: 'completed', label: t('completed') }] },
     group: (task) => task.band ? t(task.band) : null,
     useList: useTasks, useDetail: useTask, mutations, rowAction: (task) => <TaskToggle task={task} />,
-    renderers: { row: (task) => <TaskRow task={task} />, rowTrail: (task) => <TaskTrail task={task} />, name: (task) => task.title,
+    renderers: { row: (task) => <TaskRow task={task} />, rowTrail: (task) => <TaskTrail task={task} />, name: (task) => task.title, deletedMessage: t('deletedToast'),
       detail: (task, api) => <TaskDetail task={task} api={api} />, create: (api) => <CreateTask committeeId={committeeId} api={api} /> },
   }} />;
 }

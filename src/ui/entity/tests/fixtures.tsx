@@ -28,6 +28,7 @@ export function testConfig(overrides: Partial<Props> = {}): Props {
       detail: () => null,
       create: () => null,
       name: (item) => item.name,
+      deletedMessage: 'Measure moved to trash',
     },
     ...overrides,
   };

@@ -10,6 +10,8 @@ import {
   TaskListQuery,
   Revision,
   Complete,
+  Completed,
+  Operation,
   Move,
   Group,
   Reorder,
@@ -72,15 +74,25 @@ export const restore = defineHandler({
 export const complete = defineHandler({
   guard: 'session',
   input: Complete,
-  response,
+  response: Completed,
   idempotent: true,
-  handler: async (input, ctx, params) => ({
-    data: await service.completeTask(
+  handler: async (input, ctx, params) => {
+    const { task, opId } = await service.completeTask(
       authenticated(ctx),
       taskId(params),
       input.revision,
       input.force,
-    ),
+    );
+    return { data: task, meta: { opId } };
+  },
+});
+export const undoComplete = defineHandler({
+  guard: 'session',
+  input: Operation,
+  response,
+  idempotent: true,
+  handler: async (input, ctx, params) => ({
+    data: await service.undoCompleteTask(authenticated(ctx), taskId(params), input.opId),
   }),
 });
 export const reopen = defineHandler({

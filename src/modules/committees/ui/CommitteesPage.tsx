@@ -28,7 +28,7 @@ export function CommitteesPage() {
       { id: 'archived', label: t('archived'), icon: Archive, separated: true }, { id: 'trash', label: t('trash'), icon: Trash2 },
     ], sort: sortOptions(Sort.options, t), facets: [{ key: 'scope', label: t('scope'), options: [{ value: '', label: t('all') }, ...Scope.options.map((scope) => ({ value: scope, label: t(scope) }))] }] }}
     useList={useCommittees} useDetail={useCommittee} mutations={mutations} group={(item) => item.deletedAt ? null : t(item.scope)}
-    renderers={{ rowStyle: 'card', columns, name: (item) => item.name, row: (item) => <CommitteeRow committee={item} />,
+    renderers={{ rowStyle: 'card', columns, name: (item) => item.name, deletedMessage: t('deletedToast'), row: (item) => <CommitteeRow committee={item} />,
       rowTrail: (item) => <CommitteeStats committee={item} />, detail: (item, api) => <CommitteeDetail committee={item} api={api} />,
       create: (api) => <CreateCommittee api={api} /> }} />;
 }

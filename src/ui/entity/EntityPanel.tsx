@@ -7,13 +7,15 @@ import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { SaveStatus } from '@/ui/layout/SaveStatus';
 import { useNavigationGuard, type NavigationGuard } from './navigation';
 import { useSaveQueue } from './use-save-queue';
-import { DeleteEntityDialog, UnsavedEntityDialog } from './EntityDialogs';
+import { UnsavedEntityDialog } from './EntityDialogs';
+import { useRemove } from './use-remove';
 import type { Entity, DetailApi, EntityPageProps, Neighbors, SaveState } from './types';
 type Props<T extends Entity, P extends object, C> = {
   item: T;
   mutations: EntityPageProps<T, P, C>['mutations'];
   render: (item: T, api: DetailApi<P>) => ReactNode;
   name: string;
+  deletedMessage: string;
   reload: () => Promise<T | undefined>;
   close: () => void;
   move: (direction: number) => void;
@@ -47,7 +49,7 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
         {props.render(props.item, {
           save: c.queue.save,
           close: guarded(props.close),
-          remove: () => c.setDeleting(true),
+          remove: () => void c.remove(),
           restore: () => void c.restore(),
           saveState: c.queue.state,
           retry: () => void c.queue.retry(),
@@ -56,12 +58,6 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
           neighbors: props.neighbors,
         })}
       </div>
-      <DeleteEntityDialog
-        open={c.deleting}
-        setOpen={c.setDeleting}
-        name={props.name}
-        remove={c.remove}
-      />
       <UnsavedEntityDialog
         navigation={c.navigation}
         setNavigation={() => c.setNavigation(null)}
@@ -107,7 +103,6 @@ function usePanelController<T extends Entity, P extends object, C>(
 ) {
   const t = useTranslations('common');
   const queue = useSaveQueue(props.item, props.mutations.patch, props.reload);
-  const [deleting, setDeleting] = useState(false);
   const [navigation, setNavigation] = useState<(() => void) | null>(null);
   const [error, setError] = useState<Error | null>(null);
   // Blur commits a pending field, an invalid field blocks, a failed save asks first.
@@ -129,21 +124,13 @@ function usePanelController<T extends Entity, P extends object, C>(
   useUnloadGuard(queue.state);
   const fail = (failure: unknown) =>
     setError(failure instanceof Error ? failure : new Error(t('error')));
-  const remove = async () => {
-    if (await queue.settle())
-      await props.mutations
-        .remove(props.item.id, Math.max(queue.latest()?.revision ?? 0, props.item.revision))
-        .then(props.close, fail);
-    setDeleting(false);
-  };
+  const remove = useRemove(props, queue, fail);
   const restore = async () => {
     if (!props.item.deletedOpId) return;
     await props.mutations.restore(props.item.id, props.item.deletedOpId).then(props.close, fail);
   };
   return {
     queue,
-    deleting,
-    setDeleting,
     navigation,
     setNavigation,
     error,
@@ -162,8 +149,10 @@ function useUnloadGuard(state: SaveState) {
     return () => window.removeEventListener('beforeunload', unload);
   }, [state]);
 }
-// On a phone the bar reads Back · status; beside the list it reads status · close, so the
-// dismiss control sits where each layout expects it. Moving between items is the list's job.
+// The bar reads Back · name · status/position, and beside the list it closes with a cross as well.
+// The labelled way out is at the start edge at every width, where a reader leaving a record looks
+// for it; the cross is the dismissal of a surface, so it only exists once the panel is a slide-over
+// over the list rather than the whole screen. Moving between items is the list's job.
 // EP-B07: the bar used to carry a position and nothing else, so once the heading scrolled away
 // nothing on screen said which record was open, and the position named a sequence the reader could
 // not move through. It now carries the record's name once the heading has gone, and the position
@@ -185,20 +174,18 @@ function PanelToolbar({
   const t = useTranslations('common');
   return (
     <div className="sticky top-0 z-20 flex items-center gap-1 border-b bg-surface px-2 py-1.5">
-      <Button
-        variant="ghost"
-        size="sm"
-        aria-label={t('close')}
-        onClick={close}
-        className="lg:order-last"
-      >
-        <ChevronLeft className="size-4 rtl:rotate-180 lg:hidden" />
-        <span className="lg:sr-only">{t('back')}</span>
-        <X className="hidden size-4 lg:block" />
+      {/* EP-B07: the way out is at the start edge at every width, where a reader leaving a record
+          looks for it, and the cross joins it at the end edge once the panel is a slide-over beside
+          the list rather than the whole screen. Two controls, one action: the labelled one reads as
+          leaving the record and the cross as dismissing the surface, and on a phone the surface is
+          the record, so only the first is there. */}
+      <Button variant="ghost" size="sm" onClick={close}>
+        <ChevronLeft className="size-4 rtl:rotate-180" />
+        {t('back')}
       </Button>
       <div className="flex min-w-0 flex-1 items-center gap-2 ps-1 text-xs text-text-muted">
         {name && (
-          <bdi className="min-w-0 truncate text-sm font-medium text-text lg:order-first">{name}</bdi>
+          <bdi className="min-w-0 truncate text-sm font-medium text-text">{name}</bdi>
         )}
       </div>
       {state === 'idle' ? (
@@ -206,6 +193,15 @@ function PanelToolbar({
       ) : (
         <SaveStatus state={state} />
       )}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t('close')}
+        onClick={close}
+        className="hidden lg:inline-flex"
+      >
+        <X className="size-4" />
+      </Button>
     </div>
   );
 }

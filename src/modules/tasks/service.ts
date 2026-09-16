@@ -178,16 +178,65 @@ async function notifyAssigned(
     to: await userIdsForPeople(ctx, [to]),
   });
 }
+// TASKS-B02: one completion is one operation. Every row it actually changes is recorded with the
+// state it held beforehand, so Undo restores each of them exactly rather than guessing a status.
+// `reopenTask` stays the reader's own command and keeps writing `next_action`; it is not Undo, and
+// using it as one would lose the inbox, waiting or someday a task was completed from.
 export async function completeTask(ctx: Context, taskId: string, revision: number, force = false) {
   const task = await current(ctx, taskId, revision);
   const open = task.subtasks.filter((child) => child.status !== 'completed');
   if (open.length && !force)
     throw new AppError('conflict', { reason: 'state', openSubtasks: open.length });
+  const opId = id();
+  await repo.insertCompletion(ctx.db, { id: opId, rootTaskId: taskId, actorId: ctx.user.id });
   const fields = { status: 'completed', completedAt: new Date() };
-  for (const child of open) await update(ctx, child, fields, 'complete');
-  await update(ctx, task, fields, 'complete');
+  // Children first and the requested row last, the order deletion already uses.
+  const items = [];
+  for (const child of open) items.push(await completeRow(ctx, child, fields, opId));
+  items.push(await completeRow(ctx, task, fields, opId));
+  await repo.insertCompletionItems(ctx.db, items);
+  return { task: await getTask(ctx, taskId), opId };
+}
+async function completeRow(
+  ctx: Context,
+  task: { id: string; revision: number; status: string; completedAt: string | null },
+  fields: Patch,
+  opId: string,
+) {
+  const row = await update(ctx, task, fields, 'complete', opId);
+  return {
+    completionId: opId,
+    taskId: task.id,
+    previousStatus: task.status,
+    previousCompletedAt: task.completedAt ? new Date(task.completedAt) : null,
+    completedRevision: row.revision,
+  };
+}
+export async function undoCompleteTask(ctx: Context, taskId: string, opId: string) {
+  await repo.lockTasks(ctx.db);
+  const operation = await repo.lockCompletion(ctx.db, opId);
+  if (!operation || operation.rootTaskId !== taskId)
+    throw new AppError('conflict', { reason: 'state' });
+  // A repeated Undo is a replay, not a second write: the reader pressed twice, or the request was
+  // retried. Return what the first one left behind.
+  if (operation.status === 'undone') return getTask(ctx, taskId);
+  const plan = [];
+  for (const item of await repo.selectCompletionItems(ctx.db, opId))
+    plan.push({ item, row: await getTask(ctx, item.taskId, true) });
+  // Every row is checked before any is written: an Undo that restored half an operation and then
+  // refused would leave the cascade in a state nobody asked for.
+  for (const { item, row } of plan)
+    if (row.status !== 'completed' || row.revision !== item.completedRevision)
+      throw new AppError('conflict', { reason: 'state' });
+  for (const { item, row } of plan)
+    await update(ctx, row, patchOf(item), 'undo_complete', opId);
+  await repo.markCompletionUndone(ctx.db, opId);
   return getTask(ctx, taskId);
 }
+const patchOf = (item: { previousStatus: string; previousCompletedAt: Date | null }) => ({
+  status: item.previousStatus,
+  completedAt: item.previousCompletedAt,
+});
 export async function reopenTask(ctx: Context, taskId: string, revision: number) {
   const task = await current(ctx, taskId, revision);
   await update(ctx, task, { status: 'next_action', completedAt: null }, 'reopen');

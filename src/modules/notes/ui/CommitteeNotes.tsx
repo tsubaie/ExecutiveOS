@@ -13,7 +13,7 @@ export function CommitteeNotes({ committeeId, allowCreate = true }: { committeeI
     module: 'notes', title: c('notes'), description: t('descriptionIntro'),
     filters: { views: [{ id: 'all', label: t('all') }, { id: 'archived', label: t('archived') }] },
     useList: useNotes, useDetail: useNote, mutations,
-    renderers: { row: (note) => <NoteRow note={note} />, rowTrail: (note) => <NoteTrail note={note} />, name: (note) => note.title,
+    renderers: { row: (note) => <NoteRow note={note} />, rowTrail: (note) => <NoteTrail note={note} />, name: (note) => note.title, deletedMessage: t('deletedToast'),
       detail: (note, api) => <NoteDetail note={note} api={api} />, create: (api) => <CreateNote committeeId={committeeId} api={api} /> },
   }} />;
 }

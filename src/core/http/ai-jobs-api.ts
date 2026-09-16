@@ -2,7 +2,7 @@ import 'server-only';
 import { z } from 'zod';
 import { defineHandler, authenticated } from './handler';
 import { cancelAi } from '@/core/ai/cancel';
-import { availableCapabilities } from '@/core/ai/admission';
+import { aiAvailability } from '@/core/ai/admission';
 import { AiAvailability } from '@/core/config/ai-capabilities';
 import { AiJobQuery, AiJobView } from '@/core/config/ai-review-schema';
 import { latestAiJob, lastInvocationError } from '@/core/db/ai-jobs-repo';
@@ -11,9 +11,10 @@ export const availability = defineHandler({
   guard: 'session',
   input: z.strictObject({}),
   response: z.object({ data: AiAvailability }),
-  handler: async (_, ctx) => ({
-    data: { capabilities: await availableCapabilities(authenticated(ctx)) },
-  }),
+  handler: async (_, ctx) => {
+    const user = authenticated(ctx);
+    return { data: { ...(await aiAvailability(user)), canConfigure: user.user.role === 'admin' } };
+  },
 });
 export const latest = defineHandler({
   guard: 'session',

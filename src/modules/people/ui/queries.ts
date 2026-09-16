@@ -74,12 +74,16 @@ export function usePeopleMutations() {
       await refresh();
       return result.data;
     },
+    // The caller reports the deletion the moment the server has taken it: the row is already gone
+    // from the screen, and a receipt that arrives once five query trees have refetched arrives
+    // after the reader has stopped looking for it. The invalidation still runs, it just no longer
+    // stands between the delete and the word about it.
     remove: async (id: string, revision: number) => {
       const result = await request(`/people/${id}`, z.object({ opId: z.string() }), {
         method: 'DELETE',
         body: { revision },
       });
-      await refresh();
+      void refresh();
       return result;
     },
     restore: async (id: string, opId: string) => {

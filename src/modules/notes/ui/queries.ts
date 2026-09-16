@@ -85,8 +85,19 @@ export function useNoteMutations() {
     patch: (id: string, revision: number, patch: Omit<NotePatch, 'revision'>, key: string) =>
       one(`/notes/${id}`, z.json().parse({ ...patch, revision }), 'PATCH', key),
     create: (input: NoteCreate) => one('/notes', input),
-    remove: (id: string, revision: number) =>
-      write(`/notes/${id}`, z.object({ opId: z.string() }), { revision }, 'DELETE'),
+    // The delete reports itself the moment the server has taken it. Awaiting the invalidation here
+    // put every dependent query's refetch between the press and the panel closing, so the record
+    // sat on screen for a second after it was gone. The refresh still runs, just not in the way.
+    remove: async (id: string, revision: number) => {
+      try {
+        return await request(`/notes/${id}`, z.object({ opId: z.string() }), {
+          method: 'DELETE',
+          body: { revision },
+        });
+      } finally {
+        void refresh();
+      }
+    },
     restore: (id: string, opId: string) => one(`/notes/${id}/restore`, { opId }),
     archive: (id: string, revision: number, archived: boolean) =>
       one(`/notes/${id}/${archived ? 'archive' : 'unarchive'}`, { revision }),

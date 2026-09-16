@@ -46,6 +46,7 @@ export function KpisPage() {
         rowStyle: 'grid',
         columns,
         name: (item) => item.name,
+        deletedMessage: t('deletedToast'),
         row: (item) => <KpiCard kpi={item} />,
         detail: (item, api) => <KpiRecord kpi={item} api={api} />,
         create: (api) => <CreateKpi api={api} />,

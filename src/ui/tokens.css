@@ -7,6 +7,7 @@
   --color-border: var(--border);
   --color-text: var(--text);
   --color-text-muted: var(--muted-text);
+  --color-text-faint: var(--faint-text);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-success: var(--success);
@@ -46,6 +47,11 @@
   --border: #dce0da;
   --text: #202a28;
   --muted-text: #606d68;
+  /* A third step of ink, for a status that is deliberately recessive: the quietest tone that still
+     clears 4.5:1 on the surface it sits on in this theme. Dark is Mocha's overlay2 at 5.81:1 —
+     overlay1 is dimmer still and misses the floor at 4.44:1 — and light goes the other way, since
+     receding on a white ground means darker, not paler. */
+  --faint-text: #55605c;
   --accent: #306b59;
   --accent-soft: #e8f0eb;
   --on-accent: #ffffff;
@@ -55,6 +61,7 @@
   --danger: #b63c3c;
   --danger-soft: #f6e1e1;
   --scrim: #202a2899;
+  --elevated: #ffffff;
   /* Scorecard status scale (features/kpis.md). The dark values are the predecessor's own three
      colours, kept exactly. The light values are darker steps of the same hues: the originals were
      chosen against a near-black ground and fall under the contrast floor on this one, where they
@@ -88,6 +95,7 @@
   --border: #45475a;
   --text: #cdd6f4;
   --muted-text: #a6adc8;
+  --faint-text: #9399b2;
   --accent: #a6e3a1;
   --accent-soft: #343e40;
   --on-accent: #1e1e2e;
@@ -109,6 +117,7 @@
   --shadow-panel: 0 12px 36px -16px #11111bcc;
   --shadow-slideover: 0 0 2px #05050999, 0 0 44px -6px #050509e6;
   --scrim: #11111bcc;
+  --elevated: #313244;
   color-scheme: dark;
 }
 @layer base {
@@ -843,4 +852,169 @@
   gap: 2px;
   padding-inline: 8px;
   font-size: 12px;
+}
+
+/* Undo toasts. The toast is the receipt for something that left the screen, so it is centred under
+   the column the thing left rather than parked in a corner of the window: the reader's eye is
+   already on the list, and this lands in the same vertical scan line as the row that vanished.
+   Centring also means there is nothing to mirror — the only directional value is the rail's own
+   measure, and that is a logical inset. On a phone it spans the width and clears the bar the shell
+   floats over the page, because navigation stays reachable while a transient is up. It sits over
+   the page and under a dialog: a modal that is open has the reader's attention and should keep it. */
+[data-slot='toast-viewport'] {
+  position: fixed;
+  z-index: 40;
+  inset-inline: 1rem;
+  inset-block-start: auto;
+  inset-block-end: calc(3.5rem + env(safe-area-inset-bottom) + 1rem);
+  /* The insets decide the width and `max-width` caps it, rather than a width that would
+     over-constrain them: with a width set, the end inset is simply dropped when the two disagree,
+     which is what let the toast reach across an open panel. */
+  max-width: 32rem;
+  margin-inline: auto;
+}
+@media (min-width: 1024px) {
+  [data-slot='toast-viewport'] {
+    /* Centred in the working column, clear of the rail, and lifted off the edge: a bar flush to
+       the bottom of the window is read as chrome. */
+    inset-inline-start: calc(208px + 1rem);
+    inset-block-end: 2rem;
+  }
+  /* While a record is open the working column is the list beside it, so the toast centres there
+     instead of straddling the panel's edge. The measure is the panel's own, the same one the
+     toolbar already steps aside by (EP-B07), and it is logical, so RTL needs no second rule. */
+  body:has(.entity-page-open) [data-slot='toast-viewport'] {
+    inset-inline-end: calc(clamp(480px, 46vw, 880px) + 1rem);
+  }
+}
+/* The stack grows upwards from the newest toast, which is the one at index 0 and the one in front.
+   The ones behind peek over its top edge and step down in scale, and their content is hidden until
+   the viewport is hovered or focused, at which point the stack opens out into a column. There is no
+   countdown bar: a shrinking timer is a loop in the periphery, and motion here marks an event and
+   stops (docs/05 § Motion). The reader is told the record is in Trash instead, which outlives the
+   toast.
+
+   The toast stays in the theme it interrupts. Inverting it — a pale bar over the dark app — is the
+   usual snackbar answer and the wrong one here: this product opens dark, and a bright block sitting
+   in the reader's periphery for eight seconds after every delete is glare, not emphasis. Separation
+   comes from elevation instead: the elevated ground, and a hairline drawn from the text colour
+   rather than the border token, so it is brighter than any edge the page itself paints. No accent
+   rule down the leading edge either — that bar means "the open record" in this product (EP-B14),
+   and a coloured stripe on a notice is the oldest alert cliche there is. */
+[data-slot='toast'] {
+  --toast-peek: 0.5rem;
+  --toast-gap: 0.5rem;
+  --toast-scale: calc(max(0, 1 - (var(--toast-index) * 0.05)));
+  --toast-expanded-y: calc(
+    var(--toast-offset-y) * -1 + (var(--toast-index) * var(--toast-gap) * -1) +
+      var(--toast-swipe-movement-y)
+  );
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: calc(40 - var(--toast-index));
+  background: var(--elevated);
+  color: var(--text);
+  border: 0;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, var(--text), transparent 86%),
+    var(--shadow-panel);
+  transform-origin: bottom center;
+  height: var(--toast-frontmost-height, var(--toast-height));
+  transform: translateY(
+      calc(var(--toast-swipe-movement-y) - (var(--toast-index) * var(--toast-peek)))
+    )
+    scale(var(--toast-scale));
+  transition:
+    transform 260ms var(--ease-rise),
+    opacity 260ms var(--ease-rise),
+    height 150ms var(--ease-rise);
+}
+[data-slot='toast-content'] {
+  min-height: 52px;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+/* The action takes the tinted pair the product already confirms in — the ground and ink the save
+   tick wears (SaveStatus) — rather than a filled accent pill. It is reached for against a clock, so
+   it is a control and not a word; it is the only one on the toast and does not have to shout. */
+/* These two carry their own floor. The control sizes in the base layer are keyed on the button's
+   own data-slot, and the toast parts replace that attribute with their own, so the 36 px pointer
+   and 44 px touch minimums (docs/05 § Density) have to be restated here or the only way back from
+   a delete would be a 28 px target. */
+[data-slot='toast-action'],
+[data-slot='toast-close'] {
+  min-height: 36px;
+  min-width: 36px;
+}
+@media (pointer: coarse) {
+  [data-slot='toast-action'],
+  [data-slot='toast-close'] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+[data-slot='toast-action'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding-inline: 0.875rem;
+  font-weight: 500;
+}
+[data-slot='toast-action']:hover {
+  background: color-mix(in oklch, var(--accent-soft), var(--accent) 22%);
+  color: var(--accent);
+}
+[data-slot='toast-close'] {
+  color: var(--muted-text);
+}
+[data-slot='toast-close']:hover {
+  background: color-mix(in oklch, var(--elevated), var(--text) 10%);
+  color: var(--text);
+}
+[data-slot='toast'][data-expanded] {
+  height: var(--toast-height);
+  transform: translateY(var(--toast-expanded-y)) scale(1);
+}
+/* The gap between stacked toasts is dead ground the pointer would fall through on its way to the
+   one behind, collapsing the stack under the reader's hand. This bridges it. */
+[data-slot='toast']::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 100%;
+  height: calc(var(--toast-gap) + 1px);
+}
+[data-slot='toast'][data-starting-style],
+[data-slot='toast'][data-ending-style] {
+  opacity: 0;
+  transform: translateY(120%);
+}
+[data-slot='toast'][data-ending-style][data-swipe-direction='down'] {
+  transform: translateY(calc(var(--toast-swipe-movement-y) + 120%));
+}
+/* Over the limit: the toast is kept mounted so it can leave, but it is no longer shown. */
+[data-slot='toast'][data-limited] {
+  opacity: 0;
+}
+[data-slot='toast-content'] {
+  transition: opacity 200ms var(--ease-rise);
+}
+[data-slot='toast-content'][data-behind] {
+  opacity: 0;
+}
+[data-slot='toast-content'][data-expanded] {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot='toast'],
+  [data-slot='toast-content'] {
+    transition: none;
+  }
+  /* Resting appearance in every phase: the toast appears and disappears without travelling. */
+  [data-slot='toast'][data-starting-style],
+  [data-slot='toast'][data-ending-style],
+  [data-slot='toast'][data-ending-style][data-swipe-direction='down'] {
+    transform: translateY(calc(var(--toast-index) * var(--toast-peek) * -1))
+      scale(var(--toast-scale));
+  }
 }

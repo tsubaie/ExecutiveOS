@@ -54,7 +54,7 @@ export function RelatedEntities<T extends Entity, P extends object, C>({ config,
       <DialogContent showCloseButton={false} className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
         <DialogTitle className="sr-only">{config.title}</DialogTitle><DialogDescription className="sr-only">{config.description}</DialogDescription>
         {creating ? config.renderers.create({ pending, cancel: close, submit }) : detail.pending ? <Loading /> : detail.error ? <ErrorPanel error={detail.error} /> : detail.data ?
-          <EntityPanel item={detail.data} name={config.renderers.name(detail.data)} mutations={config.mutations} render={config.renderers.detail}
+          <EntityPanel item={detail.data} name={config.renderers.name(detail.data)} deletedMessage={config.renderers.deletedMessage} mutations={config.mutations} render={config.renderers.detail}
             reload={detail.refetch} close={close} move={() => undefined} neighbors={{ previous: false, next: false, position: 1, count: 1 }} /> : null}
       </DialogContent>
     </Dialog>

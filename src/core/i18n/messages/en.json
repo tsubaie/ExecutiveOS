@@ -16,6 +16,7 @@
     "cancel": "Cancel",
     "delete": "Move to trash",
     "restore": "Restore",
+    "updated": "Updated {date}",
     "retry": "Retry",
     "loading": "Loading…",
     "empty": "Nothing here yet",
@@ -42,7 +43,9 @@
     "edit": "Edit",
     "back": "Back",
     "confirm": "Confirm",
-    "deleteDescription": "Move {name} to trash? You can restore them later.",
+    "notices": "Notifications",
+    "undo": "Undo",
+    "undoFailed": "Could not undo. The record is in Trash.",
     "conflict": "Someone else changed this record. Your draft is kept.",
     "reapply": "Reload and reapply my changes",
     "unsaved": "Your changes have not been saved. Retry or discard before leaving.",
@@ -116,7 +119,8 @@
     "noOrganization": "No organization",
     "deleted": "This person is in trash. Restore to edit.",
     "directoryDescription": "The people connected to your office.",
-    "showName": "Show {name}"
+    "showName": "Show {name}",
+    "deletedToast": "Person moved to trash"
   },
   "auth": {
     "setupTitle": "Set up your workspace",
@@ -314,7 +318,6 @@
     "selected": "{count, plural, =0 {Select tasks to group} one {# selected · choose at least two} other {# selected}}",
     "convert": "Make a task",
     "completedHint": "Reopen using the checkbox to edit this completed task.",
-    "updated": "Updated {date}",
     "assignedTasks": "Assigned tasks",
     "viewAssigned": "View assigned tasks ({count})",
     "tomorrow": "Tomorrow",
@@ -325,7 +328,12 @@
     "subtaskDetailsDescription": "Owner, due date, order and actions for this subtask.",
     "dragHandle": "Drag to reorder",
     "noteTrashed": "Note in trash",
-    "committeeColumn": "Committee"
+    "committeeColumn": "Committee",
+    "deletedToast": "Task moved to trash",
+    "subtaskDeletedToast": "Subtask moved to trash",
+    "completedToast": "Task completed",
+    "subtaskCompletedToast": "Subtask completed",
+    "completedWithSubtasksToast": "Task completed with {count, plural, one {# subtask} other {# subtasks}}"
   },
   "notes": {
     "title": "Note title",
@@ -382,11 +390,11 @@
     "taskCounts": "{open} open, {done} done",
     "taskCountsShort": "{open}/{done}",
     "more": "+{count}",
-    "updated": "Updated {date}",
     "personNotes": "Notes",
     "viewNotes": "View notes ({count})",
     "noType": "No type",
-    "committeeColumn": "Committee"
+    "committeeColumn": "Committee",
+    "deletedToast": "Note moved to trash"
   },
   "ai": {
     "working": "AI is working. You can leave this page and return later.",
@@ -422,8 +430,8 @@
     "applyNoteTasks": "Apply Note & Tasks ({count})",
     "applying": "Applying…",
     "billingFailed": "OpenRouter rejected this request because of insufficient credits or the API key’s spending limit. Add credits or adjust the limit in OpenRouter, then retry.",
-    "unavailableHelp": "AI is currently unavailable. An administrator can check the connection, selected models and enabled features in AI settings. After updating them, check availability again.",
-    "checkAvailability": "Check availability again",
+    "checkAvailability": "Check again",
+    "unavailable": "AI is unavailable.",
     "modelUnavailable": "OpenRouter could not route this request to the selected model (404). Choose another model in AI settings, or review your OpenRouter provider preferences, then retry.",
     "progressStarting": "Sending your AI request…",
     "progressQueued": "Request queued — waiting to start…",
@@ -437,7 +445,13 @@
     "budgetLimit": "The workspace AI token budget has been reached. An administrator can increase it in AI settings.",
     "contextLimit": "This content is too large for the selected model. Choose a model with a larger context window or shorten the content.",
     "cancelling": "Cancelling…",
-    "cancelled": "AI request cancelled. No changes were applied."
+    "cancelled": "AI request cancelled. No changes were applied.",
+    "unavailableDetails": "What AI does here",
+    "off": "AI is off for this workspace.",
+    "turnOn": "Turn on AI",
+    "unavailableRefine": "AI can propose a tidier version of this note. Nothing changes until you read the proposal and accept it.",
+    "unavailableTags": "AI can propose tags for this note from what it says. You choose which to keep.",
+    "unavailableBreakdown": "AI can propose the subtasks this task breaks down into. You choose which to create."
   },
   "tagAdmin": {
     "title": "Manage note tags",
@@ -497,7 +511,8 @@
     "actionReorder": "Reordered",
     "actionUpdate": "Updated",
     "lastNote": "Last note: {date}",
-    "lastNoteColumn": "Last note"
+    "lastNoteColumn": "Last note",
+    "deletedToast": "Committee moved to trash"
   },
   "kpis": {
     "title": "KPIs",
@@ -568,7 +583,6 @@
     "moveUp": "Move {name} up",
     "moveDown": "Move {name} down",
     "deleteObjective": "Delete {name}",
-    "updated": "Updated {date}",
     "measuredAgainst": "Measured against",
     "unitCount": "Number",
     "unitPercent": "Percent",
@@ -619,7 +633,8 @@
     "statusColumn": "Status",
     "achievement": "Progress",
     "changeColumn": "Change",
-    "status": "Worst status first"
+    "status": "Worst status first",
+    "deletedToast": "KPI moved to trash"
   },
   "account": {
     "title": "Account",

@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from '@/ui/primitives/dialog';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
+import { useUndoToast } from '@/ui/layout/toast/use-undo-toast';
 import { ApiError } from '@/core/http/client';
 import type { Task } from '../schema/validation';
 import { useTaskMutations } from './queries';
@@ -23,35 +24,61 @@ export type Toggleable = {
   revision: number;
   completed: boolean;
   deleted?: boolean;
+  // The toast names the kind of record that was completed, and a subtask is not a task to the
+  // reader looking at a checklist inside one.
+  subtask?: boolean;
 };
-export function TaskToggle({ task }: { task: Task }) {
+// `onCompleted` is how the record's own detail panel steps aside once its task is done: completing
+// takes the task out of every list view, so a panel left open strands it, turns read-only and grows
+// the "outside the current view" banner — the framework reporting the reader's own action back to
+// them. The subtask checklist passes nothing, because the parent being read is going nowhere.
+export function TaskToggle({ task, onCompleted }: { task: Task; onCompleted?: (() => void) | undefined }) {
   return (
     <TaskCheck
+      onCompleted={onCompleted}
       task={{
         id: task.id,
         title: task.title,
         revision: task.revision,
         completed: task.status === 'completed',
         deleted: Boolean(task.deletedAt),
+        subtask: Boolean(task.parentId),
       }}
     />
   );
 }
-export function TaskCheck({ task }: { task: Toggleable }) {
+// TASKS-B02: completing is reversible, so it reports itself with an Undo that puts the task, and
+// every subtask the same operation completed, back to the exact status each held. Reopening is the
+// reader's own command in the other direction and carries no toast: it is not an undo, and it
+// deliberately lands on `next_action` rather than wherever the task came from.
+export function TaskCheck({ task, onCompleted }: { task: Toggleable; onCompleted?: (() => void) | undefined }) {
   const t = useTranslations('tasks');
   const c = useTranslations('common');
   const mutations = useTaskMutations();
+  const undoToast = useUndoToast();
   const [pending, setPending] = useState(false);
   const [openCount, setOpenCount] = useState<number | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  async function complete(force: boolean) {
+    const { meta } = await mutations.complete(task.id, task.revision, force);
+    // The panel goes first, so the receipt lands on the list rather than across the panel's edge.
+    onCompleted?.();
+    undoToast({
+      message:
+        force && openCount
+          ? t('completedWithSubtasksToast', { count: openCount })
+          : t(task.subtask ? 'subtaskCompletedToast' : 'completedToast'),
+      undo: async () => {
+        await mutations.undoComplete(task.id, meta.opId);
+      },
+    });
+  }
   async function toggle(force = false) {
     setPending(true);
     setError(null);
     try {
-      await mutations.action(task.id, task.completed ? 'reopen' : 'complete', {
-        revision: task.revision,
-        ...(task.completed ? {} : { force }),
-      });
+      if (task.completed) await mutations.action(task.id, 'reopen', { revision: task.revision });
+      else await complete(force);
       setOpenCount(null);
     } catch (error) {
       const details = completionDetails(error);
@@ -72,26 +99,51 @@ export function TaskCheck({ task }: { task: Toggleable }) {
         onCheckedChange={() => void toggle()}
       />
       {error && <ErrorPanel error={error} />}
-      <Dialog
-        open={openCount !== null}
-        onOpenChange={(open) => {
-          if (!open) setOpenCount(null);
-        }}
-      >
-        <DialogContent>
-          <DialogTitle>{t('completeParent')}</DialogTitle>
-          <DialogDescription>{t('openChildren', { count: openCount ?? 0 })}</DialogDescription>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenCount(null)}>
-              {c('cancel')}
-            </Button>
-            <Button disabled={pending} onClick={() => void toggle(true)}>
-              {t('completeAll')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CascadeDialog
+        openCount={openCount}
+        pending={pending}
+        cancel={() => setOpenCount(null)}
+        confirm={() => void toggle(true)}
+      />
     </>
+  );
+}
+// TASKS-A03: the one confirmation that stays, because it authorizes a cascade across records the
+// reader cannot see from here. What it authorizes is still one operation, and still undoable from
+// the toast that follows it.
+function CascadeDialog({
+  openCount,
+  pending,
+  cancel,
+  confirm,
+}: {
+  openCount: number | null;
+  pending: boolean;
+  cancel: () => void;
+  confirm: () => void;
+}) {
+  const t = useTranslations('tasks');
+  const c = useTranslations('common');
+  return (
+    <Dialog
+      open={openCount !== null}
+      onOpenChange={(open) => {
+        if (!open) cancel();
+      }}
+    >
+      <DialogContent>
+        <DialogTitle>{t('completeParent')}</DialogTitle>
+        <DialogDescription>{t('openChildren', { count: openCount ?? 0 })}</DialogDescription>
+        <DialogFooter>
+          <Button variant="outline" onClick={cancel}>
+            {c('cancel')}
+          </Button>
+          <Button disabled={pending} onClick={confirm}>
+            {t('completeAll')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

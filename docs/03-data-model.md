@@ -111,6 +111,12 @@ Field semantics live in the feature specs; this section fixes shape and constrai
 Constraints: trigger `tasks_depth_check` rejects a `parent_id` whose parent has a parent, and rejects updating `parent_id` on a row that has children; `CHECK ((status = 'completed') = (completed_at is not null))`; uniqueness of `(coalesce(parent_id, '00000000-0000-0000-0000-000000000000'::uuid), sort_order) where deleted_at is null`, enforced by a deferrable GiST exclusion constraint with equality operators (`btree_gist`), with reorder done in one statement.
 Indexes: `(status, due_date) where deleted_at is null`, `(owner_id)`, `(parent_id)`, `(committee_id)`, `(initiative_id)`, `(source_note_id)`, `(due_date, priority, created_at)`.
 
+### task_completions / task_completion_items
+`task_completions`: `id uuid pk, root_task_id fk tasks cascade, actor_id fk users null, status (completed|undone), created_at, undone_at null`. `task_completion_items`: `completion_id fk task_completions cascade, task_id fk tasks cascade, previous_status, previous_completed_at null, completed_revision int`, primary key `(completion_id, task_id)`.
+One completion is one operation, so Undo can restore every row it touched to exactly the state that row held (TASKS-B02). An item exists only for a row the operation actually changed, so a subtask that was already completed is untouched by Undo. `completed_revision` is the revision the row carried once this operation completed it, and it is the per-row fence: if anything has changed the row since, Undo is refused rather than overwriting later work. These are operation records, not user-facing entities: they carry no entity columns and are never soft-deleted, and they cascade with the task they belong to. The audit log is not used for this — it stores the patch that was applied rather than what it replaced, and it is write-only infrastructure with untyped JSON rather than a place to read domain state back out of.
+Constraints: `CHECK (status in ('completed','undone'))`; `CHECK ((status = 'undone') = (undone_at is not null))`; `CHECK (previous_status in ('inbox','next_action','waiting_on','someday','completed'))`.
+Indexes: `(root_task_id)`, `(actor_id)`, `(task_id)` on the items.
+
 ### notes
 `title, content, type null, note_date date, tags, committee_id set null, initiative_id set null, archived_at, search_text` + entity columns. Every row is a standalone note and list item (ADR 0012). There is no thread foreign key, grouping container, merge provenance, or structural meeting foreign key in v1; `committee_id` and `initiative_id` are added by the migrations of those modules.
 Constraints: `CHECK (length(trim(title)) between 1 and 500)`; `CHECK (cardinality(tags) <= 10)`. `search_text` from title and content.
@@ -185,6 +191,8 @@ Indexes: `(note_date, created_at, id) where deleted_at is null`, `(type)`, `(arc
 | task → owner person | `tasks.owner_id` | N:1 | `owner` |
 | task → parent task | `tasks.parent_id` | N:1, depth 1 | not projected |
 | task → source note | `tasks.source_note_id` | N:1 | `source` |
+| completion → root task | `task_completions.root_task_id` | N:1 | not projected |
+| completion → completed task | `task_completion_items.task_id` | N:M | not projected |
 | person ↔ note | `note_people` | N:M | `participant` |
 | note → committee / initiative | `notes.*_id` | N:1 | `about` |
 | meeting → committee | `meetings.committee_id` | N:1 | `belongs_to` |

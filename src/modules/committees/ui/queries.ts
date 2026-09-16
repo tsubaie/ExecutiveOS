@@ -37,7 +37,16 @@ export function useCommitteeMutations() {
   return {
     create: async (input: CommitteeCreate) => (await write('/committees', response, input)).data,
     patch: async (id: string, revision: number, fields: Omit<CommitteePatch, 'revision'>, key: string) => (await write(`/committees/${id}`, response, z.json().parse({ ...fields, revision }), 'PATCH', key)).data,
-    remove: (id: string, revision: number) => write(`/committees/${id}`, z.object({ opId: z.uuid() }), { revision }, 'DELETE'),
+    // The delete reports itself the moment the server has taken it. Awaiting the invalidation here
+    // put every dependent query's refetch between the press and the panel closing, so the record
+    // sat on screen for a second after it was gone. The refresh still runs, just not in the way.
+    remove: async (id: string, revision: number) => {
+      try {
+        return await request(`/committees/${id}`, z.object({ opId: z.uuid() }), { method: 'DELETE', body: { revision } });
+      } finally {
+        void Promise.all(['committees', 'tasks', 'notes', 'home'].map((queryKey) => client.invalidateQueries({ queryKey: [queryKey] })));
+      }
+    },
     restore: async (id: string, opId: string) => (await write(`/committees/${id}/restore`, response, { opId })).data,
     reorder: (items: z.infer<typeof Reorder>['items']) => write('/committees/reorder', z.object({ data: z.object({ updatedIds: z.array(z.uuid()) }) }), { items }, 'PATCH'),
   };

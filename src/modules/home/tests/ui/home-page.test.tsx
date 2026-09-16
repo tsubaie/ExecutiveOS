@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastHost } from '@/ui/layout/toast/ToastHost';
 // The page is exercised without its network layer: the query hook is the only seam, so each
 // scenario supplies the aggregated payload directly. The translator echoes its key plus the count
 // it was given, so a scenario can assert which fact a row chose to show.
@@ -69,13 +70,14 @@ const section = (key: string, enabled: boolean, count = 0, items: Item[] = []): 
   items,
   stale: null,
 });
-// The completion control talks to the shared query client, so scenarios render inside one.
+// The completion control talks to the shared query client and reports itself through the shared
+// toast viewport (TASKS-B02), so scenarios render inside both, the way the app mounts them.
 const mount = (node: React.ReactNode) =>
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      {node}
+      <ToastHost>{node}</ToastHost>
     </QueryClientProvider>,
   );
 function show(sections: Section[]) {
@@ -194,7 +196,9 @@ it('HOME-B08 a count that changes is replaced rather than swapped in silence', (
   // A fresh element each time: React bails out of re-rendering one it is handed back by identity.
   const tree = () => (
     <QueryClientProvider client={client}>
-      <HomePage />
+      <ToastHost>
+        <HomePage />
+      </ToastHost>
     </QueryClientProvider>
   );
   const view = render(tree());

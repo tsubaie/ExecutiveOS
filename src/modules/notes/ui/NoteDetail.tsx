@@ -1,16 +1,16 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore } from 'lucide-react';
 import { CommitteeBadge } from '@/modules/committees/ui';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
-import { useDateTime, useRelativeTime } from '@/ui/format';
 import type { DetailApi } from '@/ui/entity/types';
 import type { NoteDetail as Detail } from '../schema/validation';
 import { NoteFields, type Patch } from './NoteFields';
 import { NoteAi } from './NoteAi';
 import { NoteTasks } from './NoteTasks';
+import { EntityFooter, EntityUpdated } from '@/ui/entity/EntityFooter';
 import { useNoteMutations } from './queries';
 export function NoteDetail({ note, api }: { note: Detail; api: DetailApi<Patch> }) {
   const c = useTranslations('common');
@@ -27,7 +27,14 @@ export function NoteDetail({ note, api }: { note: Detail; api: DetailApi<Patch> 
         </>
       ) : (
         <NoteAi key={note.id} note={note}>
-          <NoteFields note={note} save={api.save} />
+          {(slots) => (
+            <NoteFields
+              note={note}
+              save={api.save}
+              contentAction={slots.content}
+              tagsAction={slots.tags}
+            />
+          )}
         </NoteAi>
       )}
       {note.committeeId && <div className="mt-3"><CommitteeBadge id={note.committeeId} /></div>}
@@ -40,8 +47,6 @@ export function NoteDetail({ note, api }: { note: Detail; api: DetailApi<Patch> 
 function NoteFooter({ note, remove }: { note: Detail; remove: () => void }) {
   const t = useTranslations('notes');
   const c = useTranslations('common');
-  const dateTime = useDateTime();
-  const relative = useRelativeTime();
   const mutations = useNoteMutations();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -57,39 +62,23 @@ function NoteFooter({ note, remove }: { note: Detail; remove: () => void }) {
     }
   }
   return (
-    <footer className="mt-6 grid gap-2 border-t pt-3 text-xs text-text-muted">
-      {error && <ErrorPanel error={error} />}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <span title={dateTime(note.updatedAt)}>
-          {t('updated', { date: relative(note.updatedAt) })}
-        </span>
-        {!note.deletedAt && (
-          <span className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={pending}
-              onClick={() => void toggleArchive()}
-            >
-              {note.archivedAt ? (
-                <ArchiveRestore className="size-3.5" />
-              ) : (
-                <Archive className="size-3.5" />
-              )}
-              {t(note.archivedAt ? 'unarchive' : 'archive')}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-danger hover:text-danger"
-              onClick={remove}
-            >
-              <Trash2 className="size-3.5" />
-              {c('delete')}
-            </Button>
-          </span>
-        )}
-      </div>
-    </footer>
+    <EntityFooter
+      remove={note.deletedAt ? null : remove}
+      notice={error ? <ErrorPanel error={error} /> : null}
+      actions={
+        note.deletedAt ? null : (
+          <Button variant="ghost" size="sm" disabled={pending} onClick={() => void toggleArchive()}>
+            {note.archivedAt ? (
+              <ArchiveRestore className="size-3.5" />
+            ) : (
+              <Archive className="size-3.5" />
+            )}
+            {t(note.archivedAt ? 'unarchive' : 'archive')}
+          </Button>
+        )
+      }
+    >
+      <EntityUpdated at={note.updatedAt} />
+    </EntityFooter>
   );
 }

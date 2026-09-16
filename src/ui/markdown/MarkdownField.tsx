@@ -1,5 +1,5 @@
 'use client';
-import { Suspense, lazy, useId, useRef, useState, type MouseEvent } from 'react';
+import { Suspense, lazy, useId, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/ui/cn';
 import type { Mentions } from './mentions';
@@ -15,7 +15,22 @@ type Props = {
   maxLength?: number;
   className?: string;
   mentions?: Mentions;
+  // Rendered on the label row: an action that transforms this field, or the notice standing in for
+  // one that is unavailable.
+  action?: ReactNode;
 };
+// An action that transforms this field belongs on its label row, not in a header above the record:
+// it changes one field, and a reader reaches for it while looking at that field.
+function FieldLabel({ id, label, action }: { id: string; label: string; action?: ReactNode }) {
+  return (
+    <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+      <label htmlFor={id} className="text-sm font-medium">
+        {label}
+      </label>
+      {action}
+    </div>
+  );
+}
 // Markdown editing (ADR 0015): the field shows the rendered preview and becomes a textarea when
 // entered; leaving it commits a changed draft and shows the preview again. Empty content stays a
 // textarea, since there is nothing to preview. With `mentions`, typing "@" opens a list of people
@@ -29,6 +44,7 @@ export function MarkdownField({
   maxLength = 50000,
   className,
   mentions,
+  action,
 }: Props) {
   const id = useId();
   const [editing, setEditing] = useState(!value.trim());
@@ -45,9 +61,7 @@ export function MarkdownField({
   };
   return (
     <div className={cn('grid gap-2', className)}>
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
+      <FieldLabel id={id} label={label} action={action} />
       {editing ? (
         <Suspense
           fallback={<div className={cn('rounded-lg border', draft.trim() ? 'min-h-40' : 'min-h-20')} />}
@@ -115,7 +129,11 @@ function Preview({
         aria-label={label}
         title={t('clickToWrite')}
         className={cn(
-          'w-full cursor-text rounded-lg border px-3 py-2 text-start hover:border-ring focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+          // A column flex box rather than a button's own layout. A button centres its content in an
+          // anonymous box that `display: block` does not defeat, so the first line of a note floated
+          // in the middle of the room the preview had claimed, while the textarea it turns into
+          // starts at the top — entering the field moved the text out from under the reader's eye.
+          'flex w-full flex-col cursor-text rounded-lg border px-3 py-2 text-start hover:border-ring focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
           // An empty box claims the room its content would need; until there is content it only
           // has to look writable, so it asks for a fraction of it.
           draft.trim() ? 'min-h-40' : 'min-h-20',

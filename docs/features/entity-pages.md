@@ -35,6 +35,7 @@ One implementation of list + detail behavior for every module: selection, URL st
     detail: (item, api) => …,                // api: save(patch), close, next, prev, neighbors, remove, restore, saveState, retry
     create: (api) => …,                      // api: submit(input), cancel, pending
     name: (item) => string,
+    deletedMessage: string,                  // localized "<kind> moved to trash" for the Undo toast (EP-B36)
   }}
 />
 ```
@@ -48,6 +49,31 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - EP-B01 Precedence: `new=1` wins over `id`; opening create removes `id`; opening an item removes `new`. `sel` and the open detail are cleared when `view`, facets, `sort`, or `q` change.
 - EP-B02 Push versus replace: open item → push; next/prev → replace; close → push (removes `id`); filter changes → replace. Back returns to the list state before the open.
 - EP-B03 Deep link to an `id` not in the current filtered list: the detail still opens (fetched by id) and the list shows a banner "not in current view" with "show in All".
+- EP-B37 **Every record closes with the same footer.** `EntityFooter` in `src/ui/entity` is the
+  framework's, not each module's: a top rule, the module's own metadata about the record on the
+  start side, and on the end side the module's closing actions followed by the one delete control.
+  `EntityUpdated` is the line every record can show — relative in the footer, exact on hover. The
+  delete control is ghost in the danger ink with the trash icon and reads `common.delete`; it is
+  hidden while the record is already in the trash. Modules MUST NOT render their own delete button:
+  the framework owned the action (EP-B36) but not its placement, and five modules grew four
+  treatments of one action, from a filled destructive button to a bare one with no footer at all.
+  Weight is what tells a reader what an action costs now that a reversible delete no longer stops to
+  ask, so it cannot vary by module — ghost in danger ink means reversible with Undo behind it, and
+  the filled `destructive` variant is reserved for the irreversible actions that do still confirm.
+  The ink is not held back until hover, because the office works on tablets and nothing hovers there.
+- EP-B36 **Deleting a record is not confirmed.** Soft deletion is reversible, so the shared detail
+  panel performs it on the press: the record goes, the panel closes behind it, and an Undo toast
+  reports it. The toast reads `renderers.deletedMessage`, which names the kind of record rather than
+  the record itself — a title is unbounded and would change the toast's shape every time it appeared,
+  and the reader has just acted on that record. Undo calls `mutations.restore(id, opId)` with the
+  operation id the deletion returned; it restores the entity and everything else that operation
+  removed, never merely delaying the request. A delete that fails leaves the panel open and the
+  record where it was, with the error above it. Permanent deletion and purge remain confirmed: those
+  are the irreversible ones, and a dialog in front of a reversible action asks at the moment of least
+  attention while catching none of the mistake that actually happens, which is acting on the wrong
+  record — that one only becomes visible once the record has gone. The mutation adapters return as
+  soon as the server has taken the delete; the cache invalidation they trigger is not awaited, so the
+  receipt arrives with the disappearance rather than after every dependent query has refetched.
 - EP-B04 Deep link to a deleted or missing id: detail shows an inline not-found state with Close; the URL keeps `id` until Close (so reload reproduces the state); Close removes it.
 - EP-B05 If the selected row is deleted by the current user, detail closes and focus returns to the next row; if it disappears due to a refetch (another member deleted it), detail shows the not-found state.
 
@@ -57,6 +83,12 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 
 ## Layout
 
+- EP-B38 The open record's bar carries a labelled Back at the start edge at every width, and from
+  1024 px a close cross at the end edge as well. Both do the same thing, and they say different
+  things about it: Back leaves the record, which is the whole screen on a phone and so the only
+  control there, while the cross dismisses a surface, which the panel only becomes once it is a
+  slide-over over the list. The two names are distinct to assistive technology (`Back`, `Close`) and
+  the start edge is logical, so RTL mirrors both without a second rule.
 - EP-B07 Desktop (≥ 1024 px): rail 208 px (collapsible, ≥ 1280 px), list, and the detail as a slide-over over the list at `clamp(480px, 46%, 880px)` of the window, running the full height of the viewport flush against its end edge, over the shell header as well as the page (EP-B26). The list keeps the width it had before the record opened: nothing resizes and no row moves under the click that opened it. 480 px stays the floor and 880 px the ceiling because that is the measure a property form reads at; the share is now of what the panel covers rather than of what it displaces. The list column opens with one sticky bar that carries the page title, the current view and its count (a button into the filter sheet where the rail is hidden), search, Filter, selection mode and the primary Create action; the page description is exposed to assistive technology only. Card lists place Create above the desktop views rail and use a compact search/sort/action toolbar; without a visible rail, the title/view and Create remain above it (EP-B22). Rows are 44 px single-line by default; group headers are 28 px; rail items 32 px with a divider before views marked `separated`. Views marked `featured` also show their count in a strip under the bar **where the rail is not showing them already** (EP-B35) (tinted by `tone` when the count is above zero: `accent` and `danger` for the app's own semantics, `good`, `warn` and `bad` for the status scale a scorecard reads in); views may carry an `icon` for the rail. While a panel or the create form is open the shell sidebar, the rail and the list soften with a light blur so only the open record reads sharp, and they stay soft for as long as the record is open (EP-B23). Colours do not change. Keyboard focus is the single exception: focus within one of those surfaces restores it, because tabbing into the list has to leave it readable. The pointer does not, so passing over the list on the way to something else does not flicker it back and forth. The panel bar shows the item's position in the loaded list ("3 of 11") when no save is in flight, as a control: previous and next move through the loaded list from the panel. This reverses the earlier rule that moving between items is done from the list alone. While a record is open the list is covered on its end side and, since EP-B23, stays softened, so sending the reader back to it for the commonest move in triage is the wrong cost. The bar also carries the record's name once the heading has scrolled out of view, so a long record always says which one it is.
 - EP-B08 Mobile: views `list` → `detail` → `create`, full screen, slide from the end side (`dir`-aware); rail as a bottom sheet with active-filter count. Back gesture and browser back both go to the previous view.
 - EP-B09 Direction: all animation and column order derive from `dir`.

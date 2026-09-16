@@ -5,6 +5,7 @@ import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { useDateTime } from '@/ui/format';
 import type { DetailApi } from '@/ui/entity/types';
+import { EntityFooter, EntityUpdated } from '@/ui/entity/EntityFooter';
 import { CommitteeTasks } from '@/modules/tasks/ui';
 import { CommitteeNotes } from '@/modules/notes/ui';
 import type { Committee, CommitteePatch } from '../schema/validation';
@@ -25,7 +26,9 @@ export function CommitteeDetail({ committee, api }: { committee: Committee; api:
       <Tabs.Panel value="notes"><CommitteeNotes committeeId={committee.id} allowCreate={!committee.deletedAt && committee.status === 'active'} /></Tabs.Panel>
       <Tabs.Panel value="activity"><CommitteeActivity id={committee.id} /></Tabs.Panel>
     </Tabs.Root>
-    {!committee.deletedAt && <Button variant="ghost" className="text-danger" onClick={api.remove}>{c('delete')}</Button>}
+    <EntityFooter remove={committee.deletedAt ? null : api.remove}>
+      <EntityUpdated at={committee.updatedAt} />
+    </EntityFooter>
   </div>;
 }
 function CommitteeActivity({ id }: { id: string }) {

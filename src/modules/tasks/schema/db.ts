@@ -8,6 +8,7 @@ import {
   timestamp,
   index,
   check,
+  primaryKey,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -63,5 +64,59 @@ export const tasks = pgTable(
       sql`(${t.status} = 'completed') = (${t.completedAt} is not null)`,
     ),
     check('tasks_self_check', sql`${t.parentId} <> ${t.id}`),
+  ],
+);
+
+// TASKS-B02: completing a parent with open subtasks changes several rows at once, so a completion
+// is recorded as one operation with one identity. Undo needs each row's state from before, which
+// nothing else stores: the audit log holds the patch that was applied, not what it replaced, and it
+// is write-only infrastructure with untyped JSON rather than a place to read domain state back out
+// of. Two small typed tables make ownership, idempotency and concurrency explicit instead.
+export const taskCompletions = pgTable(
+  'task_completions',
+  {
+    id: uuid().primaryKey(),
+    rootTaskId: uuid('root_task_id')
+      .notNull()
+      .references((): AnyPgColumn => tasks.id, { onDelete: 'cascade' }),
+    actorId: uuid('actor_id').references(() => users.id),
+    status: text().notNull().default('completed'),
+    createdAt: time('created_at').notNull().defaultNow(),
+    undoneAt: time('undone_at'),
+  },
+  (t) => [
+    index('task_completions_root_idx').on(t.rootTaskId),
+    index('task_completions_actor_idx').on(t.actorId),
+    check('task_completions_status_check', sql`${t.status} in ('completed','undone')`),
+    check(
+      'task_completions_undone_check',
+      sql`(${t.status} = 'undone') = (${t.undoneAt} is not null)`,
+    ),
+  ],
+);
+// One row per task the operation actually changed. A subtask that was already completed is not an
+// item, so Undo leaves it completed. `completed_revision` is the revision the row carried once this
+// operation had completed it, and it is the per-row fence Undo checks: if anything has touched the
+// row since, the operation is refused rather than overwriting later work.
+export const taskCompletionItems = pgTable(
+  'task_completion_items',
+  {
+    completionId: uuid('completion_id')
+      .notNull()
+      .references(() => taskCompletions.id, { onDelete: 'cascade' }),
+    taskId: uuid('task_id')
+      .notNull()
+      .references((): AnyPgColumn => tasks.id, { onDelete: 'cascade' }),
+    previousStatus: text('previous_status').notNull(),
+    previousCompletedAt: time('previous_completed_at'),
+    completedRevision: integer('completed_revision').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.completionId, t.taskId] }),
+    index('task_completion_items_task_idx').on(t.taskId),
+    check(
+      'task_completion_items_status_check',
+      sql`${t.previousStatus} in ('inbox','next_action','waiting_on','someday','completed')`,
+    ),
   ],
 );

@@ -129,5 +129,11 @@ export type EntityPageProps<T extends Entity, P, C> = {
     detail: (item: T, api: DetailApi<P>) => ReactNode;
     create: (api: CreateApi<C, T>) => ReactNode;
     name: (item: T) => string;
+    // The localized sentence the Undo toast reads when one of these is trashed, naming the kind of
+    // record rather than the record: a title is unbounded, and at this size an unbounded string
+    // wraps the toast to two lines and changes its shape every time it appears. The reader has just
+    // acted on that record and the name is one press away in Trash; what the receipt has to carry
+    // is that the action landed and that it is reversible.
+    deletedMessage: string;
   };
 };

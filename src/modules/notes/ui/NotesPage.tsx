@@ -144,6 +144,7 @@ export function NotesPage() {
         rowStyle: 'card',
         columns,
         name: (note) => note.title,
+        deletedMessage: t('deletedToast'),
         row: (note) => <NoteRow note={note} />,
         rowTrail: (note) => <NoteTrail note={note} />,
         detail: (note, api) => <NoteDetail note={note} api={api} />,

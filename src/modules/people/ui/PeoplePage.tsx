@@ -24,6 +24,7 @@ export function PeoplePage() {
       renderers={{
         columns,
         name: (person) => person.fullName,
+        deletedMessage: p('deletedToast'),
         row: (person) => <PersonRow person={person} />,
         detail: (person, api) => <PersonDetail person={person} api={api} />,
         create: (api) => <CreatePerson api={api} />,

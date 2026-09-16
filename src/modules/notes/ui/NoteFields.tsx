@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState, type FocusEvent } from 'react';
+import { useRef, useState, type FocusEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Textarea } from '@/ui/primitives/textarea';
@@ -22,7 +22,19 @@ type Save = (patch: Patch) => void;
 // The detail panel: the title is the heading, then type and date rows, the participants (people
 // mentioned in the content, linking to their pages), tags and the markdown content. Every field
 // commits on leave through the framework save queue.
-export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
+export function NoteFields({
+  note,
+  save,
+  contentAction,
+  tagsAction,
+}: {
+  note: NoteDetail;
+  save: Save;
+  // The AI actions belong to the fields they transform, so they arrive as slots rather than
+  // floating in a row above the record (NOTES-B22).
+  contentAction?: ReactNode;
+  tagsAction?: ReactNode;
+}) {
   const t = useTranslations('notes');
   const committees = useTranslations('committees');
   const { draft, change } = useDraftProperties(note, save);
@@ -50,13 +62,14 @@ export function NoteFields({ note, save }: { note: NoteDetail; save: Save }) {
         <CommitteePicker value={note.committeeId} onChange={(committeeId) => save({ committeeId })} />
       </Property>
       <ParticipantLinks participants={note.participants} />
-      <TagsEditor tags={note.tags} save={(tags) => save({ tags })} />
+      <TagsEditor tags={note.tags} save={(tags) => save({ tags })} action={tagsAction} />
       {mentions.error && <ErrorPanel error={mentions.error} />}
       <MarkdownField
         label={t('content')}
         value={note.content}
         mentions={mentions.mentions}
         onCommit={mentions.commit}
+        action={contentAction}
       />
     </fieldset>
   );

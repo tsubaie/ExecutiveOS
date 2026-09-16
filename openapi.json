@@ -791,6 +791,9 @@
           "data": {
             "additionalProperties": false,
             "properties": {
+              "canConfigure": {
+                "type": "boolean"
+              },
               "capabilities": {
                 "items": {
                   "enum": [
@@ -801,10 +804,15 @@
                   "type": "string"
                 },
                 "type": "array"
+              },
+              "configured": {
+                "type": "boolean"
               }
             },
             "required": [
-              "capabilities"
+              "capabilities",
+              "configured",
+              "canConfigure"
             ],
             "type": "object"
           }
@@ -8437,6 +8445,587 @@
         "type": "object"
       },
       "postTasksIdCompleteResponse": {
+        "$defs": {
+          "__schema0": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "__schema1": {
+            "anyOf": [
+              {
+                "maxLength": 50000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "__schema10": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          },
+          "__schema11": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "__schema12": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          },
+          "__schema13": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/__schema14"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "__schema14": {
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+            "type": "string"
+          },
+          "__schema15": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "__schema16": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "__schema17": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/__schema14"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "__schema18": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "__schema19": {
+            "anyOf": [
+              {
+                "enum": [
+                  "overdue",
+                  "today",
+                  "week",
+                  "later",
+                  "nodate"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "__schema2": {
+            "enum": [
+              "inbox",
+              "next_action",
+              "waiting_on",
+              "someday",
+              "completed"
+            ],
+            "type": "string"
+          },
+          "__schema20": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "__schema21": {
+            "default": 0,
+            "type": "number"
+          },
+          "__schema22": {
+            "default": 0,
+            "type": "number"
+          },
+          "__schema23": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "archivedAt": {
+                    "anyOf": [
+                      {
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "deletedAt": {
+                    "anyOf": [
+                      {
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "id": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "deletedAt",
+                  "archivedAt"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "__schema24": {
+            "additionalProperties": false,
+            "properties": {
+              "band": {
+                "$ref": "#/$defs/__schema19"
+              },
+              "committee": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "committeeId": {
+                "$ref": "#/$defs/__schema7"
+              },
+              "completedAt": {
+                "$ref": "#/$defs/__schema13"
+              },
+              "completedSubtaskCount": {
+                "$ref": "#/$defs/__schema22"
+              },
+              "createdAt": {
+                "$ref": "#/$defs/__schema14"
+              },
+              "createdBy": {
+                "$ref": "#/$defs/__schema15"
+              },
+              "deletedAt": {
+                "$ref": "#/$defs/__schema17"
+              },
+              "deletedOpId": {
+                "$ref": "#/$defs/__schema18"
+              },
+              "description": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "dueDate": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "id": {
+                "$ref": "#/$defs/__schema9"
+              },
+              "ownerId": {
+                "$ref": "#/$defs/__schema5"
+              },
+              "ownerName": {
+                "$ref": "#/$defs/__schema20"
+              },
+              "parentId": {
+                "$ref": "#/$defs/__schema11"
+              },
+              "priority": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "revision": {
+                "$ref": "#/$defs/__schema10"
+              },
+              "sortOrder": {
+                "$ref": "#/$defs/__schema12"
+              },
+              "sourceNote": {
+                "$ref": "#/$defs/__schema23"
+              },
+              "sourceNoteId": {
+                "$ref": "#/$defs/__schema6"
+              },
+              "status": {
+                "$ref": "#/$defs/__schema2"
+              },
+              "subtaskCount": {
+                "$ref": "#/$defs/__schema21"
+              },
+              "title": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "updatedAt": {
+                "$ref": "#/$defs/__schema14"
+              },
+              "updatedBy": {
+                "$ref": "#/$defs/__schema16"
+              }
+            },
+            "required": [
+              "title",
+              "description",
+              "status",
+              "priority",
+              "dueDate",
+              "ownerId",
+              "sourceNoteId",
+              "committeeId",
+              "committee",
+              "id",
+              "revision",
+              "parentId",
+              "sortOrder",
+              "completedAt",
+              "createdAt",
+              "updatedAt",
+              "createdBy",
+              "updatedBy",
+              "deletedAt",
+              "deletedOpId",
+              "band",
+              "ownerName",
+              "subtaskCount",
+              "completedSubtaskCount",
+              "sourceNote"
+            ],
+            "type": "object"
+          },
+          "__schema3": {
+            "anyOf": [
+              {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "urgent"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "__schema4": {
+            "anyOf": [
+              {
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "__schema5": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "__schema6": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "__schema7": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "__schema8": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "deleted": {
+                    "type": "boolean"
+                  },
+                  "id": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "enum": [
+                      "active",
+                      "archived"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "status",
+                  "deleted"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "__schema9": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "band": {
+                "$ref": "#/$defs/__schema19"
+              },
+              "committee": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "committeeId": {
+                "$ref": "#/$defs/__schema7"
+              },
+              "completedAt": {
+                "$ref": "#/$defs/__schema13"
+              },
+              "completedSubtaskCount": {
+                "$ref": "#/$defs/__schema22"
+              },
+              "createdAt": {
+                "$ref": "#/$defs/__schema14"
+              },
+              "createdBy": {
+                "$ref": "#/$defs/__schema15"
+              },
+              "deletedAt": {
+                "$ref": "#/$defs/__schema17"
+              },
+              "deletedOpId": {
+                "$ref": "#/$defs/__schema18"
+              },
+              "deletedSubtasks": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/__schema24"
+                },
+                "type": "array"
+              },
+              "description": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "dueDate": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "id": {
+                "$ref": "#/$defs/__schema9"
+              },
+              "ownerId": {
+                "$ref": "#/$defs/__schema5"
+              },
+              "ownerName": {
+                "$ref": "#/$defs/__schema20"
+              },
+              "parentId": {
+                "$ref": "#/$defs/__schema11"
+              },
+              "priority": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "revision": {
+                "$ref": "#/$defs/__schema10"
+              },
+              "sortOrder": {
+                "$ref": "#/$defs/__schema12"
+              },
+              "sourceNote": {
+                "$ref": "#/$defs/__schema23"
+              },
+              "sourceNoteId": {
+                "$ref": "#/$defs/__schema6"
+              },
+              "status": {
+                "$ref": "#/$defs/__schema2"
+              },
+              "subtaskCount": {
+                "$ref": "#/$defs/__schema21"
+              },
+              "subtasks": {
+                "default": [],
+                "items": {
+                  "$ref": "#/$defs/__schema24"
+                },
+                "type": "array"
+              },
+              "title": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "updatedAt": {
+                "$ref": "#/$defs/__schema14"
+              },
+              "updatedBy": {
+                "$ref": "#/$defs/__schema16"
+              }
+            },
+            "required": [
+              "title",
+              "description",
+              "status",
+              "priority",
+              "dueDate",
+              "ownerId",
+              "sourceNoteId",
+              "committeeId",
+              "committee",
+              "id",
+              "revision",
+              "parentId",
+              "sortOrder",
+              "completedAt",
+              "createdAt",
+              "updatedAt",
+              "createdBy",
+              "updatedBy",
+              "deletedAt",
+              "deletedOpId",
+              "band",
+              "ownerName",
+              "subtaskCount",
+              "completedSubtaskCount",
+              "sourceNote",
+              "subtasks",
+              "deletedSubtasks"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": false,
+            "properties": {
+              "opId": {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "opId"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "postTasksIdCompleteUndoBody": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "opId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "opId"
+        ],
+        "type": "object"
+      },
+      "postTasksIdCompleteUndoResponse": {
         "$defs": {
           "__schema0": {
             "maxLength": 500,
@@ -19837,7 +20426,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/postTasksIdCompleteResponse"
+                  "$ref": "#/components/schemas/postTasksIdCompleteUndoResponse"
                 }
               }
             },
@@ -20075,7 +20664,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/postTasksIdCompleteResponse"
+                  "$ref": "#/components/schemas/postTasksIdCompleteUndoResponse"
                 }
               }
             },
@@ -20176,7 +20765,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/postTasksIdCompleteResponse"
+                  "$ref": "#/components/schemas/postTasksIdCompleteUndoResponse"
                 }
               }
             },
@@ -20632,6 +21221,130 @@
         "x-idempotency-key": "required"
       }
     },
+    "/api/v1/tasks/{id}/complete/undo": {
+      "post": {
+        "operationId": "postTasksIdCompleteUndo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/postTasksIdCompleteUndoBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/postTasksIdCompleteUndoResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "validation_failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthenticated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "not_found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "rule_violation"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "internal"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "ai_unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-idempotency-key": "required"
+      }
+    },
     "/api/v1/tasks/{id}/convert-to-task": {
       "post": {
         "operationId": "postTasksIdConvertToTask",
@@ -20661,7 +21374,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/postTasksIdCompleteResponse"
+                  "$ref": "#/components/schemas/postTasksIdCompleteUndoResponse"
                 }
               }
             },
@@ -20785,7 +21498,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/postTasksIdCompleteResponse"
+                  "$ref": "#/components/schemas/postTasksIdCompleteUndoResponse"
                 }
               }
             },
@@ -20909,7 +21622,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/postTasksIdCompleteResponse"
+                  "$ref": "#/components/schemas/postTasksIdCompleteUndoResponse"
                 }
               }
             },
@@ -21033,7 +21746,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/postTasksIdCompleteResponse"
+                  "$ref": "#/components/schemas/postTasksIdCompleteUndoResponse"
                 }
               }
             },
@@ -21147,7 +21860,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/postTasksIdCompleteResponse"
+                  "$ref": "#/components/schemas/postTasksIdCompleteUndoResponse"
                 }
               }
             },
@@ -21251,7 +21964,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/postTasksIdCompleteResponse"
+                  "$ref": "#/components/schemas/postTasksIdCompleteUndoResponse"
                 }
               }
             },
