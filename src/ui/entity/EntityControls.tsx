@@ -40,8 +40,11 @@ export function EntityToolbar<T extends Entity, P extends object, C>({
 }: Surface<T, P, C>) {
   const t = useTranslations('common');
   return (
-    <div className="entity-toolbar sticky top-0 z-10 space-y-3 border-b bg-surface p-3">
-      <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-3">
+    // EP-B40: the bar pays for itself in rows. Where it has to wrap — a phone, or the list beside
+    // an open record — the padding and the gap between its lines come in a step, because three
+    // wrapped rows at desktop spacing cost 24 px of a screen that has 732 px for records.
+    <div className="entity-toolbar sticky top-0 z-10 space-y-2 border-b bg-surface p-2 @lg:space-y-3 @lg:p-3">
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-2 @lg:gap-y-3">
         <div className="flex min-w-0 flex-1 basis-auto items-center gap-2 @lg:flex-none">
           <Button
             variant="ghost"
@@ -114,7 +117,11 @@ function EntityToolbarControls<T extends Entity, P extends object, C>({
       <div className="flex min-w-0 flex-1 basis-56">
         <EntitySearch key={c.searchReset} query={c.state.q} navigate={c.navigate} />
       </div>
-      <div className="ms-auto flex shrink-0 flex-wrap items-center gap-2">
+      {/* EP-B39: the settings group wraps and gives width back like everything else in the bar. It
+          was `shrink-0`, which on a module carrying a period as well as a sort (KPIs) made the
+          group 509 px wide inside a 390 px screen — the sort clipped mid-word and Filter and Clear
+          rendered past the edge, where nothing could reach them. */}
+      <div className="ms-auto flex min-w-0 flex-wrap items-center gap-2">
         {!covered && <EntityListSettings config={config} controller={c} />}
         <Button
           variant={count ? 'secondary' : 'outline'}

@@ -21,7 +21,7 @@ AppShell
 ├── Sidebar (≥ 1024px)        nav from src/ui/layout/nav.ts
 ├── TopBar                    search · notifications · account
 ├── <main>
-└── BottomNav (< 1024px)      Home · Tasks · Meetings · Notes · Menu
+└── BottomNav (< 1024px)      four destinations in nav order · More (ADMIN-B19)
 ```
 
 - **The TopBar carries three things and no fourth.** Workspace-wide search (`features/search.md`),
@@ -65,6 +65,12 @@ All list + detail modules use `src/ui/entity` per `features/entity-pages.md`. Pa
 ## Mobile
 
 - Safe areas on shell, bottom nav, sheets. Touch targets ≥ 44px. No hover-only affordances.
+- **Chrome is measured in rows of records.** A phone gives a list 732 px under the header and over
+  the bottom bar; a bar and a strip that read well on a desktop can take half of it before the
+  first record. Padding, the gap between a wrapped bar's lines, and the featured readings all step
+  down below the list container's `@lg` (EP-B40), and the readings become one scrolling line rather
+  than a two-column block. A control is never the thing that is dropped to save the space: anything
+  in the bar that cannot fit wraps and stays reachable (EP-B39).
 - Bottom sheets for pickers on touch; popovers on desktop; one picker component chooses by pointer type, not width.
 - Pull-to-refresh via `refetch`.
 - PWA manifest and icons; service worker caches the app shell only and excludes `/api/` and file downloads (`Cache-Control: no-store` respected). No push in v1.

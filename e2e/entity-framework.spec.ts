@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from './fixtures/auth';
+import en from '../src/core/i18n/messages/en.json' with { type: 'json' };
+import ar from '../src/core/i18n/messages/ar.json' with { type: 'json' };
 
 // EP-B23: opening a record has to make that record the subject of the page. Every part of this is
 // CSS, and the part that kept failing was a cascade problem rather than a missing rule, so the
@@ -143,3 +145,68 @@ test('EP-B26 the record slides over the list instead of displacing it @desktop',
   const after = await list.boundingBox();
   expect(after?.width).toBeCloseTo(closed?.width ?? 0, 0);
 });
+
+// EP-B39: nothing in the bar may sit past the end of the screen. The settings group used to be
+// `shrink-0`, so on a module carrying a period as well as a sort it measured 509 px inside a
+// 390 px viewport: the sort clipped mid-word and Filter and Clear rendered off the end, where no
+// pointer could reach them. Measured, not asserted on classes — the failure was a computed width.
+// Both locales: an Arabic label is a different measure, and the end of the screen is the other
+// edge, so LTR passing says nothing about RTL (docs/05 § Internationalization and RTL).
+for (const locale of ['en', 'ar'] as const) {
+  for (const width of [320, 390]) {
+    test(`EP-B39 every toolbar control stays on screen at ${width} px (${locale})`, async ({
+      page,
+    }) => {
+      const m = locale === 'ar' ? ar : en;
+      await loginAs(page, locale);
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto('/kpis?view=all');
+      const toolbar = page.locator('.entity-toolbar');
+      await expect(toolbar).toBeVisible();
+      const overflowing = await toolbar.evaluate((bar) =>
+        [...bar.querySelectorAll('button, input, [role="group"]')]
+          .filter((control) => {
+            const box = control.getBoundingClientRect();
+            if (box.width <= 0 || box.height <= 0) return false;
+            // Past either edge: RTL overflows towards 0, LTR towards the far side.
+            return box.right > window.innerWidth + 1 || box.left < -1;
+          })
+          .map((control) => control.textContent?.trim().slice(0, 30) ?? control.tagName),
+      );
+      expect(overflowing).toEqual([]);
+      // The one the reader loses first when the group cannot give width back.
+      await expect(page.getByRole('button', { name: m.common.filter, exact: true })).toBeInViewport();
+    });
+  }
+}
+
+// EP-B40: the featured readings are one line on a phone. Two columns made five readings three rows
+// and an orphan with a hole beside it, which cost 198 px of a 732 px list before a single record.
+for (const locale of ['en', 'ar'] as const) {
+  test(`EP-B40 featured readings are one row on a phone (${locale})`, async ({ page }) => {
+    await loginAs(page, locale);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/tasks?view=all');
+    const strip = page.locator('[data-entity-stats]');
+    await expect(strip).toBeVisible();
+    const laid = await strip.evaluate((bar) => {
+      const rtl = getComputedStyle(bar).direction === 'rtl';
+      const tiles = [...bar.children].map((tile) => tile.getBoundingClientRect());
+      const first = tiles[0]!;
+      return {
+        rows: new Set(tiles.map((tile) => Math.round(tile.top))).size,
+        height: Math.round(bar.getBoundingClientRect().height),
+        // The strip must rest where it was painted: a snap position that ignores the padding
+        // leaves it scrolled by exactly that padding, with the leading reading cut off. RTL
+        // scrolls the other way, so the distance from zero is what matters.
+        scrolled: Math.abs(bar.scrollLeft),
+        // Inset from the inline start edge, whichever side that is.
+        leadingInset: Math.round(rtl ? window.innerWidth - first.right : first.left),
+      };
+    });
+    expect(laid.rows).toBe(1);
+    expect(laid.height).toBeLessThanOrEqual(80);
+    expect(laid.scrolled).toBe(0);
+    expect(laid.leadingInset).toBeGreaterThan(0);
+  });
+}

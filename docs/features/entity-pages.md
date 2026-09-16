@@ -131,6 +131,22 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   filter sheet does not carry a third copy of it beside the bar's control and the table's headers
   (EP-B31). A `filters.mode` is the same: EP-B28 already says it travels with the facets and is not
   one, and counting it was what made choosing a period light up "Filters · 1" and widen the button.
+- EP-B40 The bar and the readings above it are measured in rows of a phone, not in pixels of a
+  desktop. The featured readings are a single scrolling line below 1024 px (`@lg` on the list
+  container), each reading one row of name and figure, and the two-column grid returns with the
+  width to hold it: five readings in two columns is three rows and an orphan with a hole beside it,
+  which cost 198 px of the 732 px a 390 px phone has for records. The strip's snap positions are
+  inset by its own padding, or it rests scrolled by exactly that padding with its leading reading
+  cut off. The bar's own padding and the gap between its wrapped lines step down at the same width,
+  because three wrapped lines at desktop spacing is a row of records. Measured on a 390 px screen
+  with seeded data, this moves the first record of Tasks from 433 px to 284 px and of Notes from
+  287 px to 224 px.
+- EP-B39 No control in the bar sits past the end of the screen. The settings group gives width back
+  and wraps like everything else in the bar; it was `shrink-0`, which on a module carrying a period
+  as well as a sort (KPIs) measured 509 px inside a 390 px viewport — the sort clipped mid-word and
+  Filter and Clear rendered off the end, where nothing could reach them. A wrapped line is the cost
+  of keeping every control reachable, and it is the right one: a control the reader cannot press is
+  not a saving.
 - EP-B32 The bar is one wrapping row, not two fixed ones. The title and the controls are two flex
   items that share a line wherever the list is wide enough to hold both and stack where it is not, so
   a desktop list opens with a 67 px header and a phone still gets the two-row form, without either
