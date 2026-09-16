@@ -35,6 +35,7 @@ export function KpisPage() {
     <EntityPage
       module="kpis"
       title={t('title')}
+      searchLabel={t('searchList')}
       description={t('intro')}
       filters={filters}
       useList={useKpis}

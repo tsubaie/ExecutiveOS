@@ -116,6 +116,7 @@ export function NotesPage() {
     <EntityPage
       module="notes"
       title={c('notes')}
+      searchLabel={t('searchList')}
       description={t('descriptionIntro')}
       filters={filters}
       emptyState={{ icon: NotebookPen }}

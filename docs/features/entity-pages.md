@@ -141,6 +141,14 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   because three wrapped lines at desktop spacing is a row of records. Measured on a 390 px screen
   with seeded data, this moves the first record of Tasks from 433 px to 284 px and of Notes from
   287 px to 224 px.
+- EP-B41 The list's search field names its module. Its placeholder and accessible name are the
+  module's own words — "Search tasks", "Search notes" — through a required `searchLabel` on the page
+  declaration, so beside the Filter button it reads as text against facets, and beside the workspace
+  search one row above it (SEARCH-B11) it reads as a filter on this list rather than a second copy of
+  that. The no-matches state says what to do next: Clear filters, and — when a phrase was typed —
+  "Search the workspace", which opens the palette already holding that phrase, so a reader whose
+  phrase lives in another module does not retype it. The palette's own hand-off back into the list
+  is SEARCH-B12.
 - EP-B39 No control in the bar sits past the end of the screen. The settings group gives width back
   and wraps like everything else in the bar; it was `shrink-0`, which on a module carrying a period
   as well as a sort (KPIs) measured 509 px inside a 390 px viewport — the sort clipped mid-word and

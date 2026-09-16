@@ -11,7 +11,7 @@ export function CommitteeTasks({ committeeId, allowCreate = true }: { committeeI
   const c = useTranslations('common');
   const mutations = useTaskMutations();
   return <RelatedEntities allowCreate={allowCreate} filters={{ view: 'all', q: '', sort: '', committeeId }} config={{
-    module: 'tasks', title: c('tasks'), description: t('descriptionIntro'),
+    module: 'tasks', title: c('tasks'), searchLabel: t('searchList'), description: t('descriptionIntro'),
     filters: { views: [{ id: 'all', label: t('all') }, { id: 'completed', label: t('completed') }] },
     group: (task) => task.band ? t(task.band) : null,
     useList: useTasks, useDetail: useTask, mutations, rowAction: (task) => <TaskToggle task={task} />,

@@ -10,7 +10,7 @@ export function CommitteeNotes({ committeeId, allowCreate = true }: { committeeI
   const c = useTranslations('common');
   const mutations = useNoteMutations();
   return <RelatedEntities allowCreate={allowCreate} filters={{ view: 'all', q: '', sort: '', committeeId }} config={{
-    module: 'notes', title: c('notes'), description: t('descriptionIntro'),
+    module: 'notes', title: c('notes'), searchLabel: t('searchList'), description: t('descriptionIntro'),
     filters: { views: [{ id: 'all', label: t('all') }, { id: 'archived', label: t('archived') }] },
     useList: useNotes, useDetail: useNote, mutations,
     renderers: { row: (note) => <NoteRow note={note} />, rowTrail: (note) => <NoteTrail note={note} />, name: (note) => note.title, deletedMessage: t('deletedToast'),

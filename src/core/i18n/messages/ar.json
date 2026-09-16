@@ -1,5 +1,8 @@
 {
   "common": {
+    "searchOpen": "بحث",
+    "searchWorkspace": "ابحث في مساحة العمل",
+    "searchScope": "ابحث في {module} عن «{query}»",
     "brand": "ExecutiveOS",
     "tagline": "رؤية واضحة لمكتبك.",
     "home": "الرئيسية",
@@ -102,6 +105,7 @@
     "searchShortcutMac": "⌘ K"
   },
   "people": {
+    "searchList": "ابحث في الأشخاص",
     "fullName": "الاسم الكامل",
     "displayName": "اسم العرض",
     "honorific": "اللقب",
@@ -272,6 +276,7 @@
     "ai_failed": "فشل طلب الذكاء الاصطناعي. أعد المحاولة."
   },
   "tasks": {
+    "searchList": "ابحث في المهام",
     "title": "عنوان المهمة",
     "description": "الوصف",
     "status": "الحالة",
@@ -338,6 +343,7 @@
     "completedWithSubtasksToast": "اكتملت المهمة ومعها مهام فرعية عددها {count}"
   },
   "notes": {
+    "searchList": "ابحث في الملاحظات",
     "title": "عنوان الملاحظة",
     "content": "المحتوى",
     "type": "النوع",
@@ -471,6 +477,7 @@
     "updated": "تم تحديث {count} ملاحظات."
   },
   "committees": {
+    "searchList": "ابحث في اللجان",
     "title": "اللجان",
     "committee": "اللجنة",
     "intro": "إدارة اللجان ومهامها وملاحظاتها المرتبطة.",
@@ -517,6 +524,7 @@
     "deletedToast": "نُقلت اللجنة إلى المحذوفات"
   },
   "kpis": {
+    "searchList": "ابحث في مؤشرات الأداء",
     "title": "مؤشرات الأداء",
     "intro": "الأهداف والمقاييس والقراءات والمستهدفات الربعية.",
     "name": "الاسم",

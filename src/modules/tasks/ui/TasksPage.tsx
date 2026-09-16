@@ -83,6 +83,7 @@ export function TasksPage() {
     <EntityPage
       module="tasks"
       title={c('tasks')}
+      searchLabel={t('searchList')}
       description={t('descriptionIntro')}
       filters={filters}
       emptyState={{ icon: ListChecks }}

@@ -1,8 +1,9 @@
 'use client';
-import { Suspense, lazy, useEffect, useState, useSyncExternalStore } from 'react';
+import { Suspense, lazy, useEffect, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
+import { closeSearchPalette, openSearchPalette, useSearchPalette } from './search-palette-store';
 // The palette is a whole dialog, a query and a result list, and it is loaded by every route in the
 // product for a control most visits never open. It arrives when it is first opened instead
 // (the pattern ChoiceSelect already uses for its searchable variant).
@@ -17,38 +18,47 @@ import { NotificationBell } from '@/modules/notifications/ui';
 // every width has to earn it.
 export function ShellHeader({ user }: { user: { name: string; email: string } }) {
   const t = useTranslations('common');
-  const [searching, setSearching] = useState(false);
+  const { open, query } = useSearchPalette();
   const apple = useApplePlatform();
-  useSearchShortcut(() => setSearching(true));
+  useSearchShortcut(openSearchPalette);
   return (
     <header className="flex min-h-14 shrink-0 items-center gap-2 border-b px-4 lg:px-8">
       {/* SEARCH-B08: a button, not an input. The palette owns the text, so there is one place it is
-          typed and no state to hand over when it opens. */}
-      <Button
-        variant="outline"
-        // `w-full` on a flex item is 100% of the row, not "the space that is left", and the button
-        // variant is `shrink-0` — so beside the bell and the avatar it pushed the header wider than
-        // a 390px screen. It takes the remaining width and is allowed to give it back instead.
-        className="min-w-0 flex-1 shrink basis-0 justify-start gap-2 font-normal text-text-muted sm:max-w-md"
-        onClick={() => setSearching(true)}
-      >
-        <Search aria-hidden={true} className="size-4" />
-        <span className="flex-1 truncate text-start">{t('searchPlaceholder')}</span>
-        <kbd
-          translate="no"
-          aria-hidden={true}
-          className="hidden shrink-0 rounded border px-1.5 py-0.5 text-[11px] tabular-nums sm:inline"
-        >
-          {t(apple ? 'searchShortcutMac' : 'searchShortcut')}
-        </kbd>
-      </Button>
+          typed and no state to hand over when it opens.
+          SEARCH-B11: and it looks like one. It used to be drawn as a bordered field stretched
+          across the band, one row above the list's own search field, so every entity page showed
+          two things to type into and the reader had to guess which one they meant. Only the list's
+          field is somewhere to type; this is a launcher — an icon, the word and the key, at its
+          natural width beside the other two utilities — and on a phone the icon alone. */}
       <div className="ms-auto flex shrink-0 items-center gap-1">
+        <Button
+          variant="ghost"
+          className="gap-2 font-normal text-text-muted"
+          aria-label={t('searchWorkspace')}
+          onClick={() => openSearchPalette()}
+        >
+          <Search aria-hidden={true} className="size-4" />
+          <span className="hidden sm:inline">{t('searchOpen')}</span>
+          <kbd
+            translate="no"
+            aria-hidden={true}
+            className="hidden rounded border px-1.5 py-0.5 text-[11px] tabular-nums sm:inline"
+          >
+            {t(apple ? 'searchShortcutMac' : 'searchShortcut')}
+          </kbd>
+        </Button>
         <NotificationBell />
         <AccountMenu user={user} />
       </div>
-      {searching && (
+      {open && (
         <Suspense fallback={null}>
-          <SearchPalette open={searching} onOpenChange={setSearching} />
+          <SearchPalette
+            open={open}
+            initialQuery={query}
+            onOpenChange={(next) => {
+              if (!next) closeSearchPalette();
+            }}
+          />
         </Suspense>
       )}
     </header>

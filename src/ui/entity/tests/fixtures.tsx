@@ -13,6 +13,7 @@ export function testConfig(overrides: Partial<Props> = {}): Props {
   return {
     module: 'measures',
     title: 'Measures',
+    searchLabel: 'Search measures',
     description: 'Every measure.',
     filters: { views: [] },
     useList: () => testList(),
