@@ -54,6 +54,11 @@ test('TASKS-B02 TASKS-B08 EP-B20 task cards retain an independent completion con
   // same views and counts the strip is not drawn, and collapsing the rail is what brings it back;
   // where there is no rail at all it is simply there. Either way it reads Inbox first and rounded.
   const summaries = page.locator('[data-entity-stats]');
+  // The bar has to be on screen before the rail's state can be read: `isVisible()` answers now
+  // rather than waiting, so probing straight after the navigation reported "no rail" on a page
+  // that had not drawn one yet, and the strip was then expected while it was still standing aside
+  // for a rail the test had not collapsed.
+  await expect(page.locator('.entity-toolbar')).toBeVisible();
   const railed = await page.getByRole('button', { name: en.common.collapseViews }).isVisible();
   if (railed) {
     await expect(summaries).toBeHidden();

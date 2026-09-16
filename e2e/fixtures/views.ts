@@ -4,7 +4,11 @@ import ar from '../../src/core/i18n/messages/ar.json' with { type: 'json' };
 // Selects an entity view whether the rail is visible (wide desktop) or folded into the filter sheet.
 export async function selectView(page: Page, locale: string, name: RegExp) {
   const messages = locale === 'ar' ? ar : en;
-  const rail = page.getByRole('button', { name }).first();
+  // Scoped to the rail, not the page: a view name is ordinary words, so an unscoped lookup also
+  // matches a record whose title happens to contain them. A note called "Trash <id>" made
+  // `.first()` resolve to its own row wherever the rail was absent, and the fixture then clicked
+  // the row it was supposed to be navigating away from.
+  const rail = page.locator('.entity-rail').getByRole('button', { name }).first();
   if (await rail.isVisible()) {
     await rail.click();
     return;

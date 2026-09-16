@@ -139,7 +139,10 @@ test('HOME-B02 HOME-A03 uninstalled sections are omitted and AI review section i
   // HOME-B02: a module the workspace never installed is left out rather than listed as empty.
   await expect(page.getByText('Module not enabled', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Next meetings', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Attention KPIs', exact: true })).toHaveCount(0);
+  // KPIs ships a home provider since 05c989c, so the module is installed and HOME-B02's other
+  // half applies: an installed section stays visible at zero items. This line asserted its
+  // absence from before the module existed.
+  await expect(page.getByRole('heading', { name: 'Attention KPIs', exact: true })).toBeVisible();
   await expect(page.getByText('Pending AI reviews', { exact: true })).toHaveCount(0);
   // An installed section stays even with nothing in it.
   await expect(page.getByRole('heading', { name: 'Overdue actions', exact: true })).toBeVisible();
