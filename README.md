@@ -66,7 +66,7 @@ After setup, load the six invented preview people (repeat-safe):
 docker compose exec app pnpm db:seed
 ```
 
-A few representative screenshots live under `docs/screenshots/`; `node tools/capture-preview.mjs` and `node tools/capture-tasks.mjs` regenerate the full matrix into the ignored `tmp/screenshots/`.
+A few representative screenshots live under `docs/screenshots/`; the `tools/capture-*.mjs` scripts (preview, tasks, notes, kpis) regenerate the full matrix into the ignored `tmp/screenshots/`.
 
 Restore replaces the target database and requires explicit confirmation, as specified by ADR 0008:
 

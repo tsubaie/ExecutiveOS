@@ -138,6 +138,7 @@ offered as a facet instead.
 The list page's featured strip is the scorecard band: how the measures divide between on target,
 near target, off target and no data. "Needs attention" stays a rail view rather than a fifth tile,
 because it is the same rows counted a second time.
+- The list's search field is labelled `kpis.searchList` ("Search KPIs", EP-B41); `q` covers name, category and notes.
 
 ## Acceptance criteria
 
