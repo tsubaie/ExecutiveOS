@@ -92,6 +92,8 @@ export const TaskListQuery = z.strictObject({
   priority: z.union([Priority, z.literal('')]).default(''),
   dueFrom: z.union([z.iso.date(), z.literal('')]).default(''),
   dueTo: z.union([z.iso.date(), z.literal('')]).default(''),
+  // TASKS-B05: one calendar day, the facet a day in Home's week strip opens the list with.
+  due: z.union([z.iso.date(), z.literal('')]).default(''),
   hasSubtasks: z.enum(['', 'true', 'false']).default(''),
   sourceNoteId: z.union([z.uuid(), z.literal('')]).default(''),
   committeeId: z.union([z.uuid(), z.literal('')]).default(''),

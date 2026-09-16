@@ -32,7 +32,7 @@ import {
   Frequency,
   type KpiCreate,
   type KpiPatch,
-  type KpiListQuery,
+  KpiListQuery,
   type ObjectiveCreate,
   type ObjectivePatch,
   type ReadingCreate,
@@ -370,13 +370,9 @@ export async function removeTarget(ctx: Context, kpiId: string, targetId: string
 }
 // HOME-B01 § Attention KPIs: the page consumes this through the module's server manifest.
 export async function homeSummary(ctx: Context, day: string): Promise<HomeSection[]> {
-  const thresholds = await getSetting(ctx.db, 'kpis.status_thresholds');
-  const at: Scope = { today: day, thresholds };
-  const rows = await repo.selectKpis(
-    ctx.db,
-    { view: 'attention', q: '', objectiveId: '', category: '', ownerId: '' },
-    { today: at.today, fromYear: Number(at.today.slice(0, 4)) - 1 },
-  );
+  const at: Scope = { today: day, thresholds: await getSetting(ctx.db, 'kpis.status_thresholds') };
+  const span = { today: day, fromYear: Number(day.slice(0, 4)) - 1 };
+  const rows = await repo.selectKpis(ctx.db, KpiListQuery.parse({ view: 'attention' }), span);
   const attention = rows
     .map((row) => toKpi(row, at))
     .filter((item) => !item.deletedAt && attentionStatuses.includes(item.meta.status))
@@ -394,6 +390,8 @@ export async function homeSummary(ctx: Context, day: string): Promise<HomeSectio
         href: routes.kpis({ view: 'all', id: item.id }),
         committee: item.objectiveName,
         date: item.meta.currentDate,
+        status: item.meta.status,
+        ratio: item.meta.achievement,
       })),
     },
   ];

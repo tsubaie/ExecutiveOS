@@ -1,35 +1,28 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { Avatar } from '@/ui/layout/Avatar';
-import { TaskCheck } from '@/modules/tasks/ui';
-import { AgeingBar, Late, Progress } from './HomeBar';
-import { useCount, usePlainDate, useToday } from '@/ui/format';
-import { alarming, daysBetween, type Item, type Section, type SectionKey } from './home-sections';
+import { useCount } from '@/ui/format';
+import { Card, Row } from './HomeRow';
+import { emptyKey, type Section } from './home-sections';
 
-// The lead section is the one thing that must not be missed, so it is the only block given a raised
-// surface. Everything else stays on the page ground: one rule under the heading, hairlines between
-// rows. Depth comes from the neutral surface tokens, never from a colour tint, because only a soft
-// tint's matching solid foreground is guaranteed to meet contrast (docs/05 § Density).
+// A section on the page ground: one rule under the heading, hairlines between rows. Depth comes
+// from the neutral surface tokens, never from a colour tint, because only a soft tint's matching
+// solid foreground is guaranteed to meet contrast (docs/05 § Density). The one raised surface on
+// the page is the week block (HOME-B07), and the task sections are drawn together as the Actions
+// block; everything else arrives here.
 export function Stream({
   section,
-  lead = false,
   quiet = false,
+  wide = false,
 }: {
   section: Section;
-  lead?: boolean;
   quiet?: boolean;
+  wide?: boolean;
 }) {
   const t = useTranslations('home');
-  const c = useTranslations('common');
   const count = useCount();
-  const danger = alarming(section);
   return (
-    <section
-      className={
-        lead ? 'home-rise home-lead mt-6 rounded-xl border bg-surface px-4 py-4 lg:mt-8 lg:px-6' : ''
-      }
-    >
+    <section>
       <div className="flex items-baseline justify-between gap-4 border-b pb-2">
         <div className="flex min-w-0 items-baseline gap-2.5">
           <h2
@@ -39,135 +32,49 @@ export function Stream({
           </h2>
           <span
             key={section.count}
-            className={`count-tick shrink-0 text-sm tabular-nums ${danger ? 'rounded-md bg-danger-soft px-1.5 text-danger' : 'text-text-muted'}`}
+            className="count-tick shrink-0 text-sm tabular-nums text-text-muted"
           >
             {count(section.count)}
           </span>
         </div>
         {section.href && (
-          <Link className="shrink-0 text-xs text-accent hover:underline" href={section.href}>
+          <Link
+            className="shrink-0 text-xs text-text-muted transition-colors duration-150 hover:text-accent hover:underline focus-visible:text-accent"
+            href={section.href}
+          >
             {t('viewAll')}
           </Link>
         )}
       </div>
-      <Ageing section={section} />
-      {section.items.length > 0 ? (
-        <ul className={lead ? 'home-lead-rows md:grid md:grid-cols-2 md:gap-x-10' : ''}>
-          {section.items.map((item) => (
-            <li key={item.id} className={lead ? '' : 'border-b last:border-b-0'}>
-              <Row item={item} sectionKey={section.key} lead={lead} />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="py-4 text-sm text-text-muted">{c('empty')}</p>
-      )}
+      <Items section={section} wide={wide} />
     </section>
   );
 }
-
-// HOME-B09: the shape of the pile, stated in figures with the mark only ranking them.
-function Ageing({ section }: { section: Section }) {
+// HOME-B02: an empty section answers its own question where it has one, and says the generic
+// line only where it does not.
+function Items({ section, wide }: { section: Section; wide: boolean }) {
   const t = useTranslations('home');
-  // Nothing a month old means there is no shape to show: an all-neutral bar is a mark with no
-  // information in it, and saying "none" out loud is noise on a screen that is already dense.
-  // The absence is the message, so the whole line goes.
-  if (!section.stale) return null;
-  return (
-    <p className="mt-3 flex items-center gap-2">
-      <AgeingBar count={section.count} stale={section.stale} />
-      <span className="text-xs font-medium tabular-nums text-danger">
-        {t('staleOverdue', { count: section.stale })}
-      </span>
-    </p>
-  );
-}
-
-// One status fact per row, chosen by the question the section answers: how late, who holds it, how
-// much is open, when it happened.
-function useStatus(item: Item, sectionKey: SectionKey) {
-  const t = useTranslations('home');
-  const date = usePlainDate();
-  const today = useToday();
-  if (sectionKey === 'overdue' && item.date) {
-    const late = daysBetween(item.date, today);
-    return late > 0 ? { text: t('daysLate', { count: late }), alarming: true } : null;
-  }
-  // A waiting row is a person, so the fact is how much of the principal's work they are holding.
-  if (sectionKey === 'waiting' && item.count !== null)
-    return { text: t('holding', { count: item.count }), alarming: false };
-  if (sectionKey === 'committees' && item.count !== null)
-    return { text: t('openWork', { count: item.count }), alarming: false };
-  if (sectionKey === 'notes' && item.date) return { text: date(item.date), alarming: false };
-  return null;
-}
-
-// Title first, then the facts on their own line underneath. Pinning the facts to the far edge of a
-// wide row leaves a gulf across the middle and makes a full page look empty.
-// The row is not one link: a task the principal can finish here needs a control beside the link,
-// and a button inside an anchor is neither valid nor operable.
-// A task the principal can finish here gets a control; a task someone else holds gets their face.
-function RowLead({ item, sectionKey }: { item: Item; sectionKey: SectionKey }) {
-  if (item.revision !== null && (sectionKey === 'overdue' || sectionKey === 'today'))
+  const c = useTranslations('common');
+  const empty = emptyKey(section.key);
+  if (section.items.length === 0)
+    return <p className="py-4 text-sm text-text-muted">{empty ? t(empty) : c('empty')}</p>;
+  if (wide)
     return (
-      <TaskCheck
-        task={{ id: item.id, title: item.title, revision: item.revision, completed: false }}
-      />
+      <ul className="mt-3 grid gap-3 md:grid-cols-3">
+        {section.items.map((item) => (
+          <li key={item.id} className="min-w-0">
+            <Card item={item} sectionKey={section.key} />
+          </li>
+        ))}
+      </ul>
     );
-  // The row's title is the person's name, so the avatar repeats it and is decoration only.
-  if (sectionKey === 'waiting' && item.owner)
-    return (
-      <span aria-hidden>
-        <Avatar name={item.owner} className="mt-0.5" />
-      </span>
-    );
-  return null;
-}
-// The facts line: what the row belongs to, then the one status fact its section calls for.
-function RowFacts({ item, sectionKey }: { item: Item; sectionKey: SectionKey }) {
-  const t = useTranslations('home');
-  const status = useStatus(item, sectionKey);
-  const facts = [item.committee, sectionKey === 'committees' ? item.owner : null].filter(Boolean);
-  const late = sectionKey === 'committees' ? (item.overdue ?? 0) : 0;
   return (
-    <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-text-muted">
-      {/* A fact is user text of any length. `truncate` alone does not shrink a flex item — its
-          automatic minimum is its content — so one unbroken committee name stretched the section
-          past the screen and took the row's "View all" off the end of it with it. */}
-      {facts.map((fact) => (
-        <bdi key={fact} className="min-w-0 truncate">
-          {fact}
-        </bdi>
+    <ul>
+      {section.items.map((item) => (
+        <li key={item.id} className="border-b last:border-b-0">
+          <Row item={item} sectionKey={section.key} />
+        </li>
       ))}
-      {status && (
-        <bdi className={`tabular-nums ${status.alarming ? 'font-medium text-danger' : ''}`}>
-          {status.text}
-        </bdi>
-      )}
-      {late > 0 && (
-        <span className="inline-flex items-center gap-1.5 font-medium text-danger">
-          <Late late={late} open={item.count ?? 0} />
-          <bdi className="tabular-nums">{t('lateOpen', { count: late })}</bdi>
-        </span>
-      )}
-      {sectionKey === 'committees' && item.done !== null && (
-        <Progress done={item.done} open={item.count ?? 0} />
-      )}
-    </span>
-  );
-}
-function Row({ item, sectionKey, lead }: { item: Item; sectionKey: SectionKey; lead: boolean }) {
-  return (
-    <div className="group -mx-2 flex items-start gap-3 rounded-md px-2 py-3 transition-colors duration-150 hover:bg-surface-raised">
-      <RowLead item={item} sectionKey={sectionKey} />
-      <Link href={item.href} title={item.title} className="min-w-0 flex-1">
-        <span
-          className={`block truncate text-start transition-colors duration-150 group-hover:text-accent ${lead ? 'text-[0.9375rem]' : 'text-sm'}`}
-        >
-          <bdi>{item.title}</bdi>
-        </span>
-        <RowFacts item={item} sectionKey={sectionKey} />
-      </Link>
-    </div>
+    </ul>
   );
 }

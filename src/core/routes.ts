@@ -15,7 +15,7 @@ export const routes = {
   home: () => '/home',
   kpis: (query?: Optional<'view' | 'id' | 'objectiveId' | 'category' | 'team' | 'sort'>) =>
     withQuery('/kpis', query),
-  tasks: (query?: Optional<'view' | 'id' | 'ownerId' | 'sort' | 'committeeId'>) =>
+  tasks: (query?: Optional<'view' | 'id' | 'ownerId' | 'sort' | 'committeeId' | 'due'>) =>
     withQuery('/tasks', query),
   people: (query?: Optional<'view' | 'id'>) => withQuery('/people', query),
   notes: (query?: Optional<'view' | 'id' | 'personId' | 'tag' | 'type' | 'committeeId'>) =>

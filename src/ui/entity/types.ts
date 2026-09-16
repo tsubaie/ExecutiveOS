@@ -19,7 +19,12 @@ export type View = {
   // semantics; `good`, `warn` and `bad` are the status scale a scorecard reads in (docs/05 § Charts).
   tone?: 'danger' | 'accent' | 'good' | 'warn' | 'bad';
 };
-export type Facet = { key: string; label: string; options: { value: string; label: string }[] };
+// EP-B42: a facet is one URL key the list is narrowed by. Most are a fixed-list choice; a date
+// facet is one calendar day, picked the way every other date in the product is picked, and it
+// travels, clears and counts exactly as a choice does.
+export type Facet = { key: string; label: string } & (
+  { kind?: 'choice'; options: { value: string; label: string }[] } | { kind: 'date' }
+);
 // EP-B29: one column of the table presentation. `head` names it, `cell` renders it, and `numeric`
 // is the only styling a module may ask for, because it is the one that carries meaning: a column
 // of figures is read down, so it takes tabular figures and sits against the column's end edge.

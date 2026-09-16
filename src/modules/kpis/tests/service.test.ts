@@ -273,4 +273,8 @@ it('KPIS-B12 HOME-B01 the home section carries the KPIs that need attention, wor
   expect(section).toMatchObject({ key: 'kpis', enabled: true, count: 2, stale: 1 });
   expect(section?.items.map((item) => item.title)).toEqual(['Failing', 'Stale']);
   expect(section?.href).toContain('view=attention');
+  // HOME-B01: the row carries the state the page prints and the proportion it draws (KPIS-B07).
+  expect(section?.items[0]).toMatchObject({ status: 'off_target' });
+  expect(section?.items[0]?.ratio).not.toBeNull();
+  expect(section?.items[1]).toMatchObject({ status: 'stale' });
 });

@@ -10,9 +10,7 @@ import { getSetting } from '@/core/db/settings-repo';
 import { decodeCursor, encodeCursor, filtersHash } from '@/core/db/keyset';
 import { applyUpdate, requireRevision, type EntityOps } from '@/core/entity/service';
 import { AppError } from '@/core/http/errors';
-import { routes } from '@/core/routes';
 import { emit } from '@/core/notifications/emit';
-import type { HomeSection } from '@/core/modules/server-manifest';
 import { dayAt, addDays, bandOf } from '@/core/time/tasks';
 import { aiPeople, getPerson, personNameSql } from '@/modules/people';
 import { getNote } from '@/modules/notes';
@@ -228,8 +226,7 @@ export async function undoCompleteTask(ctx: Context, taskId: string, opId: strin
   for (const { item, row } of plan)
     if (row.status !== 'completed' || row.revision !== item.completedRevision)
       throw new AppError('conflict', { reason: 'state' });
-  for (const { item, row } of plan)
-    await update(ctx, row, patchOf(item), 'undo_complete', opId);
+  for (const { item, row } of plan) await update(ctx, row, patchOf(item), 'undo_complete', opId);
   await repo.markCompletionUndone(ctx.db, opId);
   return getTask(ctx, taskId);
 }
@@ -346,48 +343,6 @@ export async function reorderTasks(ctx: Context, input: z.infer<typeof Reorder>)
   });
   return getTask(ctx, input.parentId);
 }
-export async function homeSummary(ctx: Context, today: string): Promise<HomeSection[]> {
-  const row = await repo.selectHomeSummary(ctx.db, today);
-  const task = z.array(
-    z.object({
-      id: z.uuid(),
-      title: z.string(),
-      revision: z.number(),
-      date: z.string().nullable(),
-      owner: z.string().nullable(),
-      committee: z.string().nullable(),
-    }),
-  );
-  const sections = ['overdue', 'today'].map((key) => ({
-    key,
-    enabled: true,
-    count: z.number().parse(row[key + 'Count']),
-    href: routes.tasks({ view: key }),
-    stale: key === 'overdue' ? z.number().parse(row['overdueStale']) : null,
-    items: task
-      .parse(row[key + 'Items'])
-      .map((item) => ({ ...item, href: routes.tasks({ view: 'all', id: item.id }) })),
-  }));
-  // HOME-B10: one row per person holding work, not one per task.
-  const holders = z
-    .array(z.object({ id: z.uuid(), title: z.string(), count: z.number() }))
-    .parse(row['waitingPeople']);
-  return [
-    ...sections,
-    {
-      key: 'waiting',
-      enabled: true,
-      count: z.number().parse(row['waitingCount']),
-      href: routes.tasks({ view: 'waiting' }),
-      items: holders.map((holder) => ({
-        ...holder,
-        owner: holder.title,
-        href: routes.tasks({ view: 'waiting', ownerId: holder.id }),
-      })),
-    },
-  ];
-}
-
 export function peopleForAi(ctx: Context) {
   return aiPeople(ctx);
 }

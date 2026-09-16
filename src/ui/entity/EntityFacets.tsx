@@ -1,5 +1,6 @@
 'use client';
 import { ChoiceSelect } from '@/ui/layout/ChoiceSelect';
+import { DatePicker } from '@/ui/layout/DatePicker';
 import type { Entity } from './types';
 import type { Surface } from './surface';
 // The contents of the filter sheet: the module's facets, each a fixed-list choice over one URL key.
@@ -15,15 +16,27 @@ export function EntityFacets<T extends Entity, P extends object, C>({
     c.navigate({ ...patch, id: null, new: null, sel: null }, true);
   return (
     <div className="grid gap-3">
-      {config.filters.facets?.map((filter) => (
-        <FacetSelect
-          key={filter.key}
-          label={filter.label}
-          value={c.facets[filter.key] ?? ''}
-          options={filter.options}
-          onChange={(value) => change({ [filter.key]: value })}
-        />
-      ))}
+      {config.filters.facets?.map((filter) =>
+        filter.kind === 'date' ? (
+          // EP-B42: one day under one key; an empty value is the facet cleared.
+          <div key={filter.key} className="grid min-w-0 gap-1 text-sm text-text-muted">
+            <span>{filter.label}</span>
+            <DatePicker
+              label={filter.label}
+              value={c.facets[filter.key] || null}
+              onChange={(day) => change({ [filter.key]: day ?? '' })}
+            />
+          </div>
+        ) : (
+          <FacetSelect
+            key={filter.key}
+            label={filter.label}
+            value={c.facets[filter.key] ?? ''}
+            options={filter.options}
+            onChange={(value) => change({ [filter.key]: value })}
+          />
+        ),
+      )}
     </div>
   );
 }

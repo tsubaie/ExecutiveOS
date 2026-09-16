@@ -14,6 +14,16 @@ export function usePlainDate() {
   const format = useFormatter();
   return (value: string) => format.dateTime(plainDateValue(value), 'day', { timeZone: 'UTC' });
 }
+// A calendar day as its weekday and as its number, for a strip where the month is implied.
+export function useWeekday() {
+  const format = useFormatter();
+  return (value: string) => format.dateTime(plainDateValue(value), 'weekday', { timeZone: 'UTC' });
+}
+export function useDayOfMonth() {
+  const format = useFormatter();
+  return (value: string) =>
+    format.dateTime(plainDateValue(value), 'dayOfMonth', { timeZone: 'UTC' });
+}
 export function useDateTime() {
   const format = useFormatter();
   return (value: string) => format.dateTime(new Date(value), 'dateTime');

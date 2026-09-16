@@ -34,6 +34,7 @@ type Filters = {
   priority: string;
   dueFrom: string;
   dueTo: string;
+  due: string;
   hasSubtasks: string;
   sourceNoteId: string;
   hasSourceNote: string;
@@ -69,6 +70,7 @@ function base(f: Filters) {
   if (f.priority) predicates.push(eq(tasks.priority, f.priority));
   if (f.dueFrom) predicates.push(sql`${tasks.dueDate} >= ${f.dueFrom}`);
   if (f.dueTo) predicates.push(sql`${tasks.dueDate} <= ${f.dueTo}`);
+  if (f.due) predicates.push(eq(tasks.dueDate, f.due));
   if (f.hasSubtasks)
     predicates.push(f.hasSubtasks === 'true' ? sql`${children} > 0` : sql`${children} = 0`);
   if (f.q)
@@ -215,7 +217,7 @@ export async function selectHomeSummary(database: Database, today: string) {
   const predicates = {
     overdue: and(active, sql`${tasks.dueDate} < ${today}`),
     today: and(active, eq(tasks.dueDate, today)),
-    waiting: and(active, eq(tasks.status, 'waiting_on'), isNotNull(tasks.ownerId)),
+    waiting: and(active, eq(tasks.status, 'waiting_on')),
   };
   const columns: Record<string, SQL> = {};
   for (const [key, predicate] of Object.entries(predicates)) {
@@ -233,10 +235,25 @@ export async function selectHomeSummary(database: Database, today: string) {
   // late; this says whether it is a backlog or a crisis.
   columns['overdueStale'] =
     sql`count(*) filter (where ${predicates.overdue} and ${tasks.dueDate} < (${today}::date - 30))::int`;
+  // HOME-B14: the week ahead, one row per calendar day from today, each with how much top-level
+  // open work falls due on it. A day with nothing due is still a day, so the series drives the
+  // rows and the count joins to it rather than the other way round.
+  columns['weekDays'] = sql`coalesce((select json_agg(item) from (select d::date::text as date,
+      (select count(*) from tasks where ${active} and ${tasks.dueDate} = d::date)::int as count
+      from generate_series(${today}::date, ${today}::date + 6, interval '1 day') d order by d) item),'[]'::json)`;
   // HOME-B10: waiting is a chase list, so it aggregates by the person holding the work rather than
   // listing each task. One row per person, the people holding the most first.
+  // Work waiting on nobody is still waiting: it is counted with the rest and reported as one
+  // further row, with the earliest due date among it, rather than dropped for having no owner.
+  columns['waitingUnowned'] =
+    sql`count(*) filter (where ${predicates.waiting} and ${tasks.ownerId} is null)::int`;
+  columns['waitingUnownedDate'] =
+    sql`min(${tasks.dueDate}) filter (where ${predicates.waiting} and ${tasks.ownerId} is null)::text`;
+  columns['waitingUnownedLate'] =
+    sql`count(*) filter (where ${predicates.waiting} and ${tasks.ownerId} is null and ${tasks.dueDate} < ${today})::int`;
   columns['waitingPeople'] =
-    sql`coalesce((select json_agg(item) from (select p.id, p.full_name as title, count(*)::int as count
+    sql`coalesce((select json_agg(item) from (select p.id, p.full_name as title, count(*)::int as count,
+      min(t.due_date)::text as date, count(*) filter (where t.due_date < ${today})::int as overdue
       from tasks t join people p on p.id = t.owner_id and p.deleted_at is null
       where t.id in (select id from tasks where ${predicates.waiting})
       group by p.id, p.full_name order by count(*) desc, lower(p.full_name), p.id limit 5) item),'[]'::json)`;

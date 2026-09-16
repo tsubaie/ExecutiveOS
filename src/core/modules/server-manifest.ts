@@ -19,6 +19,11 @@ export type HomeSectionItem = {
   overdue?: number | null;
   // Work the row has already finished, so progress can be shown alongside what is left.
   done?: number | null;
+  // A state word from the owning module's own vocabulary, where the row is a measure rather than
+  // a piece of work; the page looks the word and its tone up through that module's labels.
+  status?: string | null;
+  // How far through its limit the row is, 0..1 and beyond, for a row drawn as an arc.
+  ratio?: number | null;
 };
 export type HomeSection = {
   key: string;
@@ -29,6 +34,9 @@ export type HomeSection = {
   // HOME-B09: how many of `count` are past the stale threshold, for sections that age. It answers
   // whether a pile is a backlog or a crisis, which a bare total cannot.
   stale?: number | null;
+  // HOME-B14: the shape of the week ahead, one entry per calendar day starting today, for the
+  // section whose module owns dated work. The page draws it as the strip that leads the screen.
+  days?: { date: string; count: number; href: string }[] | null;
 };
 export type ServerManifest = {
   id: string;
@@ -47,8 +55,5 @@ export type ServerManifest = {
 export type NotificationSubject = { title: string; href: string };
 export type NotificationContribution = {
   kinds: readonly string[];
-  resolve: (
-    ctx: Context,
-    ids: readonly string[],
-  ) => Promise<Map<string, NotificationSubject>>;
+  resolve: (ctx: Context, ids: readonly string[]) => Promise<Map<string, NotificationSubject>>;
 };

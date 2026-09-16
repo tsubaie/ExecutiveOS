@@ -144,8 +144,10 @@ test('HOME-B02 HOME-A03 uninstalled sections are omitted and AI review section i
   // absence from before the module existed.
   await expect(page.getByRole('heading', { name: 'Attention KPIs', exact: true })).toBeVisible();
   await expect(page.getByText('Pending AI reviews', { exact: true })).toHaveCount(0);
-  // An installed section stays even with nothing in it.
-  await expect(page.getByRole('heading', { name: 'Overdue actions', exact: true })).toBeVisible();
+  // An installed section stays even with nothing in it: the task sections are one Actions block
+  // whose header states both counts at zero (HOME-B01).
+  await expect(page.getByRole('heading', { name: 'Actions', exact: true })).toBeVisible();
+  await expect(page.getByText('0 Overdue actions', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: /Your people directory/ }).click();
   await expect(page).toHaveURL(/people/);
 });
