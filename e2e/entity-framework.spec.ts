@@ -143,3 +143,53 @@ test('EP-B26 the record slides over the list instead of displacing it @desktop',
   const after = await list.boundingBox();
   expect(after?.width).toBeCloseTo(closed?.width ?? 0, 0);
 });
+
+// EP-B39: nothing in the bar may sit past the end of the screen. The settings group used to be
+// `shrink-0`, so on a module carrying a period as well as a sort it measured 509 px inside a
+// 390 px viewport: the sort clipped mid-word and Filter and Clear rendered off the end, where no
+// pointer could reach them. Measured, not asserted on classes — the failure was a computed width.
+for (const width of [320, 390]) {
+  test(`EP-B39 every toolbar control stays on screen at ${width} px`, async ({ page }) => {
+    await loginAs(page, 'en');
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/kpis?view=all');
+    const toolbar = page.locator('.entity-toolbar');
+    await expect(toolbar).toBeVisible();
+    const overflowing = await toolbar.evaluate((bar) =>
+      [...bar.querySelectorAll('button, input, [role="group"]')]
+        .filter((control) => {
+          const box = control.getBoundingClientRect();
+          return box.width > 0 && box.height > 0 && box.right > window.innerWidth + 1;
+        })
+        .map((control) => control.textContent?.trim().slice(0, 30) ?? control.tagName),
+    );
+    expect(overflowing).toEqual([]);
+    // The one the reader loses first when the group cannot give width back.
+    await expect(page.getByRole('button', { name: /^Filter$/ })).toBeInViewport();
+  });
+}
+
+// EP-B40: the featured readings are one line on a phone. Two columns made five readings three rows
+// and an orphan with a hole beside it, which cost 198 px of a 732 px list before a single record.
+test('EP-B40 featured readings are one row on a phone', async ({ page }) => {
+  await loginAs(page, 'en');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/tasks?view=all');
+  const strip = page.locator('[data-entity-stats]');
+  await expect(strip).toBeVisible();
+  const laid = await strip.evaluate((bar) => {
+    const tiles = [...bar.children].map((tile) => tile.getBoundingClientRect());
+    return {
+      rows: new Set(tiles.map((tile) => Math.round(tile.top))).size,
+      height: Math.round(bar.getBoundingClientRect().height),
+      // The strip must rest where it was painted: a snap position that ignores the padding leaves
+      // it scrolled by exactly that padding, with the leading reading cut off.
+      scrolled: bar.scrollLeft,
+      firstInset: Math.round(tiles[0]!.left),
+    };
+  });
+  expect(laid.rows).toBe(1);
+  expect(laid.height).toBeLessThanOrEqual(80);
+  expect(laid.scrolled).toBe(0);
+  expect(laid.firstInset).toBeGreaterThan(0);
+});

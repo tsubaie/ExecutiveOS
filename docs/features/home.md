@@ -75,6 +75,13 @@ The one screen the principal opens first. It is a set of queries over existing m
   which is the same statement the meter already makes, made once on arrival. The motion is
   decoration over a page that is already correct: under `prefers-reduced-motion: reduce` none of it
   runs and every block is at its resting position and full opacity on the first frame.
+- HOME-B13 A section never runs past the end of the screen. A grid item does not shrink below its
+  own min-content and a committee named after a UUID has no break in it, so on a phone — where the
+  columns are one implicit track rather than the `minmax(0, …)` template of 1024 px and up — the
+  column grew past its track and carried every section's "View all" off the end with it. The
+  columns declare their own zero minimum, and the facts under a row truncate rather than push. The
+  spacing between sections steps down below 1024 px for the same reason the entity bar's does
+  (EP-B40): a 40 px gap between blocks is a row of records on a screen that has ten of them.
 - HOME-B06 Section ownership is exclusive and checked centrally when the providers are collected: a key claimed by two modules, or a key no section list declares, fails the request with the owning key named. Collapsing to the first match would make the page depend on module import order and let a section disappear silently.
 
 ## Known gap

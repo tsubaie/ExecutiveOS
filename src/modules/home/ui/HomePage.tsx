@@ -5,7 +5,7 @@ import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { Greeting } from './HomeGreeting';
 import { Stream } from './HomeStream';
 import { ambient, type Section } from './home-sections';
-const page = 'mx-auto max-w-[1400px] px-6 py-8 lg:px-10 lg:py-10';
+const page = 'mx-auto max-w-[1400px] px-6 py-6 lg:px-10 lg:py-10';
 export function HomePage() {
   const t = useTranslations('home');
   const query = useHome();
@@ -35,14 +35,18 @@ export function HomePage() {
         <>
           {lead && <Stream section={lead} lead />}
           {rest.length > 0 && (
-            <div className="mt-10 grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-              <div className="home-column flex flex-col gap-10">
+            <div className="mt-6 grid gap-x-14 gap-y-6 lg:mt-10 lg:gap-y-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+              {/* A grid item will not shrink below its own min-content, and a committee named
+                  after a UUID has no break in it, so the column grew past the track and carried
+                  every section's "View all" off the end of the screen with it. The `lg` template
+                  already says `minmax(0, …)`; the implicit single column needs saying too. */}
+              <div className="home-column flex min-w-0 flex-col gap-6 lg:gap-10">
                 {carrying.map((section) => (
                   <Stream key={section.key} section={section} />
                 ))}
               </div>
               {reference.length > 0 && (
-                <div className="home-column home-column-quiet flex flex-col gap-10">
+                <div className="home-column home-column-quiet flex min-w-0 flex-col gap-6 lg:gap-10">
                   {reference.map((section) => (
                     <Stream key={section.key} section={section} quiet />
                   ))}

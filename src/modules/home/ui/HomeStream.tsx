@@ -27,11 +27,11 @@ export function Stream({
   return (
     <section
       className={
-        lead ? 'home-rise home-lead mt-8 rounded-xl border bg-surface px-5 py-4 lg:px-6' : ''
+        lead ? 'home-rise home-lead mt-6 rounded-xl border bg-surface px-4 py-4 lg:mt-8 lg:px-6' : ''
       }
     >
       <div className="flex items-baseline justify-between gap-4 border-b pb-2">
-        <div className="flex items-baseline gap-2.5">
+        <div className="flex min-w-0 items-baseline gap-2.5">
           <h2
             className={`truncate ${quiet ? 'text-sm font-medium text-text-muted' : 'text-base font-semibold'}`}
           >
@@ -131,8 +131,11 @@ function RowFacts({ item, sectionKey }: { item: Item; sectionKey: SectionKey }) 
   const late = sectionKey === 'committees' ? (item.overdue ?? 0) : 0;
   return (
     <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-text-muted">
+      {/* A fact is user text of any length. `truncate` alone does not shrink a flex item — its
+          automatic minimum is its content — so one unbroken committee name stretched the section
+          past the screen and took the row's "View all" off the end of it with it. */}
       {facts.map((fact) => (
-        <bdi key={fact} className="truncate">
+        <bdi key={fact} className="min-w-0 truncate">
           {fact}
         </bdi>
       ))}
