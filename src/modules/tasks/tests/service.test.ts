@@ -9,6 +9,7 @@ import { id } from '@/core/db/ids';
 import { tasks } from '../schema/db';
 import { TaskCreate, TaskListQuery, TaskPatch } from '../schema/validation';
 import * as service from '../service';
+import { homeSummary } from '../home';
 const actorId = id();
 let user: User;
 const run = <T>(action: (ctx: { db: Database; user: User; requestId: string }) => Promise<T>) =>
@@ -243,7 +244,7 @@ it('HOME-B01 HOME-B03 TASKS-B15 Home includes task counts and links, with five i
   const today = dayAt('UTC');
   for (let i = 0; i < 7; i++) await create(`Today ${i}`, { dueDate: today });
   await create('Overdue', { dueDate: '2000-01-01' });
-  const sections = await run((ctx) => service.homeSummary(ctx, today));
+  const sections = await run((ctx) => homeSummary(ctx, today));
   expect(sections.find((section) => section.key === 'today')?.count).toBe(7);
   expect(sections.find((section) => section.key === 'today')?.items).toHaveLength(5);
   expect(sections.find((section) => section.key === 'overdue')?.count).toBe(1);
@@ -293,7 +294,9 @@ it('TASKS-B02 undoing a forced completion restores only the rows that completion
 it('TASKS-B02 undo is refused once a completed row has moved on, and writes nothing', async () => {
   const task = await create('Sign the minutes', { status: 'inbox' });
   const { task: done, opId } = await run((ctx) => service.completeTask(ctx, task.id, 1));
-  await run((ctx) => service.patchTask(ctx, task.id, { revision: done.revision, priority: 'high' }));
+  await run((ctx) =>
+    service.patchTask(ctx, task.id, { revision: done.revision, priority: 'high' }),
+  );
   await expect(run((ctx) => service.undoCompleteTask(ctx, task.id, opId))).rejects.toMatchObject({
     code: 'conflict',
     details: { reason: 'state' },
@@ -323,4 +326,14 @@ it('TASKS-B02 a completion and its undo are audited under one operation id', asy
   const rows = await db().select().from(auditLog).where(eq(auditLog.opId, opId));
   const actions = rows.map((row) => row.action).sort();
   expect(actions).toEqual(['complete', 'undo_complete']);
+});
+
+it('TASKS-B05 the due facet narrows the list to one calendar day', async () => {
+  await create('On the day', { dueDate: '2026-09-16' });
+  await create('Day after', { dueDate: '2026-09-17' });
+  await create('Undated');
+  const list = await run((ctx) =>
+    service.listTasks(ctx, TaskListQuery.parse({ view: 'all', due: '2026-09-16' })),
+  );
+  expect(list.data.map((task) => task.title)).toEqual(['On the day']);
 });

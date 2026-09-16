@@ -170,7 +170,7 @@ it('KPIS-B03 the gauge shows the achievement as its headline and names both figu
   expect(screen.getByText('50 pts')).toBeTruthy();
   // One arc for the track and one for the filled portion; the fill never runs past the track.
   expect(container.querySelectorAll('.recharts-radial-bar-sector').length).toBeGreaterThan(0);
-  expect(screen.getByRole('img', { name: '340% of target · Near target' })).toBeTruthy();
+  expect(screen.getByRole('img', { name: '340% of target · Partially achieved' })).toBeTruthy();
 });
 it('KPIS-B03 KPIS-A03 without a usable ratio the gauge is dropped and the status stands alone', () => {
   const { container } = mount(

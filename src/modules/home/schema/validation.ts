@@ -20,10 +20,16 @@ export const Home = z.object({
       count: z.number(),
       href: z.string().nullable().default(null),
       stale: z.number().nullable().default(null),
+      days: z
+        .array(z.object({ date: z.iso.date(), count: z.number(), href: z.string() }))
+        .nullable()
+        .default(null),
       items: z
         .array(
           z.object({
-            id: z.uuid(),
+            // A row is usually a record, but a section may add a row that is not one (the
+            // unassigned holder in Waiting on), so the id is a key rather than a record id.
+            id: z.string().min(1),
             title: z.string(),
             href: z.string(),
             date: z.iso.date().nullable().default(null),
@@ -33,6 +39,8 @@ export const Home = z.object({
             revision: z.number().nullable().default(null),
             overdue: z.number().nullable().default(null),
             done: z.number().nullable().default(null),
+            status: z.string().nullable().default(null),
+            ratio: z.number().nullable().default(null),
           }),
         )
         .default([]),

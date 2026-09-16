@@ -12,6 +12,8 @@ import { createCommittee, patchCommittee, removeCommittee } from '@/modules/comm
 import { CommitteeCreate } from '@/modules/committees/schema/validation';
 import { PersonCreate } from '@/modules/people/schema/validation';
 import { homeSummary } from '../service';
+import { addDays, dayAt } from '@/core/time/tasks';
+import { defaults } from '@/core/config/defaults';
 let user: User;
 const run = <T>(action: (ctx: { db: Database; user: User; requestId: string }) => Promise<T>) =>
   db().transaction((database) => action({ db: database, user, requestId: id() }));
@@ -117,4 +119,84 @@ it('COMM-B06 drops a committee from the section once it is trashed', async () =>
     count: 0,
     items: [],
   });
+});
+
+it('HOME-B14 the due-today section carries the week ahead: seven days from today with their due counts', async () => {
+  const today = dayAt(defaults.timezone);
+  const plus = (days: number) => addDays(today, days);
+  await run((ctx) => createTask(ctx, TaskCreate.parse({ title: 'Now', dueDate: today })));
+  await run((ctx) => createTask(ctx, TaskCreate.parse({ title: 'Soon', dueDate: plus(2) })));
+  await run((ctx) => createTask(ctx, TaskCreate.parse({ title: 'Also soon', dueDate: plus(2) })));
+  await run((ctx) => createTask(ctx, TaskCreate.parse({ title: 'Later', dueDate: plus(9) })));
+  await run((ctx) => createTask(ctx, TaskCreate.parse({ title: 'Late', dueDate: '2000-01-01' })));
+  const home = await run((ctx) => homeSummary(ctx));
+  const section = (key: string) => home.sections.find((item) => item.key === key);
+  const days = section('today')?.days ?? [];
+  // A day with nothing due is still a day, and the eighth day is not part of the week.
+  expect(days).toHaveLength(7);
+  expect(days[0]).toEqual({ date: today, count: 1, href: `/tasks?view=all&due=${today}` });
+  expect(days[2]).toEqual({ date: plus(2), count: 2, href: `/tasks?view=all&due=${plus(2)}` });
+  expect(days.map((day) => day.count)).toEqual([1, 0, 2, 0, 0, 0, 0]);
+  // Only the section whose module owns dated work carries the shape; the overdue section does not.
+  expect(section('overdue')?.days).toBeNull();
+});
+it('HOME-B10 a waiting row is dated by the earliest thing its holder has due', async () => {
+  const created = await run((ctx) =>
+    createPerson(
+      ctx,
+      PersonCreate.parse({
+        fullName: 'Holder Person',
+        kind: 'internal',
+        isAssignable: true,
+        tags: [],
+        email: null,
+        phone: null,
+        notes: null,
+        displayName: null,
+        honorific: null,
+        organization: null,
+        roleTitle: null,
+        userId: null,
+      }),
+    ),
+  );
+  // Creation answers with possible duplicates instead of a row when a name is close to an
+  // existing one; an empty directory has none, so the row is there.
+  const holderId = created.data?.id;
+  if (!holderId) throw new Error('holder not created');
+  const waiting = (title: string, dueDate: string | null) =>
+    run((ctx) =>
+      createTask(
+        ctx,
+        TaskCreate.parse({ title, status: 'waiting_on', ownerId: holderId, dueDate }),
+      ),
+    );
+  await waiting('Undated', null);
+  await waiting('Next month', '2099-02-01');
+  await waiting('Next week', '2099-01-10');
+  await waiting('Already late', '2000-01-01');
+  const home = await run((ctx) => homeSummary(ctx));
+  const row = home.sections.find((item) => item.key === 'waiting')?.items[0];
+  // The earliest due date is the late one, and the late share says so.
+  expect(row).toMatchObject({ title: 'Holder Person', count: 4, date: '2000-01-01', overdue: 1 });
+});
+it('HOME-B10 waiting work that nobody holds is counted and reported as one last unassigned row', async () => {
+  const unowned = (title: string, dueDate: string | null) =>
+    run((ctx) => createTask(ctx, TaskCreate.parse({ title, status: 'waiting_on', dueDate })));
+  await unowned('Ministry presentation', '2099-03-01');
+  await unowned('Grey output problem', '2000-02-15');
+  const home = await run((ctx) => homeSummary(ctx));
+  const section = home.sections.find((item) => item.key === 'waiting');
+  expect(section?.count).toBe(2);
+  expect(section?.items).toEqual([
+    expect.objectContaining({
+      id: 'unassigned',
+      title: '',
+      owner: null,
+      count: 2,
+      date: '2000-02-15',
+      overdue: 1,
+    }),
+  ]);
+  expect(section?.items[0]?.href).toBe('/tasks?view=waiting');
 });

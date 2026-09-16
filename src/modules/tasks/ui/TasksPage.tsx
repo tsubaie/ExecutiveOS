@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   Trash2,
 } from 'lucide-react';
-import type { View as ViewDef } from '@/ui/entity/types';
+import type { FiltersDef, View as ViewDef } from '@/ui/entity/types';
 import { useCommitteeOptions } from '@/modules/committees/ui';
 import { EntityPage } from '@/ui/entity/EntityPage';
 import { sortOptions } from '@/ui/entity/filters';
@@ -40,7 +40,7 @@ const presentation: Record<string, Partial<ViewDef>> = {
   completed: { icon: CheckCircle2, separated: true },
   trash: { icon: Trash2 },
 };
-function useTaskFilters() {
+function useTaskFilters(): FiltersDef {
   const committee = useCommitteeOptions();
   const t = useTranslations('tasks');
   const c = useTranslations('common');
@@ -69,6 +69,8 @@ function useTaskFilters() {
           ...Priority.options.map((value) => ({ value, label: t(value) })),
         ],
       },
+      // TASKS-B05, EP-B42: one day, the way a day in Home's week strip narrows the list.
+      { key: 'due', kind: 'date', label: t('dueOn') },
     ],
   };
 }

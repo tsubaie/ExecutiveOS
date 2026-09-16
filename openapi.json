@@ -1351,6 +1351,39 @@
                     "count": {
                       "type": "number"
                     },
+                    "days": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "count": {
+                                "type": "number"
+                              },
+                              "date": {
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                "type": "string"
+                              },
+                              "href": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "date",
+                              "count",
+                              "href"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null
+                    },
                     "enabled": {
                       "type": "boolean"
                     },
@@ -1404,8 +1437,7 @@
                             "type": "string"
                           },
                           "id": {
-                            "format": "uuid",
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "overdue": {
@@ -1422,10 +1454,24 @@
                               "null"
                             ]
                           },
+                          "ratio": {
+                            "default": null,
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
                           "revision": {
                             "default": null,
                             "type": [
                               "number",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "default": null,
+                            "type": [
+                              "string",
                               "null"
                             ]
                           },
@@ -1443,7 +1489,9 @@
                           "count",
                           "revision",
                           "overdue",
-                          "done"
+                          "done",
+                          "status",
+                          "ratio"
                         ],
                         "type": "object"
                       },
@@ -1477,6 +1525,7 @@
                     "count",
                     "href",
                     "stale",
+                    "days",
                     "items"
                   ],
                   "type": "object"
@@ -20186,6 +20235,25 @@
           {
             "in": "query",
             "name": "dueTo",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                  "type": "string"
+                },
+                {
+                  "const": "",
+                  "type": "string"
+                }
+              ],
+              "default": ""
+            }
+          },
+          {
+            "in": "query",
+            "name": "due",
             "required": false,
             "schema": {
               "anyOf": [

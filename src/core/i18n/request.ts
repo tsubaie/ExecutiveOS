@@ -53,6 +53,10 @@ export default getRequestConfig(async () => {
         day,
         monthYear,
         month: { calendar: 'gregory', numberingSystem, month: 'short' },
+        // HOME-B14: a strip of days names each one twice, the weekday and its number, and neither
+        // needs the month the heading already implies.
+        weekday: { calendar: 'gregory', numberingSystem, weekday: 'short' },
+        dayOfMonth: { calendar: 'gregory', numberingSystem, day: 'numeric' },
         dateTime: { ...day, hour: 'numeric', minute: '2-digit' },
       },
       number: {

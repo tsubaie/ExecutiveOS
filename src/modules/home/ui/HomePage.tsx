@@ -4,7 +4,9 @@ import { useHome } from './queries';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { Greeting } from './HomeGreeting';
 import { Stream } from './HomeStream';
-import { ambient, type Section } from './home-sections';
+import { Actions } from './HomeActions';
+import { Week } from './HomeWeek';
+import { gridRank, isAction, quiet, wide, type Section } from './home-sections';
 const page = 'mx-auto max-w-[1400px] px-6 py-6 lg:px-10 lg:py-10';
 export function HomePage() {
   const t = useTranslations('home');
@@ -15,14 +17,14 @@ export function HomePage() {
   // HOME-B02: a module the workspace never enabled is left out rather than given a row. An enabled
   // section stays even at zero, because zero overdue actions is an answer.
   const live: Section[] = data.sections.filter((section) => section.enabled);
-  // HOME-B07: the first section that actually has something in it leads, at full width. The section
-  // order is the product's urgency order, so the lead is whatever is most pressing today.
-  const lead = live.find((section) => section.count > 0);
-  // What the principal is accountable for carries the wide column; reference material sits quieter
-  // beside it rather than claiming the same weight.
-  const rest = live.filter((section) => section !== lead);
-  const carrying = rest.filter((section) => !ambient(section));
-  const reference = rest.filter(ambient);
+  // HOME-B07, HOME-B14: the week leads, at full width and on the one raised surface, whenever the
+  // module that owns dated work is installed. The task sections become the Actions block under it.
+  const today = live.find((section) => section.key === 'today');
+  const overdue = live.find((section) => section.key === 'overdue');
+  // One grid of three columns under the week, in the order the principal asks (home-sections).
+  const grid = live
+    .filter((section) => !isAction(section))
+    .sort((a, b) => gridRank(a) - gridRank(b));
   return (
     <div className={page}>
       <Greeting
@@ -33,27 +35,22 @@ export function HomePage() {
       />
       {live.length > 0 ? (
         <>
-          {lead && <Stream section={lead} lead />}
-          {rest.length > 0 && (
-            <div className="mt-6 grid gap-x-14 gap-y-6 lg:mt-10 lg:gap-y-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-              {/* A grid item will not shrink below its own min-content, and a committee named
-                  after a UUID has no break in it, so the column grew past the track and carried
-                  every section's "View all" off the end of the screen with it. The `lg` template
-                  already says `minmax(0, …)`; the implicit single column needs saying too. */}
-              <div className="home-column flex min-w-0 flex-col gap-6 lg:gap-10">
-                {carrying.map((section) => (
-                  <Stream key={section.key} section={section} />
-                ))}
+          {today && <Week today={today} overdue={overdue} />}
+          {/* A grid item will not shrink below its own min-content, and a committee named after
+              a UUID has no break in it, so a column once grew past its track and carried every
+              section's "View all" off the end of the screen with it (HOME-B13). Every template
+              here says `minmax(0, …)`, the phone's single column included. */}
+          <div className="home-column mt-6 grid grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-6 lg:mt-10 lg:grid-cols-[repeat(3,minmax(0,1fr))] lg:gap-y-10">
+            {(overdue || today) && <Actions overdue={overdue} today={today} />}
+            {grid.map((section) => (
+              <div
+                key={section.key}
+                className={wide(section) ? 'min-w-0 lg:col-span-2' : 'min-w-0'}
+              >
+                <Stream section={section} quiet={quiet(section)} wide={wide(section)} />
               </div>
-              {reference.length > 0 && (
-                <div className="home-column home-column-quiet flex min-w-0 flex-col gap-6 lg:gap-10">
-                  {reference.map((section) => (
-                    <Stream key={section.key} section={section} quiet />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+            ))}
+          </div>
         </>
       ) : (
         <div className="mt-10 border-t pt-10 text-center">
@@ -74,8 +71,9 @@ function HomeSkeleton() {
       <div className={`h-4 w-28 ${block}`} />
       <div className={`mt-3 h-9 w-[32rem] max-w-full ${block} lg:h-10`} />
       <div className={`mt-3 h-4 w-48 ${block}`} />
-      <div className={`mt-8 h-44 ${block}`} />
-      <div className="mt-10 grid items-start gap-x-14 gap-y-10 xl:grid-cols-2">
+      <div className={`mt-8 h-32 ${block}`} />
+      <div className="mt-10 grid items-start gap-x-10 gap-y-10 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
+        <div className={`h-40 ${block}`} />
         <div className={`h-32 ${block}`} />
         <div className={`h-32 ${block}`} />
       </div>
