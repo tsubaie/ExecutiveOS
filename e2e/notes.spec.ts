@@ -231,12 +231,11 @@ test('NOTES-A07 NOTES-A10 trash keeps linked tasks, restore brings them back, AI
   expect((await api(page, 'notes', `/${created.id}/refine`, 'POST', { revision: 1 })).status).toBe(
     503,
   );
+  // EP-B36: trashing is reversible, so it runs on the press and reports itself with Undo.
   await detail(page).getByRole('button', { name: en.common.delete, exact: true }).click();
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: en.common.delete, exact: true })
-    .click();
-  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.getByRole('button', { name: en.common.undo, exact: true })).toBeVisible();
+  // The record closing is what settles the layout; the toast appears before the panel has gone.
+  await expect(page).not.toHaveURL(/id=/);
   await selectView(page, 'en', new RegExp(en.notes.trash));
   await rows(page).filter({ hasText: created.title }).click();
   await expect(detail(page).getByRole('link', { name: task.title })).toBeVisible();

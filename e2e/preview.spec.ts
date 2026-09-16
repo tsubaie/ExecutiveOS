@@ -35,13 +35,17 @@ for (const locale of ['en', 'ar'])
     await expect(page.getByRole('heading', { name: m.people.duplicateTitle })).toBeVisible();
     await page.getByRole('button', { name: m.common.cancel, exact: true }).click();
     await expect(page.getByRole('dialog')).toBeHidden();
-    await page.getByRole('button', { name: m.common.close, exact: true }).click();
-    await page.getByRole('button').filter({ hasText: name }).click();
-    await page.getByRole('button', { name: m.common.delete, exact: true }).click();
+    // The surface still open here differs by width: beside the list it is the create form, which
+    // closes with its own cross, while on a phone the created record is already showing and its
+    // way out is the labelled Back (EP-B38). Either name dismisses what is in front of the list.
     await page
-      .getByRole('dialog')
-      .getByRole('button', { name: m.common.delete, exact: true })
+      .getByRole('button', { name: new RegExp(`^(${m.common.close}|${m.common.back})$`, 'u') })
+      .first()
       .click();
+    await page.getByRole('button').filter({ hasText: name }).click();
+    // EP-B36: no confirmation in front of a reversible delete; the receipt carries the way back.
+    await page.getByRole('button', { name: m.common.delete, exact: true }).click();
+    await expect(page.getByRole('button', { name: m.common.undo, exact: true })).toBeVisible();
     await expect(page).not.toHaveURL(/id=/);
     await selectView(page, locale, new RegExp(m.common.trash));
     await page.getByRole('button').filter({ hasText: name }).click();

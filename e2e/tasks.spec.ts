@@ -108,24 +108,29 @@ for (const locale of ['en', 'ar'])
     );
     const checkbox = page.locator('aside.entity-detail').getByRole('checkbox').first();
     await checkbox.click();
+    // TASKS-A03: the one confirmation that stays, because it authorizes a cascade across records
+    // the reader cannot see from here.
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.getByRole('button', { name: m.tasks.completeAll, exact: true }).click();
-    await expect(checkbox).toBeChecked();
-    await checkbox.click();
-    await expect(checkbox).not.toBeChecked();
-    await expect(
-      page.locator('aside.entity-detail').getByLabel(m.tasks.status, { exact: true }),
-    ).toContainText(m.tasks.next_action);
+    // TASKS-B02: completing takes the task out of every view, so the record closes behind it and
+    // the receipt beside the list carries the way back.
+    await expect(page).not.toHaveURL(/id=/);
+    await page.getByRole('button', { name: m.common.undo, exact: true }).click();
+    // The task was completed from the inbox, so Undo returns it and its subtask to the inbox.
+    // `reopen` would have written next_action and lost where each came from.
+    await expect.poll(async () => (await api(page, `/${id}`)).body.data.status).toBe('inbox');
+    await expect
+      .poll(async () => (await api(page, `/${id}`)).body.data.subtasks[0].status)
+      .toBe('inbox');
+    await page.goto(`/tasks?view=all&id=${id}`);
+    // EP-B36: a reversible delete runs on the press, with no confirmation in front of it.
     await page
       .locator('aside.entity-detail')
       .getByRole('button', { name: m.common.delete, exact: true })
       .last()
       .click();
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: m.common.delete, exact: true })
-      .click();
     await expect(page).not.toHaveURL(/id=/);
+    await expect(page.getByRole('button', { name: m.common.undo, exact: true })).toBeVisible();
     await page.goto(`/tasks?view=trash&id=${id}`);
     await page
       .locator('aside.entity-detail')
@@ -143,7 +148,7 @@ for (const locale of ['en', 'ar'])
       path: `docs/screenshots/tasks-detail-${locale}-mobile.png`,
       fullPage: true,
     });
-    await page.getByRole('button', { name: m.common.close, exact: true }).click();
+    await page.getByRole('button', { name: m.common.back, exact: true }).click();
     await expect(page.locator(`[data-row-id="${id}"]`)).toBeVisible();
     await page.screenshot({
       path: `docs/screenshots/tasks-list-${locale}-mobile.png`,
@@ -317,13 +322,13 @@ for (const locale of ['en', 'ar']) {
     await page.keyboard.press('Escape');
     await expect(page).not.toHaveURL(/sel=/);
     await row.click();
-    await page.getByRole('button', { name: m.common.close, exact: true }).click();
+    await page.getByRole('button', { name: m.common.back, exact: true }).click();
     await expect(row).toBeFocused();
     await page.goto(`/tasks?view=all&priority=urgent&id=${task.id}`);
     await expect(page.getByText(m.common.outside, { exact: true })).toBeVisible();
     await page.getByRole('button', { name: m.common.showAll }).click();
     await expect(page).toHaveURL(new RegExp(`view=all&id=${task.id}`));
-    await page.getByRole('button', { name: m.common.close, exact: true }).click();
+    await page.getByRole('button', { name: m.common.back, exact: true }).click();
     await page.getByRole('button', { name: m.common.filter, exact: true }).click();
     await page.getByRole('dialog').getByLabel(m.tasks.priority, { exact: true }).click();
     await page.getByRole('option', { name: m.tasks.urgent, exact: true }).click();
