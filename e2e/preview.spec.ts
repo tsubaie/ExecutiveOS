@@ -27,7 +27,12 @@ for (const locale of ['en', 'ar'])
     await expect(page.getByLabel(m.people.organization, { exact: true })).toHaveValue(
       'Preview Foundation',
     );
-    await page.getByRole('button', { name: m.common.close, exact: true }).click();
+    // Beside the list the record closes with a cross; on a phone its way out is the labelled
+    // Back (EP-B38).
+    await page
+      .getByRole('button', { name: new RegExp(`^(${m.common.close}|${m.common.back})$`, 'u') })
+      .first()
+      .click();
     await page.getByRole('button', { name: m.common.create, exact: true }).click();
     await page.getByLabel(m.people.fullName, { exact: true }).fill(name);
     await page.getByRole('button', { name: m.common.create, exact: true }).last().click();

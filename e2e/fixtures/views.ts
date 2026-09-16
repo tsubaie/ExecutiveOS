@@ -10,7 +10,10 @@ export async function selectView(page: Page, locale: string, name: RegExp) {
     return;
   }
   await page.getByRole('button', { name: messages.common.filter, exact: true }).click();
-  const dialog = page.getByRole('dialog');
+  // The app's own dialog surface, not any `role="dialog"`: a toast is one too (Base UI makes each
+  // toast a navigable region), so a bare role lookup matches the receipt of whatever the reader
+  // just did as readily as the filter sheet.
+  const dialog = page.locator('[data-slot="dialog-content"]');
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name }).click();
   await expect(dialog).toBeHidden();
