@@ -58,7 +58,9 @@ const note = async (page: Page, title: string, fields: object = {}) =>
   (await api(page, 'notes', '', 'POST', { title, ...fields })).body.data;
 const detail = (page: Page) => page.locator('aside.entity-detail');
 const rows = (page: Page) => page.locator('[data-row-id]');
-test('NOTES-B02 EP-B20 notes use separated horizontal cards that still open details', async ({ page }) => {
+test('NOTES-B02 EP-B20 notes use separated horizontal cards that still open details', async ({
+  page,
+}) => {
   await loginAs(page, 'en');
   const title = `Horizontal card ${Date.now()}`;
   const first = await note(page, `${title} one`, { tags: ['Budget', 'Risk'] });
@@ -70,7 +72,9 @@ test('NOTES-B02 EP-B20 notes use separated horizontal cards that still open deta
     const two = page.locator(`[data-row-id="${second.id}"]`).locator('..');
     await expect(one).toBeVisible();
     await expect(two).toBeVisible();
-    expect(await one.evaluate((element) => Number.parseFloat(getComputedStyle(element).borderRadius))).toBeGreaterThan(0);
+    expect(
+      await one.evaluate((element) => Number.parseFloat(getComputedStyle(element).borderRadius)),
+    ).toBeGreaterThan(0);
     const a = await one.boundingBox();
     const b = await two.boundingBox();
     if (!a || !b) throw new Error('Missing note card geometry');
@@ -251,7 +255,7 @@ test('NOTES-A08 NOTES-A09 Arabic search finds normalized content, a tag and a pa
   const marker = crypto.randomUUID().slice(0, 8);
   const person = (await api(page, 'people', '', 'POST', personDraft(`سامر ${marker}`))).body.data;
   const created = await note(page, `إِعداد الميزانية ${marker}`, {
-    content: '# جدول الأعمال\n\nنقاط النقاش',
+    content: '# جدول الأعمال\n\nنقاط النقاش\nالسطر الثاني',
     tags: [`مُتابعة${marker}`],
     participantIds: [person.id],
   });
@@ -263,6 +267,8 @@ test('NOTES-A08 NOTES-A09 Arabic search finds normalized content, a tag and a pa
   const heading = detail(page).getByRole('heading', { name: 'جدول الأعمال' });
   await expect(heading).toBeVisible();
   expect(await heading.evaluate((element) => getComputedStyle(element).direction)).toBe('rtl');
+  const prose = detail(page).getByText(/نقاط النقاش\s+السطر الثاني/u);
+  expect(await prose.evaluate((element) => getComputedStyle(element).whiteSpace)).toBe('pre-wrap');
 });
 test('NOTES-A11 HOME-B01 home lists recent notes and collapses the section when empty', async ({
   page,

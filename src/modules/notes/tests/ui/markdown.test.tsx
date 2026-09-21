@@ -4,11 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MarkdownField } from '@/ui/markdown/MarkdownField';
 import { Markdown } from '@/ui/markdown/Markdown';
-import {
-  insertMention,
-  matchMentions,
-  mentionAt,
-} from '@/ui/markdown/mentions';
+import { insertMention, matchMentions, mentionAt } from '@/ui/markdown/mentions';
 import { sourceOffset } from '@/ui/markdown/caret';
 import { mount } from './harness';
 const content = [
@@ -47,6 +43,12 @@ describe('markdown field', () => {
     expect(links.filter(Boolean)).toEqual(['https://example.test']);
     expect(links.some((href) => href?.startsWith('javascript'))).toBe(false);
     expect(document.querySelector('a')?.getAttribute('rel')).toContain('noopener');
+  });
+  it('NOTES-B07 preserves soft line breaks in rendered prose', () => {
+    mount(<Markdown content={'first line\nsecond line'} />);
+    expect(screen.getByText(/first line\s+second line/u).className).toContain(
+      'whitespace-pre-wrap',
+    );
   });
   it('NOTES-B07 entering the preview opens the textarea; leaving commits once and shows the preview again', async () => {
     const commit = vi.fn();
