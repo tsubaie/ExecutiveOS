@@ -9,9 +9,9 @@ import { schema } from './schema';
 // sanitize schema drops images and unsafe links, and every block carries dir="auto" so mixed
 // Arabic and English content lays out per paragraph.
 type Extra = { node?: object | undefined };
-function Paragraph({ node, ...props }: ComponentProps<'p'> & Extra) {
+function Paragraph({ node, className, ...props }: ComponentProps<'p'> & Extra) {
   void node;
-  return <p dir="auto" {...props} />;
+  return <p dir="auto" className={cn('whitespace-pre-wrap', className)} {...props} />;
 }
 function ListItem({ node, ...props }: ComponentProps<'li'> & Extra) {
   void node;
