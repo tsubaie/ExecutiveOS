@@ -56,7 +56,7 @@ export function evaluateDuplicates(duplicates: Duplicate[]): Report {
   return result;
 }
 export async function auditDupes(root: string, all: boolean) {
-  const changed = all ? null : changedSince(root, 'main');
+  const changed = all ? null : (changedSince(root, 'origin/main') ?? changedSince(root, 'main'));
   const paths =
     changed === null
       ? ['src']
