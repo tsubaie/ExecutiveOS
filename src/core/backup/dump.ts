@@ -1,56 +1,37 @@
 import 'server-only';
-import { spawn } from 'node:child_process';
-import { mkdir, stat, writeFile, rename, readdir } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { mkdir, stat, writeFile, rename, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { pipeline } from 'node:stream/promises';
 import { create } from 'tar';
 import { env } from '@/core/config/env';
-import { postgresConnection } from '@/core/config/backup-env';
 import { resolveInside } from '@/core/files/storage';
 import { checksum, verifyBackup } from './manifest';
+import { pgCommand } from './pg';
+import { isRestoreWorkspace } from './swap';
 import { appVersion } from '@/core/config/version';
-export function pgCommand(binary: 'pg_dump' | 'pg_restore', args: string[], signal?: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    const connection = postgresConnection();
-    const child = spawn(binary, [...connection.args, ...args], {
-      env: connection.environment,
-      stdio: ['ignore', 'ignore', 'pipe'],
-      ...(signal ? { signal } : {}),
-    });
-    let diagnostic = '';
-    child.stderr.on('data', (chunk) => {
-      diagnostic = (diagnostic + String(chunk)).slice(-4096);
-    });
-    child.on('error', reject);
-    child.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${binary} failed (${code}): ${diagnostic}`));
-    });
-  });
+// A restore in progress keeps its staging and retired directories inside FILES_DIR; they are
+// never part of a backup.
+function outsideRestoreWorkspace(path: string) {
+  return !isRestoreWorkspace(path.replace(/^\.\//u, '').split('/')[0] ?? '');
 }
-export async function createBackup(backupId: string, signal?: AbortSignal) {
-  const root = env().BACKUP_DIR;
-  const directory = resolveInside(root, backupId);
-  await mkdir(root, { recursive: true });
-  try {
-    const existing = await stat(directory);
-    if (existing.isDirectory()) return await verifyBackup(directory);
-  } catch (error) {
-    if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
-  }
-  const staging = resolveInside(root, `.${backupId}-${crypto.randomUUID()}`);
-  await mkdir(staging, { recursive: true });
+async function writeBackup(backupId: string, staging: string, signal: AbortSignal) {
   await mkdir(env().FILES_DIR, { recursive: true });
   await pgCommand(
     'pg_dump',
     ['--format=custom', '--no-owner', '--no-acl', '--file', join(staging, 'db.dump')],
     signal,
   );
-  await create({ cwd: env().FILES_DIR, file: join(staging, 'files.tar'), portable: true }, ['.']);
+  await pipeline(
+    create({ cwd: env().FILES_DIR, portable: true, filter: outsideRestoreWorkspace }, ['.']),
+    createWriteStream(join(staging, 'files.tar')),
+    { signal },
+  );
   const entries = await Promise.all(
     ['db.dump', 'files.tar'].map(async (name) => [
       name,
       {
-        sha256: await checksum(join(staging, name)),
+        sha256: await checksum(join(staging, name), signal),
         bytes: (await stat(join(staging, name))).size,
       },
     ]),
@@ -62,11 +43,33 @@ export async function createBackup(backupId: string, signal?: AbortSignal) {
     appVersion,
     files: Object.fromEntries(entries),
   };
-  await writeFile(join(staging, 'manifest.json'), JSON.stringify(manifest, null, 2));
-  await verifyBackup(staging);
-  signal?.throwIfAborted();
-  await rename(staging, directory);
+  await writeFile(join(staging, 'manifest.json'), JSON.stringify(manifest, null, 2), { signal });
+  await verifyBackup(staging, signal);
+  signal.throwIfAborted();
   return manifest;
+}
+// ADMIN-B33: every phase observes the signal, and a backup that does not finish leaves no
+// staging directory behind.
+export async function createBackup(backupId: string, signal = new AbortController().signal) {
+  const root = env().BACKUP_DIR;
+  const directory = resolveInside(root, backupId);
+  await mkdir(root, { recursive: true });
+  try {
+    const existing = await stat(directory);
+    if (existing.isDirectory()) return await verifyBackup(directory);
+  } catch (error) {
+    if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+  }
+  const staging = resolveInside(root, `.${backupId}-${crypto.randomUUID()}`);
+  await mkdir(staging, { recursive: true });
+  try {
+    const manifest = await writeBackup(backupId, staging, signal);
+    await rename(staging, directory);
+    return manifest;
+  } catch (error) {
+    await rm(staging, { recursive: true, force: true });
+    throw error;
+  }
 }
 export async function listBackups() {
   const root = env().BACKUP_DIR;

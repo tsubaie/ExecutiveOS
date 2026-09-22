@@ -11,7 +11,7 @@ One decision per file. Format: **Status**, **Context**, **Decision**, **Conseque
 | 0005 | Own multi-user auth with cookie sessions and roles | accepted, login throttling refined by 0013 |
 | 0006 | Hybrid linking with mirrored structural relations | superseded by 0009 |
 | 0007 | Local file storage and native PDF input for meeting briefs | accepted |
-| 0008 | Scope of the "no CLI" rule; backups with bundled PostgreSQL client binaries | accepted |
+| 0008 | Scope of the "no CLI" rule; backups with bundled PostgreSQL client binaries | accepted, restore sequence refined by 0024 |
 | 0009 | Contextual links table plus a projected edges view | accepted |
 | 0010 | Job execution contract: leases, fencing, dedup keys, all AI as jobs | accepted |
 | 0011 | People are the single identity for task owners and attendees | accepted |
@@ -27,5 +27,6 @@ One decision per file. Format: **Status**, **Context**, **Decision**, **Conseque
 | 0021 | Global search fans out over module providers | accepted |
 | 0022 | Notifications are a stored, per-user, pull-only feed | accepted |
 | 0023 | The route bundle budget is 272 KB | accepted |
+| 0024 | Restore stages files and swaps them in after the database; the runner drains before it aborts | accepted |
 
 Open decisions awaiting an ADR: license (see roadmap); chart library confirmation (`recharts`).

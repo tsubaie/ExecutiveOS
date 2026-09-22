@@ -14,9 +14,11 @@ export async function register() {
   const { env } = await import('./core/config/env');
   const { checkConnection } = await import('./core/ai/client');
   await checkConnection();
+  let stop = async () => {};
   if (env().JOBS_ENABLED) {
     const { startRunner } = await import('./core/jobs/runner');
-    const stop = startRunner();
-    process.once('SIGTERM', stop);
+    stop = startRunner();
   }
+  const { installShutdown } = await import('./core/jobs/shutdown');
+  installShutdown(stop, env().NEXT_MANUAL_SIG_HANDLE === 'true');
 }
