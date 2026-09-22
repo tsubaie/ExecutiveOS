@@ -44,6 +44,14 @@ describe('markdown field', () => {
     expect(links.some((href) => href?.startsWith('javascript'))).toBe(false);
     expect(document.querySelector('a')?.getAttribute('rel')).toContain('noopener');
   });
+  it('NOTES-A09 a loose list item resolves its own direction: its paragraph carries no dir of its own', () => {
+    mount(<Markdown content={'- السلام عليكم\n\n- وعليكم السلام\n\nنص'} />);
+    const item = screen.getByText('السلام عليكم');
+    expect(item.tagName).toBe('P');
+    expect(item.hasAttribute('dir')).toBe(false);
+    expect(item.closest('li')?.getAttribute('dir')).toBe('auto');
+    expect(screen.getByText('نص').getAttribute('dir')).toBe('auto');
+  });
   it('NOTES-B07 preserves soft line breaks in rendered prose', () => {
     mount(<Markdown content={'first line\nsecond line'} />);
     expect(screen.getByText(/first line\s+second line/u).className).toContain(
