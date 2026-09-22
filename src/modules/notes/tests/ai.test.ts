@@ -9,6 +9,9 @@ import { fixtureModel, finishedJob } from '../../../../tests/fixtures/ai/jobs';
 import refinement from '../../../../tests/fixtures/ai/notes.refine.v1.en.json';
 import { harness, actorId } from './fixtures';
 import { startNoteAi } from '../ai/service';
+import { refinePrompt } from '../ai/prompts/select';
+import { AiPayload } from '@/core/ai/job-schema';
+import { latestAiJob } from '@/core/db/ai-jobs-repo';
 import { applyNoteAi } from '../ai/apply';
 import { getNote, patchNote } from '../service';
 vi.mock('@/core/ai/models', () => ({ loadModels: async () => [fixtureModel] }));
@@ -94,11 +97,24 @@ it('NOTES-B17 NOTES-A10 disabled capabilities refuse both note entry points', as
 });
 it('NOTES-B18 applies edited task titles and preserves repeat-apply protection', async () => {
   const note = await harness.note('Plan', { content: 'Review the draft.' });
-  const job = await finishedJob(db(), actorId(), 'notes.refine', note.id, note.revision, refinement);
+  const job = await finishedJob(
+    db(),
+    actorId(),
+    'notes.refine',
+    note.id,
+    note.revision,
+    refinement,
+  );
   const create = vi.fn().mockResolvedValue('00000000-0000-4000-8000-000000000001');
-  const input = { jobId: job.id, acceptContent: true, taskIndexes: [0], tagIndexes: [],
-    taskTitles: [{ index: 0, title: 'Review the revised draft' }] };
-  const apply = () => harness.run((ctx) => applyNoteAi(ctx, note.id, input, 'notes.refine', create));
+  const input = {
+    jobId: job.id,
+    acceptContent: true,
+    taskIndexes: [0],
+    tagIndexes: [],
+    taskTitles: [{ index: 0, title: 'Review the revised draft' }],
+  };
+  const apply = () =>
+    harness.run((ctx) => applyNoteAi(ctx, note.id, input, 'notes.refine', create));
   const first = await apply();
   expect(await apply()).toEqual(first);
   expect(create).toHaveBeenCalledTimes(1);
@@ -106,13 +122,47 @@ it('NOTES-B18 applies edited task titles and preserves repeat-apply protection',
 });
 it('NOTES-B18 Apply Note Only updates content and selected tags without creating tasks', async () => {
   const note = await harness.note('Plan', { content: 'Review the draft.' });
-  const job = await finishedJob(db(), actorId(), 'notes.refine', note.id, note.revision, refinement);
+  const job = await finishedJob(
+    db(),
+    actorId(),
+    'notes.refine',
+    note.id,
+    note.revision,
+    refinement,
+  );
   const create = vi.fn();
-  await harness.run((ctx) => applyNoteAi(ctx, note.id, {
-    jobId: job.id, acceptContent: true, taskIndexes: [], tagIndexes: [0], taskTitles: [],
-  }, 'notes.refine', create));
+  await harness.run((ctx) =>
+    applyNoteAi(
+      ctx,
+      note.id,
+      {
+        jobId: job.id,
+        acceptContent: true,
+        taskIndexes: [],
+        tagIndexes: [0],
+        taskTitles: [],
+      },
+      'notes.refine',
+      create,
+    ),
+  );
   expect(create).not.toHaveBeenCalled();
   const updated = await harness.run((ctx) => getNote(ctx, note.id));
   expect(updated.content).toBe(refinement.refined_content);
   expect(updated.tags).toContain('planning');
+});
+it('NOTES-B26 refine jobs are admitted with prompt v3, which keeps checklist markers out of refined content, and older versions stay executable', async () => {
+  const note = await harness.note('Plan', { content: 'Review the draft.' });
+  const started = await harness.run((ctx) =>
+    startNoteAi(ctx, note.id, note.revision, 'notes.refine'),
+  );
+  const job = await latestAiJob(db(), actorId(), note.id, 'ai.notes.refine');
+  expect(job?.id).toBe(started.id);
+  expect(AiPayload.parse(job?.payload).promptVersion).toBe(3);
+  expect(refinePrompt(3)).toMatch(/never write checklist markers/iu);
+  expect(refinePrompt(3)).toMatch(/keep any checklist marker that already exists/iu);
+  expect(refinePrompt(3)).toMatch(/level two/iu);
+  expect(refinePrompt(2)).not.toMatch(/checklist/iu);
+  expect(refinePrompt(1)).not.toMatch(/checklist/iu);
+  expect(refinePrompt(2)).not.toBe(refinePrompt(3));
 });

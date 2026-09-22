@@ -59,6 +59,8 @@ export function EntityContent<T extends Entity, P extends object, C>({
       reload={c.detail.refetch}
       move={c.move}
       neighbors={c.neighbors}
+      focus={c.state.focus}
+      setFocus={(key) => c.navigate({ focus: key }, true)}
     />
   );
 }

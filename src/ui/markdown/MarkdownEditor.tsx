@@ -1,7 +1,17 @@
 'use client';
-import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from 'react';
 import { Textarea } from '@/ui/primitives/textarea';
 import { MentionMenu } from './MentionMenu';
+import { editForKey, pasteLink } from './keys';
+import { applyEdit } from './apply';
+import { EditorToolbar } from './EditorToolbar';
 import {
   activeMention,
   insertMention,
@@ -19,6 +29,8 @@ type EditorProps = {
   // Where the caret lands on mount: the source position of the click that opened the editor, or
   // null for the end of the text.
   caret?: number | null | undefined;
+  // NOTES-B28: the expanded view adds the formatting toolbar above the text.
+  toolbar?: boolean | undefined;
   onChange: (draft: string) => void;
   onLeave: () => void;
 };
@@ -30,6 +42,7 @@ export default function MarkdownEditor({
   maxLength,
   mentions,
   caret,
+  toolbar = false,
   onChange,
   onLeave,
 }: EditorProps) {
@@ -44,7 +57,8 @@ export default function MarkdownEditor({
   }, [caret]);
   const menu = useMentionMenu(mentions, box, onChange);
   return (
-    <div className="relative">
+    <div className="relative grid gap-2">
+      {toolbar && <EditorToolbar box={box} onChange={onChange} />}
       <Textarea
         ref={box}
         id={id}
@@ -63,7 +77,11 @@ export default function MarkdownEditor({
           onChange(event.target.value);
           menu.track(event.target);
         }}
-        onKeyDown={menu.keyDown}
+        onKeyDown={(event) => {
+          menu.keyDown(event);
+          if (!event.defaultPrevented) editorKey(event, onChange);
+        }}
+        onPaste={(event) => editorPaste(event, onChange)}
         onKeyUp={(event) => menu.track(event.currentTarget)}
         onClick={(event) => menu.track(event.currentTarget)}
         onBlur={() => {
@@ -76,6 +94,34 @@ export default function MarkdownEditor({
       )}
     </div>
   );
+}
+// NOTES-B23: Enter continues a list, Tab and Shift+Tab nest and unnest a list line, Ctrl or
+// Command with B, I and K format the selection, and with Enter leave the field, which commits.
+function editorKey(event: KeyboardEvent<HTMLTextAreaElement>, onChange: (draft: string) => void) {
+  if (event.altKey) return;
+  const element = event.currentTarget;
+  const mod = event.metaKey || event.ctrlKey;
+  if (mod && event.key === 'Enter') {
+    event.preventDefault();
+    element.blur();
+    return;
+  }
+  const edit = editForKey(element.value, element.selectionStart, element.selectionEnd, {
+    key: event.key,
+    mod,
+    shift: event.shiftKey,
+  });
+  if (applyEdit(element, edit, onChange)) event.preventDefault();
+}
+// NOTES-B23: an address pasted over a selection links the selection instead of replacing it.
+function editorPaste(
+  event: ClipboardEvent<HTMLTextAreaElement>,
+  onChange: (draft: string) => void,
+) {
+  const element = event.currentTarget;
+  const pasted = event.clipboardData.getData('text/plain');
+  const edit = pasteLink(element.value, element.selectionStart, element.selectionEnd, pasted);
+  if (applyEdit(element, edit, onChange)) event.preventDefault();
 }
 // Tracks the "@" token at the caret, filters people and inserts the chosen name in place.
 function useMentionMenu(

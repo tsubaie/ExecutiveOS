@@ -1,7 +1,7 @@
 import { derivedParticipants } from '../../schema/validation';
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MarkdownField } from '@/ui/markdown/MarkdownField';
 import { Markdown } from '@/ui/markdown/Markdown';
 import { insertMention, matchMentions, mentionAt } from '@/ui/markdown/mentions';
@@ -43,6 +43,14 @@ describe('markdown field', () => {
     expect(links.filter(Boolean)).toEqual(['https://example.test']);
     expect(links.some((href) => href?.startsWith('javascript'))).toBe(false);
     expect(document.querySelector('a')?.getAttribute('rel')).toContain('noopener');
+  });
+  it('NOTES-A09 a loose list item resolves its own direction: its paragraph carries no dir of its own', () => {
+    mount(<Markdown content={'- السلام عليكم\n\n- وعليكم السلام\n\nنص'} />);
+    const item = screen.getByText('السلام عليكم');
+    expect(item.tagName).toBe('P');
+    expect(item.hasAttribute('dir')).toBe(false);
+    expect(item.closest('li')?.getAttribute('dir')).toBe('auto');
+    expect(screen.getByText('نص').getAttribute('dir')).toBe('auto');
   });
   it('NOTES-B07 preserves soft line breaks in rendered prose', () => {
     mount(<Markdown content={'first line\nsecond line'} />);
@@ -128,6 +136,78 @@ describe('markdown field', () => {
     fireEvent.keyDown(area, { key: 'ArrowUp' });
     fireEvent.keyUp(area, { key: 'ArrowUp' });
     expect(selected()).toBe(2);
+  });
+});
+describe('expanded view', () => {
+  const labels = { expand: 'Expand', collapse: 'Exit expanded view', description: 'Reading room' };
+  it('EP-B44 NOTES-B28 the label row offers the expand control and reports the change to its owner', () => {
+    const setOpen = vi.fn();
+    mount(
+      <MarkdownField
+        label="Content"
+        value="hello"
+        expand={{ title: 'Plan', open: false, setOpen, labels }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(setOpen).toHaveBeenCalledWith(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  it('EP-B44 NOTES-B28 when open, the same field renders inside a dialog headed by the record title, and the record keeps the way back', async () => {
+    const setOpen = vi.fn();
+    mount(
+      <MarkdownField
+        label="Content"
+        value="hello"
+        expand={{ title: 'Plan', open: true, setOpen, labels }}
+      />,
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'Plan' });
+    expect(within(dialog).getByRole('button', { name: 'Content' })).toBeTruthy();
+    expect(within(dialog).getByText('hello')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Content' }));
+    expect(await within(dialog).findByRole('textbox', { name: 'Content' })).toBeTruthy();
+    // Outside the dialog, the record keeps the label and the control that brings the text back.
+    const away = screen.getAllByRole('button', { name: 'Exit expanded view' });
+    expect(away.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(away[0]!);
+    expect(setOpen).toHaveBeenCalledWith(false);
+  });
+});
+describe('expanded toolbar', () => {
+  const labels = { expand: 'Expand', collapse: 'Exit expanded view', description: 'Reading room' };
+  it('NOTES-B28 the toolbar shows only in the expanded view, formats the selection and keeps focus in the text', async () => {
+    mount(<MarkdownField label="Content" value="" />);
+    await screen.findByRole('textbox', { name: 'Content' });
+    expect(screen.queryByRole('toolbar')).toBeNull();
+    mount(
+      <MarkdownField
+        label="Content"
+        value=""
+        expand={{ title: 'Plan', open: true, setOpen: vi.fn(), labels }}
+      />,
+    );
+    const area = (await screen.findByRole('textbox', { name: 'Content' })) as HTMLTextAreaElement;
+    const bar = screen.getByRole('toolbar', { name: 'Formatting' });
+    fireEvent.change(area, { target: { value: 'say hi now' } });
+    area.focus();
+    area.setSelectionRange(4, 6);
+    fireEvent.click(within(bar).getByRole('button', { name: 'Bold' }));
+    expect(area.value).toBe('say **hi** now');
+    expect(document.activeElement).toBe(area);
+    area.setSelectionRange(0, 0);
+    fireEvent.click(within(bar).getByRole('button', { name: 'Checklist' }));
+    expect(area.value).toBe('- [ ] say **hi** now');
+    fireEvent.click(within(bar).getByRole('button', { name: 'Bullet list' }));
+    expect(area.value).toBe('- say **hi** now');
+    fireEvent.click(within(bar).getByRole('button', { name: 'Italic' }));
+    expect(area.value.startsWith('*')).toBe(true);
+    fireEvent.change(area, { target: { value: 'Agenda' } });
+    area.setSelectionRange(0, 0);
+    fireEvent.click(within(bar).getByRole('button', { name: 'Title' }));
+    expect(area.value).toBe('## Agenda');
+    fireEvent.click(within(bar).getByRole('button', { name: 'Subtitle' }));
+    expect(area.value).toBe('### Agenda');
   });
 });
 describe('mention helpers', () => {

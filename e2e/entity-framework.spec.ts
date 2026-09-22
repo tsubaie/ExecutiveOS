@@ -108,7 +108,8 @@ test('EP-B26 the record slides over the list instead of displacing it @desktop',
   // The entrance travels the panel's own width, so every box below has to be the resting one.
   // Polling for the edge it settles against beats sleeping for longer than the animation: the
   // measurement is the wait, and a slow frame lengthens it instead of failing it.
-  const edge = () => panel.boundingBox().then((box) => Math.round((box?.x ?? 0) + (box?.width ?? 0)));
+  const edge = () =>
+    panel.boundingBox().then((box) => Math.round((box?.x ?? 0) + (box?.width ?? 0)));
   await expect.poll(edge).toBe(page.viewportSize()?.width ?? 0);
 
   // Opening a record moves no row: the list keeps exactly the width it had when it was alone.
@@ -146,6 +147,23 @@ test('EP-B26 the record slides over the list instead of displacing it @desktop',
   expect(after?.width).toBeCloseTo(closed?.width ?? 0, 0);
 });
 
+test('EP-B43 a click anywhere outside the record closes it like Esc @desktop', async ({ page }) => {
+  await loginAs(page, 'en');
+  const prefix = `Away ${crypto.randomUUID()}`;
+  const id = await createTask(page, `${prefix} first`);
+  await page.goto(`/tasks?view=all&q=${encodeURIComponent(prefix)}`);
+  await page.locator(`[data-row-id="${id}"]`).click();
+  const panel = page.locator('.entity-detail');
+  await expect(panel).toBeVisible();
+  // A press inside the panel leaves it open; one anywhere else on the page — here the shell
+  // header — closes it without a scrim ever appearing.
+  await panel.getByLabel(en.tasks.title, { exact: true }).click();
+  await expect(panel).toBeVisible();
+  await page.locator('header').click({ position: { x: 4, y: 4 } });
+  await expect(panel).toHaveCount(0);
+  await expect(page).not.toHaveURL(/id=/);
+});
+
 // EP-B39: nothing in the bar may sit past the end of the screen. The settings group used to be
 // `shrink-0`, so on a module carrying a period as well as a sort it measured 509 px inside a
 // 390 px viewport: the sort clipped mid-word and Filter and Clear rendered off the end, where no
@@ -175,7 +193,9 @@ for (const locale of ['en', 'ar'] as const) {
       );
       expect(overflowing).toEqual([]);
       // The one the reader loses first when the group cannot give width back.
-      await expect(page.getByRole('button', { name: m.common.filter, exact: true })).toBeInViewport();
+      await expect(
+        page.getByRole('button', { name: m.common.filter, exact: true }),
+      ).toBeInViewport();
     });
   }
 }

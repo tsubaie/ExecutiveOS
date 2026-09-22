@@ -7,6 +7,8 @@ export function resolveUrlState(params: URLSearchParams) {
     q: params.get('q') ?? '',
     sort: params.get('sort') ?? '',
     layout: params.get('layout') ?? '',
+    // EP-B44: the field of the open record shown in the expanded view, or empty.
+    focus: params.get('focus') ?? '',
   };
 }
 export function changeUrl(params: URLSearchParams, patch: Record<string, string | null>) {
@@ -23,9 +25,15 @@ export function changeUrl(params: URLSearchParams, patch: Record<string, string 
     if (!patch.id) result.delete('id');
     if (!patch.new) result.delete('new');
   }
+  if (leavesFocus(patch)) result.delete('focus');
   return result.toString();
 }
 
+// EP-B44: the expanded view belongs to one record, so it ends when the record or the list under it
+// changes, unless the patch speaks for it.
+function leavesFocus(patch: Record<string, string | null>) {
+  return !('focus' in patch) && ['id', 'new', ...filterKeys].some((key) => key in patch);
+}
 // EP-B29: the layout is deliberately absent here. Clearing filters puts the reader back to the
 // unfiltered list; it does not take away the presentation they chose to read it in.
 export function clearEntityFilters(keys: string[]) {

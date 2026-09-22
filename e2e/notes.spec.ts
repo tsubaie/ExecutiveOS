@@ -322,3 +322,52 @@ test('NOTES-A12 NOTES-B20 ADMIN-B08 an administrator adds a note type and makes 
     });
   }
 });
+test('NOTES-A13 NOTES-B27 ADMIN-B30 a note created from the Meeting template opens with its sections; administration lists the built-in templates', async ({
+  page,
+}) => {
+  await loginAs(page, 'en');
+  const title = `Template ${crypto.randomUUID()}`;
+  await page.goto(`/notes?view=all&q=${encodeURIComponent(title)}`);
+  await page.getByRole('button', { name: en.common.create, exact: true }).click();
+  await page.getByLabel(en.notes.title, { exact: true }).fill(title);
+  await page.getByLabel(en.notes.template, { exact: true }).click();
+  await page.getByRole('option', { name: en.notes.templateMeeting, exact: true }).click();
+  await page.getByRole('button', { name: en.common.create, exact: true }).last().click();
+  await expect(page).toHaveURL(/id=/);
+  await expect(detail(page).getByRole('heading', { name: 'Attendees', exact: true })).toBeVisible();
+  await expect(detail(page).getByRole('heading', { name: 'Decisions', exact: true })).toBeVisible();
+  await page.goto('/admin/notes');
+  await expect(page.getByLabel(`${en.admin.bodyEn} meeting`, { exact: true })).toHaveValue(
+    /## Attendees/,
+  );
+  await expect(page.getByLabel(`${en.admin.bodyAr} one_on_one`, { exact: true })).toHaveValue(
+    /## الهدف/,
+  );
+});
+test('NOTES-A14 NOTES-B28 EP-B44 Expand opens the content in the expanded view and Escape closes it, record still open', async ({
+  page,
+}) => {
+  await loginAs(page, 'en');
+  const title = `Expanded ${crypto.randomUUID()}`;
+  const created = await note(page, title);
+  await api(page, 'notes', `/${created.id}`, 'PATCH', {
+    revision: created.revision,
+    content: '## Agenda\n- one\n- two',
+  });
+  await page.goto(`/notes?view=all&id=${created.id}`);
+  await detail(page).getByRole('button', { name: en.common.expandContent, exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: title });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/focus=content/);
+  await dialog.getByRole('button', { name: en.notes.content, exact: true }).click();
+  const box = dialog.getByRole('textbox', { name: en.notes.content, exact: true });
+  await expect(box).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(page).not.toHaveURL(/focus=/);
+  await expect(page).toHaveURL(new RegExp(`id=${created.id}`));
+});

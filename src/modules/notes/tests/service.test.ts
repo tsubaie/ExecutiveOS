@@ -368,3 +368,26 @@ it('NOTES-B14 NOTES-A11 HOME-B01 home summary lists recent notes and skips archi
   expect((await run((ctx) => service.homeSummary(ctx, today)))[0]?.count).toBe(0);
   void tasks;
 });
+it('NOTES-B27 offers the built-in templates until some are configured, and only enabled ones', async () => {
+  const builtIn = await harness.run((ctx) => service.listTemplates(ctx));
+  expect(builtIn.data.map((template) => template.id)).toEqual(['meeting', 'one_on_one']);
+  expect(builtIn.data[0]?.body.en).toContain('## Attendees');
+  expect(builtIn.data[0]?.body.ar).toContain('## الحضور');
+  expect(builtIn.data[1]?.body.en).toContain('- [ ] ');
+  await writeSetting(
+    db(),
+    'notes.templates',
+    [
+      {
+        id: 'brief',
+        labels: { en: 'Brief', ar: 'موجز' },
+        body: { en: '## Brief', ar: '## موجز' },
+        enabled: true,
+      },
+      { id: 'old', labels: { en: 'Old', ar: 'قديم' }, body: { en: '', ar: '' }, enabled: false },
+    ],
+    actorId(),
+  );
+  const configured = await harness.run((ctx) => service.listTemplates(ctx));
+  expect(configured.data.map((template) => template.id)).toEqual(['brief']);
+});

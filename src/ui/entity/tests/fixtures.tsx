@@ -17,7 +17,12 @@ export function testConfig(overrides: Partial<Props> = {}): Props {
     description: 'Every measure.',
     filters: { views: [] },
     useList: () => testList(),
-    useDetail: () => ({ data: undefined, pending: false, error: null, refetch: async () => undefined }),
+    useDetail: () => ({
+      data: undefined,
+      pending: false,
+      error: null,
+      refetch: async () => undefined,
+    }),
     mutations: {
       patch: async () => testRow('a', 'Alpha', 0),
       create: async () => null,
@@ -48,7 +53,7 @@ function testList() {
 type Controller = EntityController<TestRow, object, object>;
 export function testController(overrides: Partial<Controller> = {}): Controller {
   return {
-    state: { creating: false, id: null, view: 'all', q: '', sort: '', layout: '' },
+    state: { creating: false, id: null, view: 'all', q: '', sort: '', layout: '', focus: '' },
     setLayout: vi.fn(),
     facets: {},
     searchReset: 0,

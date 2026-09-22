@@ -104,6 +104,19 @@ export const NoteTypes = z.object({
   data: z.array(NoteType),
   meta: z.object({ defaultType: z.string().nullable() }),
 });
+// NOTES-B27: a template a new note can start from; label and body per locale.
+export const NoteTemplate = z.object({
+  id: z.string(),
+  labels: z.record(z.string(), z.string()),
+  body: z.record(z.string(), z.string()),
+  enabled: z.boolean(),
+});
+export type NoteTemplate = z.infer<typeof NoteTemplate>;
+export const NoteTemplates = z.object({ data: z.array(NoteTemplate) });
+// The body for a locale, falling back to English and then to whatever the template carries.
+export function templateBody(template: NoteTemplate, locale: string): string {
+  return template.body[locale] ?? template.body.en ?? Object.values(template.body)[0] ?? '';
+}
 export const NoteListQuery = z.strictObject({
   committeeId: z.union([z.uuid(), z.literal('')]).default(''),
   view: z.string().max(120).default('all'),
@@ -149,7 +162,9 @@ export const ManageTags = z.strictObject({
   target: Tag.nullable(),
 });
 export type ManageTags = z.infer<typeof ManageTags>;
-export const ManageTagsResult = z.object({ data: z.object({ updatedCount: z.number().int().nonnegative() }) });
+export const ManageTagsResult = z.object({
+  data: z.object({ updatedCount: z.number().int().nonnegative() }),
+});
 
 export const SuggestedTask = z.object({
   title: z.string().trim().min(1).max(120),
@@ -172,15 +187,21 @@ export const NoteAiApply = z
     jobId: z.uuid(),
     acceptContent: z.boolean(),
     taskIndexes: z.array(z.number().int().min(0).max(14)).max(15),
-    taskTitles: z.array(z.strictObject({
-      index: z.number().int().min(0).max(14),
-      title: SuggestedTask.shape.title,
-    })).max(15).optional(),
+    taskTitles: z
+      .array(
+        z.strictObject({
+          index: z.number().int().min(0).max(14),
+          title: SuggestedTask.shape.title,
+        }),
+      )
+      .max(15)
+      .optional(),
     tagIndexes: z.array(z.number().int().min(0).max(4)).max(5),
   })
   .refine(
     (input) =>
-      new Set(input.taskTitles?.map((task) => task.index)).size === (input.taskTitles?.length ?? 0) &&
+      new Set(input.taskTitles?.map((task) => task.index)).size ===
+        (input.taskTitles?.length ?? 0) &&
       (input.taskTitles ?? []).every((task) => input.taskIndexes.includes(task.index)) &&
       new Set(input.taskIndexes).size === input.taskIndexes.length &&
       new Set(input.tagIndexes).size === input.tagIndexes.length,

@@ -11,10 +11,16 @@ import type { CreateApi } from '@/ui/entity/types';
 import { NoteCreate, type NoteDetail } from '../schema/validation';
 import { useNoteTypes } from './queries';
 import { CommitteePicker } from '@/modules/committees/ui';
-import { TypeSelect } from './NoteFields';
-// Create asks for title, type and date only (notes.md § UI); everything else is added on the
-// detail right after, with autosave.
-export function CreateNote({ api, committeeId = null }: { api: CreateApi<NoteCreate, NoteDetail>; committeeId?: string | null }) {
+import { TemplateSelect, TypeSelect } from './NoteSelects';
+// Create asks for title, type, date and an optional template whose body becomes the content
+// (notes.md § UI, NOTES-B27); everything else is added on the detail right after, with autosave.
+export function CreateNote({
+  api,
+  committeeId = null,
+}: {
+  api: CreateApi<NoteCreate, NoteDetail>;
+  committeeId?: string | null;
+}) {
   const t = useTranslations('notes');
   const c = useTranslations('common');
   const committees = useTranslations('committees');
@@ -23,6 +29,7 @@ export function CreateNote({ api, committeeId = null }: { api: CreateApi<NoteCre
   const [error, setError] = useState<Error | null>(null);
   const [type, setType] = useState('');
   const [noteDate, setNoteDate] = useState<string | null>(today);
+  const [template, setTemplate] = useState({ id: '', body: '' });
   const fallback = types.data?.meta.defaultType ?? '';
   async function submit(form: FormData) {
     const fields = Object.fromEntries(form);
@@ -33,6 +40,7 @@ export function CreateNote({ api, committeeId = null }: { api: CreateApi<NoteCre
           committeeId: fields.committeeId || null,
           type: type || fallback || null,
           noteDate: noteDate ?? today,
+          content: template.body,
         }),
       );
     } catch (failure) {
@@ -52,15 +60,51 @@ export function CreateNote({ api, committeeId = null }: { api: CreateApi<NoteCre
           <Input {...control} name="title" dir="auto" required pattern=".*\S.*" maxLength={500} />
         )}
       </Field>
-      <Property label={committees('committee')}><CommitteePicker value={committeeId} name="committeeId" /></Property>
-      <div className="grid gap-2">
-        <Property label={t('type')}>
-          <TypeSelect value={type || fallback} onChange={setType} />
-        </Property>
-        <Property label={t('date')}>
-          <DatePicker value={noteDate} onChange={setNoteDate} label={t('date')} />
-        </Property>
-      </div>
+      <Property label={committees('committee')}>
+        <CommitteePicker value={committeeId} name="committeeId" />
+      </Property>
+      <CreateProperties
+        type={type || fallback}
+        setType={setType}
+        noteDate={noteDate}
+        setNoteDate={setNoteDate}
+        template={template.id}
+        setTemplate={setTemplate}
+      />
     </EntityCreateForm>
+  );
+}
+function CreateProperties({
+  type,
+  setType,
+  noteDate,
+  setNoteDate,
+  template,
+  setTemplate,
+}: {
+  type: string;
+  setType: (type: string) => void;
+  noteDate: string | null;
+  setNoteDate: (date: string | null) => void;
+  template: string;
+  setTemplate: (template: { id: string; body: string }) => void;
+}) {
+  const t = useTranslations('notes');
+  return (
+    <div className="grid gap-2">
+      <Property label={t('type')}>
+        <TypeSelect value={type} onChange={setType} />
+      </Property>
+      <Property label={t('date')}>
+        <DatePicker value={noteDate} onChange={setNoteDate} label={t('date')} />
+      </Property>
+      <Property label={t('template')}>
+        <TemplateSelect
+          value={template}
+          label={t('template')}
+          onPick={(id, body) => setTemplate({ id, body })}
+        />
+      </Property>
+    </div>
   );
 }

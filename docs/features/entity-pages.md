@@ -155,6 +155,21 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
   count — and an empty value is the facet cleared. A module declares it when a list is narrowed by
   a day rather than a range (Tasks: `due`), which is what lets another screen hand the list a day
   (Home's week strip, HOME-B14).
+- EP-B43 From 1024 px a press on the page's ground anywhere outside the open record — the list's
+  empty space, the bar, the shell header, the sidebar — closes the record exactly as `Esc` does
+  (EP-B06), through the same guarded close, so pending saves settle first (EP-B11). A press on a
+  control — a row, a view, a link, a button, a field — does only what that control does: a view
+  change or a link already ends the record through its own guarded navigation, and one press must
+  not ask the guard twice. A press inside the panel or in a popup rendered in a portal — a picker,
+  a dialog, a toast — leaves the record alone. The panel stays non-modal (EP-B26): nothing is inert and no scrim
+  appears; the press simply also lands where it was aimed. Below 1024 px the record is the
+  full-screen view of EP-B08 and nothing is beside it to press.
+- EP-B44 A record may offer one of its fields in an expanded view: the framework carries which
+  field as `focus=<key>` in the URL and hands the record `focus.key` and `focus.set` through the
+  detail API. The key belongs to one record, so it ends when the record or the list under it
+  changes; a nested record panel has no expanded view. The view itself is the product's dialog at
+  its largest, headed by the record's name, and the module decides which field can use it
+  (Notes: content, NOTES-B28).
 - EP-B39 No control in the bar sits past the end of the screen. The settings group gives width back
   and wraps like everything else in the bar; it was `shrink-0`, which on a module carrying a period
   as well as a sort (KPIs) measured 509 px inside a 390 px viewport — the sort clipped mid-word and
@@ -345,7 +360,9 @@ Twelve top-level props is the ceiling (`07-coding-guidelines.md`); related optio
 - `bulk-actions.test.tsx`: confirm flow runs once, render escape hatch, disabled predicates.
 - `navigation-guard.test.tsx`: registered guard defers, unregistered surface navigates, guards leave with their owner.
 - `keyboard.test.ts`: `a` opens bulk actions, `x` toggles, shortcuts ignored in inputs.
-- e2e `entity-framework.spec.ts`: A02, A03, A06 in both locales; B23 the dim holds through the click that opened the record, the panel is the only raised plane, and the selected row keeps only its edge bar; B26 the list keeps its width when a record opens, the panel overlaps it rather than sitting beside it, and the list stays scrollable and tabbable behind it.
+- `url-state.test.ts`: B44 the focus key travels with the record and ends with it.
+- `pointer-away.test.ts`: B43 a press on the ground behind the record closes it; the panel, a row, a control, a portal, a toast and a phone do not.
+- e2e `entity-framework.spec.ts`: A02, A03, A06 in both locales; B23 the dim holds through the click that opened the record, the panel is the only raised plane, and the selected row keeps only its edge bar; B26 the list keeps its width when a record opens, the panel overlaps it rather than sitting beside it, and the list stays scrollable and tabbable behind it; B43 a click outside the record closes it.
 - Mutation targets: `resolveUrlState`, `saveQueue`, `keyboardHandler`.
 
 ## Audit items

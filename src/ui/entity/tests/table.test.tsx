@@ -23,7 +23,15 @@ function renderTable(group?: (row: TestRow) => string) {
       <EntityTable
         config={config}
         controller={testController({
-          state: { creating: false, id: null, view: 'all', q: '', sort: '', layout: 'table' },
+          state: {
+            creating: false,
+            id: null,
+            view: 'all',
+            q: '',
+            sort: '',
+            layout: 'table',
+            focus: '',
+          },
         })}
         rows={rows.map((item) => ({ item, leaving: false, entering: false }))}
       />
@@ -72,7 +80,7 @@ describe('entity column sorting', () => {
   function renderWith(sort: string) {
     const config = testConfig({ renderers: { ...testConfig().renderers, columns } });
     const controller = testController({
-      state: { creating: false, id: null, view: 'all', q: '', sort, layout: 'table' },
+      state: { creating: false, id: null, view: 'all', q: '', sort, layout: 'table', focus: '' },
     });
     render(
       <NextIntlClientProvider locale="en" messages={en}>
@@ -93,7 +101,9 @@ describe('entity column sorting', () => {
     expect(screen.getByRole('button', { name: 'Name' })).toBeTruthy();
     // The unsorted column is text, not a control that would promise an order it cannot deliver.
     expect(screen.queryByRole('button', { name: 'Score' })).toBeNull();
-    expect(screen.getByRole('columnheader', { name: 'Score' }).getAttribute('aria-sort')).toBeNull();
+    expect(
+      screen.getByRole('columnheader', { name: 'Score' }).getAttribute('aria-sort'),
+    ).toBeNull();
   });
   it('EP-B31 pressing the column already ordering the list returns to the default', () => {
     const idle = renderWith('');

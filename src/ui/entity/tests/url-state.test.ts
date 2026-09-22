@@ -27,4 +27,18 @@ describe('Entity URL state', () => {
     expect(resolveUrlState(new URLSearchParams('id=missing')).id).toBe('missing');
     expect(changeUrl(new URLSearchParams('id=missing'), { id: null })).toBe('');
   });
+  it('EP-B44 the expanded field travels with its record and ends when the record or the list changes', () => {
+    expect(resolveUrlState(new URLSearchParams('id=a&focus=content')).focus).toBe('content');
+    expect(resolveUrlState(new URLSearchParams('id=a')).focus).toBe('');
+    expect(changeUrl(new URLSearchParams('id=a'), { focus: 'content' })).toBe('id=a&focus=content');
+    expect(changeUrl(new URLSearchParams('id=a&focus=content'), { focus: null })).toBe('id=a');
+    expect(changeUrl(new URLSearchParams('id=a&focus=content'), { id: 'b' })).toBe('id=b');
+    expect(changeUrl(new URLSearchParams('id=a&focus=content'), { id: null, new: null })).toBe('');
+    expect(changeUrl(new URLSearchParams('id=a&focus=content'), { view: 'trash' })).toBe(
+      'view=trash',
+    );
+    expect(changeUrl(new URLSearchParams('id=a&focus=content'), { sel: 'a' })).toBe(
+      'id=a&focus=content&sel=a',
+    );
+  });
 });

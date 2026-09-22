@@ -6,7 +6,7 @@ import { Locale } from '@/core/config/defaults';
 export const AiPayload = z.object({
   capability: AiCapability,
   capabilityVersion: z.literal(1),
-  promptVersion: z.union([z.literal(1), z.literal(2)]),
+  promptVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   entityId: z.uuid(),
   revision: z.number().int().positive(),
   contentHash: z.string(),
