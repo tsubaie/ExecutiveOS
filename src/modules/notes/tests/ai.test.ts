@@ -10,9 +10,12 @@ import refinement from '../../../../tests/fixtures/ai/notes.refine.v1.en.json';
 import { harness, actorId } from './fixtures';
 import { startNoteAi } from '../ai/service';
 import { refinePrompt } from '../ai/prompts/select';
+import { NoteAiApply } from '../schema/validation';
+import { insertRefinement } from '../repo';
+import { id } from '@/core/db/ids';
 import { AiPayload } from '@/core/ai/job-schema';
 import { latestAiJob } from '@/core/db/ai-jobs-repo';
-import { applyNoteAi } from '../ai/apply';
+import { applyNoteAi, discardNoteAi, restoreNoteAi } from '../ai/apply';
 import { getNote, patchNote } from '../service';
 vi.mock('@/core/ai/models', () => ({ loadModels: async () => [fixtureModel] }));
 vi.mock('@/core/ai/client', () => ({ aiConnection: () => ({ state: 'enabled' }) }));
@@ -165,4 +168,110 @@ it('NOTES-B26 refine jobs are admitted with prompt v3, which keeps checklist mar
   expect(refinePrompt(2)).not.toMatch(/checklist/iu);
   expect(refinePrompt(1)).not.toMatch(/checklist/iu);
   expect(refinePrompt(2)).not.toBe(refinePrompt(3));
+});
+it('NOTES-B18 Keep applies the rewrite as the reader edited it, and an edit without accepting content is refused', async () => {
+  const note = await harness.note('Plan', { content: 'Review the draft.' });
+  const job = await finishedJob(
+    db(),
+    actorId(),
+    'notes.refine',
+    note.id,
+    note.revision,
+    refinement,
+  );
+  await harness.run((ctx) =>
+    applyNoteAi(
+      ctx,
+      note.id,
+      {
+        jobId: job.id,
+        acceptContent: true,
+        content: '## Edited\n\nBy hand.',
+        taskIndexes: [],
+        tagIndexes: [],
+      },
+      'notes.refine',
+      async () => '00000000-0000-4000-8000-000000000001',
+    ),
+  );
+  expect((await harness.run((ctx) => getNote(ctx, note.id))).content).toBe('## Edited\n\nBy hand.');
+  expect(
+    NoteAiApply.safeParse({
+      jobId: job.id,
+      acceptContent: false,
+      content: 'x',
+      taskIndexes: [],
+      tagIndexes: [0],
+    }).success,
+  ).toBe(false);
+});
+it('NOTES-B18 a discarded proposal can be restored until it is applied, and comes back stale when the note moved on', async () => {
+  const note = await harness.note('Plan', { content: 'Review the draft.' });
+  const job = await finishedJob(
+    db(),
+    actorId(),
+    'notes.refine',
+    note.id,
+    note.revision,
+    refinement,
+  );
+  await harness.run((ctx) => discardNoteAi(ctx, note.id, job.id, 'notes.refine'));
+  await expect(
+    harness.run((ctx) =>
+      applyNoteAi(
+        ctx,
+        note.id,
+        { jobId: job.id, acceptContent: true, taskIndexes: [], tagIndexes: [] },
+        'notes.refine',
+        async () => 'x',
+      ),
+    ),
+  ).rejects.toMatchObject({ code: 'conflict' });
+  await harness.run((ctx) => restoreNoteAi(ctx, note.id, job.id));
+  const applied = await harness.run((ctx) =>
+    applyNoteAi(
+      ctx,
+      note.id,
+      { jobId: job.id, acceptContent: true, taskIndexes: [], tagIndexes: [] },
+      'notes.refine',
+      async () => 'x',
+    ),
+  );
+  expect(applied.ids).toEqual([]);
+  await expect(harness.run((ctx) => restoreNoteAi(ctx, note.id, job.id))).rejects.toMatchObject({
+    code: 'conflict',
+  });
+  // A second proposal, discarded after the note moved on, restores as stale rather than pending.
+  const moved = await harness.run((ctx) => getNote(ctx, note.id));
+  const later = await finishedJob(
+    db(),
+    actorId(),
+    'notes.refine',
+    note.id,
+    moved.revision,
+    refinement,
+  );
+  await insertRefinement(db(), {
+    id: id(),
+    noteId: note.id,
+    jobId: later.id,
+    noteRevision: moved.revision,
+    contentHash: 'fixture',
+    capabilityVersion: 1,
+    refinedContent: refinement.refined_content,
+    suggestedTasks: refinement.suggested_tasks,
+    suggestedTags: refinement.suggested_tags,
+    summaryOfChanges: refinement.summary_of_changes,
+    status: 'pending',
+    createdBy: actorId(),
+  });
+  await harness.run((ctx) =>
+    patchNote(ctx, note.id, { revision: moved.revision, title: 'Plan 2' }),
+  );
+  await harness.run((ctx) => discardNoteAi(ctx, note.id, later.id, 'notes.refine'));
+  await harness.run((ctx) => restoreNoteAi(ctx, note.id, later.id));
+  const rows = await db().execute(
+    sql`select status from note_refinements where job_id = ${later.id}::uuid`,
+  );
+  expect(rows.rows[0]?.status).toBe('stale');
 });

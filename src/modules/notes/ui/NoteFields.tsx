@@ -1,21 +1,27 @@
 'use client';
-import { useRef, useState, type FocusEvent, type ReactNode } from 'react';
+import { useState, type FocusEvent, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Textarea } from '@/ui/primitives/textarea';
 import { Property } from '@/ui/layout/Property';
 import { DatePicker } from '@/ui/layout/DatePicker';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { MarkdownField } from '@/ui/markdown/MarkdownField';
-import { NEW_MENTION, type MentionItem } from '@/ui/markdown/mentions';
-import { derivedParticipants } from '../schema/validation';
 import type { NoteDetail, NotePatch } from '../schema/validation';
 import type { DetailApi } from '@/ui/entity/types';
-import { useAllPeople, useNoteMutations } from './queries';
+import { useMentions } from './use-mentions';
 import { TemplateSelect, TypeSelect } from './NoteSelects';
 import { CommitteePicker } from '@/modules/committees/ui';
 import { TagsEditor } from './TagsEditor';
 import { ParticipantLinks } from './ParticipantLinks';
 export type Patch = Omit<NotePatch, 'revision'>;
+// NOTES-B18: a proposal under review takes the content field's place in the expanded view: its
+// draft is what the field shows and commits, and the band and the original ride along.
+export type ReviewSlot = {
+  value: string;
+  onCommit: (value: string) => void;
+  banner: ReactNode;
+  aside: ReactNode;
+};
 type Save = (patch: Patch) => void;
 // The detail panel: the title is the heading, then type and date rows, the participants (people
 // mentioned in the content, linking to their pages), tags and the markdown content. Every field
@@ -26,6 +32,7 @@ export function NoteFields({
   focus,
   contentAction,
   tagsAction,
+  review = null,
 }: {
   note: NoteDetail;
   save: Save;
@@ -35,31 +42,15 @@ export function NoteFields({
   // floating in a row above the record (NOTES-B22).
   contentAction?: ReactNode;
   tagsAction?: ReactNode;
+  review?: ReviewSlot | null;
 }) {
-  const t = useTranslations('notes');
-  const c = useTranslations('common');
   const committees = useTranslations('committees');
   const { draft, change } = useDraftProperties(note, save);
   const mentions = useMentions(note, save);
   return (
     <fieldset data-autosave className="grid min-w-0 gap-4">
       <NoteTitle title={note.title} save={save} />
-      <div className="grid gap-2">
-        <Property label={t('type')} quiet empty={!draft.type}>
-          <TypeSelect
-            value={draft.type}
-            current={note.type ?? ''}
-            onChange={(next) => change({ type: next })}
-          />
-        </Property>
-        <Property label={t('date')} quiet empty={!draft.noteDate}>
-          <DatePicker
-            value={draft.noteDate}
-            label={t('date')}
-            onChange={(next) => next && change({ noteDate: next })}
-          />
-        </Property>
-      </div>
+      <TypeAndDate note={note} draft={draft} change={change} />
       <Property label={committees('committee')} quiet empty={!note.committeeId}>
         <CommitteePicker
           value={note.committeeId}
@@ -69,15 +60,71 @@ export function NoteFields({
       <ParticipantLinks participants={note.participants} />
       <TagsEditor tags={note.tags} save={(tags) => save({ tags })} action={tagsAction} />
       {mentions.error && <ErrorPanel error={mentions.error} />}
-      <MarkdownField
-        label={t('content')}
-        value={note.content}
-        mentions={mentions.mentions}
-        onCommit={mentions.commit}
+      <ContentField
+        note={note}
+        focus={focus}
+        review={review}
+        mentions={mentions}
         action={<ContentActions note={note} save={save} action={contentAction} />}
-        expand={expandFor(note, focus, c)}
       />
     </fieldset>
+  );
+}
+// Type and date, controlled from the draft (useDraftProperties).
+function TypeAndDate({
+  note,
+  draft,
+  change,
+}: {
+  note: NoteDetail;
+  draft: Properties;
+  change: (patch: Partial<Properties>) => void;
+}) {
+  const t = useTranslations('notes');
+  return (
+    <div className="grid gap-2">
+      <Property label={t('type')} quiet empty={!draft.type}>
+        <TypeSelect
+          value={draft.type}
+          current={note.type ?? ''}
+          onChange={(next) => change({ type: next })}
+        />
+      </Property>
+      <Property label={t('date')} quiet empty={!draft.noteDate}>
+        <DatePicker
+          value={draft.noteDate}
+          label={t('date')}
+          onChange={(next) => next && change({ noteDate: next })}
+        />
+      </Property>
+    </div>
+  );
+}
+// The content: the note's own text, or a proposal's draft while one is under review (NOTES-B18).
+function ContentField({
+  note,
+  focus,
+  review,
+  mentions,
+  action,
+}: {
+  note: NoteDetail;
+  focus: DetailApi<Patch>['focus'];
+  review: ReviewSlot | null;
+  mentions: ReturnType<typeof useMentions>;
+  action: ReactNode;
+}) {
+  const t = useTranslations('notes');
+  const c = useTranslations('common');
+  return (
+    <MarkdownField
+      label={t('content')}
+      value={review?.value ?? note.content}
+      mentions={mentions.mentions}
+      onCommit={review?.onCommit ?? mentions.commit}
+      action={action}
+      expand={{ ...expandFor(note, focus, c), banner: review?.banner, aside: review?.aside }}
+    />
   );
 }
 // NOTES-B27: an empty note offers a template to insert, beside whatever the AI slot holds.
@@ -121,52 +168,6 @@ function expandFor(
       description: c('expandedDescription'),
     },
   };
-}
-// NOTES-B08: "@" lists the workspace's people and offers to add an unknown name; the participants
-// saved with the content are the candidates whose mention appears in it. A commit waits for any
-// creation still in flight, so a name added and left in one breath is not lost.
-function useMentions(note: NoteDetail, save: Save) {
-  const c = useTranslations('common');
-  const people = useAllPeople();
-  const mutations = useNoteMutations();
-  const picked = useRef<MentionItem[]>([]);
-  const pending = useRef<Promise<void>[]>([]);
-  const [error, setError] = useState<Error | null>(null);
-  const directory: MentionItem[] = (people.data?.data ?? []).map((person) => ({
-    id: person.id,
-    name: person.displayName ?? person.fullName,
-  }));
-  const onPick = (item: MentionItem) => {
-    if (!item.create) return;
-    pending.current.push(
-      mutations
-        .createPerson(item.id.slice(NEW_MENTION.length))
-        .then((person) => {
-          if (person) picked.current.push({ id: person.id, name: item.name });
-        })
-        .catch((failure: unknown) =>
-          setError(failure instanceof Error ? failure : new Error(c('error'))),
-        ),
-    );
-  };
-  const commit = (content: string) => {
-    const current = note.participants.map((person) => person.id);
-    void Promise.allSettled(pending.current).then(() => {
-      const candidates = [
-        ...directory,
-        ...note.participants.map((person) => ({ id: person.id, name: person.name })),
-        ...picked.current,
-      ];
-      const participantIds = derivedParticipants(content, candidates).filter(
-        (id, index, all) => all.indexOf(id) === index,
-      );
-      const same =
-        participantIds.length === current.length &&
-        participantIds.every((id) => current.includes(id));
-      save(same ? { content } : { content, participantIds });
-    });
-  };
-  return { mentions: { items: directory, onPick, allowCreate: true }, commit, error };
 }
 type Properties = { type: string; noteDate: string | null };
 // Pickers are controlled from a draft re-based on the saved note whenever it changes, without

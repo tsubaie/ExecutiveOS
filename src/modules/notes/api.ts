@@ -5,7 +5,7 @@ import { SuggestedTask } from './schema/validation';
 import { z } from 'zod';
 import { defineHandler, authenticated } from '@/core/http/handler';
 import { startNoteAi } from './ai/service';
-import { noteAiApplyHandler, noteAiDiscardHandler } from './ai/api';
+import { noteAiApplyHandler, noteAiDiscardHandler, noteAiRestoreHandler } from './ai/api';
 import {
   NoteDetail,
   NoteCreate,
@@ -156,6 +156,7 @@ export const suggestTags = noteAiStart('notes.suggest_tags');
 export const refineApply = noteAiApplyHandler('notes.refine', createSuggestedTask);
 export const tagsApply = noteAiApplyHandler('notes.suggest_tags', createSuggestedTask);
 export const refineDiscard = noteAiDiscardHandler('notes.refine');
+export const refineRestore = noteAiRestoreHandler();
 export const tagsDiscard = noteAiDiscardHandler('notes.suggest_tags');
 
 async function createSuggestedTask(

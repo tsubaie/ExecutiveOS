@@ -3,11 +3,19 @@ import { z } from 'zod';
 import { defineHandler, authenticated } from '@/core/http/handler';
 import type { Context } from '@/core/auth/session';
 import { SuggestedTask } from '../schema/validation';
-type CreateSuggestedTask = (ctx: Context, noteId: string, task: z.infer<typeof SuggestedTask>, ownerId: string | null) => Promise<string>;
-import { NoteAiApply } from '../schema/validation';
-import { applyNoteAi, discardNoteAi } from './apply';
+type CreateSuggestedTask = (
+  ctx: Context,
+  noteId: string,
+  task: z.infer<typeof SuggestedTask>,
+  ownerId: string | null,
+) => Promise<string>;
+import { NoteAiApply, NoteAiRestore } from '../schema/validation';
+import { applyNoteAi, discardNoteAi, restoreNoteAi } from './apply';
 const response = z.object({ data: z.object({ ids: z.array(z.uuid()) }) });
-export function noteAiApplyHandler(capability: 'notes.refine' | 'notes.suggest_tags', createSuggestedTask: CreateSuggestedTask) {
+export function noteAiApplyHandler(
+  capability: 'notes.refine' | 'notes.suggest_tags',
+  createSuggestedTask: CreateSuggestedTask,
+) {
   return defineHandler({
     guard: 'session',
     input: NoteAiApply,
@@ -16,8 +24,9 @@ export function noteAiApplyHandler(capability: 'notes.refine' | 'notes.suggest_t
     handler: async (input, ctx, params) => {
       const context = authenticated(ctx);
       const noteId = z.uuid().parse(params.id);
-      const data = await applyNoteAi(context, noteId, input, capability,
-        (task, ownerId) => createSuggestedTask(context, noteId, task, ownerId));
+      const data = await applyNoteAi(context, noteId, input, capability, (task, ownerId) =>
+        createSuggestedTask(context, noteId, task, ownerId),
+      );
       return { data };
     },
   });
@@ -34,6 +43,18 @@ export function noteAiDiscardHandler(capability: 'notes.refine' | 'notes.suggest
         input.jobId,
         capability,
       ),
+    }),
+  });
+}
+// NOTES-B18: Undo on the discard toast puts the proposal back.
+export function noteAiRestoreHandler() {
+  return defineHandler({
+    guard: 'session',
+    input: NoteAiRestore,
+    response,
+    idempotent: true,
+    handler: async (input, ctx, params) => ({
+      data: await restoreNoteAi(authenticated(ctx), z.uuid().parse(params.id), input.jobId),
     }),
   });
 }
