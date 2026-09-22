@@ -21,6 +21,8 @@ export type ReviewSlot = {
   onCommit: (value: string) => void;
   banner: ReactNode;
   aside: ReactNode;
+  asideTitle: string;
+  footer: ReactNode;
 };
 type Save = (patch: Patch) => void;
 // The detail panel: the title is the heading, then type and date rows, the participants (people
@@ -123,7 +125,13 @@ function ContentField({
       mentions={mentions.mentions}
       onCommit={review?.onCommit ?? mentions.commit}
       action={action}
-      expand={{ ...expandFor(note, focus, c), banner: review?.banner, aside: review?.aside }}
+      expand={{
+        ...expandFor(note, focus, c),
+        banner: review?.banner,
+        aside: review?.aside,
+        asideTitle: review?.asideTitle,
+        footer: review?.footer,
+      }}
     />
   );
 }

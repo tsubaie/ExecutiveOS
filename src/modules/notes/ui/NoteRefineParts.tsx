@@ -81,20 +81,7 @@ export function RefineTasks({
     return <p className="py-8 text-center text-sm text-text-muted">{ai('noTasksFound')}</p>;
   return (
     <fieldset disabled={disabled} className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-text-muted">
-          {ai('tasksSelected', { count: selected.length, total: tasks.length })}
-        </p>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() =>
-            setSelected(selected.length === tasks.length ? [] : tasks.map((_, index) => index))
-          }
-        >
-          {selected.length === tasks.length ? ai('deselectAll') : ai('selectAll')}
-        </Button>
-      </div>
+      <TasksHeader total={tasks.length} selected={selected} setSelected={setSelected} />
       {tasks.map((task, index) => (
         <div key={task.title} className="space-y-3 rounded-lg border p-3">
           <div className="flex items-center gap-3">
@@ -137,6 +124,38 @@ function TaskContext({ task }: { task: z.infer<typeof SuggestedTask> }) {
           {task.source_snippet}
         </blockquote>
       )}
+    </div>
+  );
+}
+function TasksHeader({
+  total,
+  selected,
+  setSelected,
+}: {
+  total: number;
+  selected: number[];
+  setSelected: (value: number[]) => void;
+}) {
+  const ai = useTranslations('ai');
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="grid gap-0.5">
+        <h4 className="text-sm font-medium">{ai('suggestedTasksCount', { count: total })}</h4>
+        <p className="text-xs text-text-muted tabular-nums">
+          {ai('tasksSelected', { count: selected.length, total: total })}
+        </p>
+      </div>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() =>
+          setSelected(
+            selected.length === total ? [] : Array.from({ length: total }, (_, index) => index),
+          )
+        }
+      >
+        {selected.length === total ? ai('deselectAll') : ai('selectAll')}
+      </Button>
     </div>
   );
 }

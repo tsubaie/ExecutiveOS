@@ -11,10 +11,13 @@ export type Expand = {
   open: boolean;
   setOpen: (open: boolean) => void;
   labels: { expand: string; collapse: string; description: string };
-  // A band above the text in the expanded view (a proposal under review, NOTES-B18) and a second
-  // column beside it (the original the proposal rewrote).
+  // A proposal under review (NOTES-B18): a band above the text, a rail beside it from 1024 px and
+  // below it on narrower screens, and a footer pinned to the view's bottom for the decision.
   banner?: ReactNode;
   aside?: ReactNode;
+  // Names the rail where it folds under a disclosure, below 1024 px.
+  asideTitle?: string | undefined;
+  footer?: ReactNode;
 };
 // An action that transforms this field belongs on its label row, not in a header above the record:
 // it changes one field, and a reader reaches for it while looking at that field.
@@ -95,6 +98,8 @@ export function FieldFrame({
         onOpenChange={expand.setOpen}
         banner={expand.banner}
         aside={expand.aside}
+        asideTitle={expand.asideTitle}
+        footer={expand.footer}
       >
         {children}
       </ExpandedField>
@@ -114,6 +119,8 @@ export function ExpandedField({
   onOpenChange,
   banner,
   aside,
+  asideTitle,
+  footer,
   children,
 }: {
   title: string;
@@ -122,6 +129,8 @@ export function ExpandedField({
   onOpenChange: (open: boolean) => void;
   banner?: ReactNode | undefined;
   aside?: ReactNode | undefined;
+  asideTitle?: string | undefined;
+  footer?: ReactNode | undefined;
   children: ReactNode;
 }) {
   return (
@@ -137,20 +146,55 @@ export function ExpandedField({
           <DialogDescription className="sr-only">{description}</DialogDescription>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-8 sm:py-6">
-          <div
-            className={cn(
-              'mx-auto w-full text-base leading-7 [&_textarea]:min-h-[calc(94dvh-13rem)] [&_textarea]:text-base [&_textarea]:leading-7 [&_[data-checklist]]:min-h-[calc(94dvh-13rem)]',
-              aside ? 'grid max-w-[184ch] gap-6 lg:grid-cols-2' : 'max-w-[92ch]',
-            )}
-          >
-            <div className="min-w-0">
-              {banner}
-              {children}
-            </div>
-            {aside && <div className="min-w-0">{aside}</div>}
-          </div>
+          <Columns banner={banner} aside={aside} asideTitle={asideTitle}>
+            {children}
+          </Columns>
         </div>
+        {footer && (
+          <div className="border-t bg-surface px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-6">
+            {footer}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+// The text column, and the rail beside it from 1024 px or folded above the text below that.
+function Columns({
+  banner,
+  aside,
+  asideTitle,
+  children,
+}: {
+  banner: ReactNode;
+  aside: ReactNode;
+  asideTitle: string | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        // Reading and writing typography: a wide measure, looser leading, and headings that
+        // step above the body so a note's sections read as sections.
+        'mx-auto w-full text-base leading-7 [&_h2]:mt-2 [&_h2]:text-lg [&_h2]:text-pretty [&_h3]:text-base [&_h3]:text-pretty [&_textarea]:text-base [&_textarea]:leading-7',
+        // The text fills the height, except on a phone with a rail, where the rail must
+        // stay within reach beneath it.
+        aside
+          ? 'grid max-w-[140ch] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:[&_[data-checklist]]:min-h-[calc(94dvh-13rem)] lg:[&_textarea]:min-h-[calc(94dvh-13rem)]'
+          : 'max-w-[92ch] [&_[data-checklist]]:min-h-[calc(94dvh-13rem)] [&_textarea]:min-h-[calc(94dvh-13rem)]',
+      )}
+    >
+      <div className="min-w-0">
+        {banner}
+        {aside && (
+          <details className="group mb-4 rounded-lg border lg:hidden">
+            <summary className="cursor-pointer px-3 py-3 text-sm font-medium">{asideTitle}</summary>
+            <div className="border-t px-3 py-3">{aside}</div>
+          </details>
+        )}
+        {children}
+      </div>
+      {aside && <div className="hidden min-w-0 lg:block">{aside}</div>}
+    </div>
   );
 }
