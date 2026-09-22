@@ -139,7 +139,12 @@ describe('markdown field', () => {
   });
 });
 describe('expanded view', () => {
-  const labels = { expand: 'Expand', collapse: 'Exit expanded view', description: 'Reading room' };
+  const labels = {
+    expand: 'Expand',
+    collapse: 'Exit expanded view',
+    description: 'Reading room',
+    away: 'Open in the expanded view',
+  };
   it('EP-B44 NOTES-B28 the label row offers the expand control and reports the change to its owner', () => {
     const setOpen = vi.fn();
     mount(
@@ -168,14 +173,20 @@ describe('expanded view', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Content' }));
     expect(await within(dialog).findByRole('textbox', { name: 'Content' })).toBeTruthy();
     // Outside the dialog, the record keeps the label and the control that brings the text back.
-    const away = screen.getAllByRole('button', { name: 'Exit expanded view' });
+    // The dialog hides the record from the accessibility tree while it is open.
+    const away = screen.getAllByRole('button', { name: 'Exit expanded view', hidden: true });
     expect(away.length).toBeGreaterThanOrEqual(1);
     fireEvent.click(away[0]!);
     expect(setOpen).toHaveBeenCalledWith(false);
   });
 });
 describe('expanded toolbar', () => {
-  const labels = { expand: 'Expand', collapse: 'Exit expanded view', description: 'Reading room' };
+  const labels = {
+    expand: 'Expand',
+    collapse: 'Exit expanded view',
+    description: 'Reading room',
+    away: 'Open in the expanded view',
+  };
   it('NOTES-B28 the toolbar shows only in the expanded view, formats the selection and keeps focus in the text', async () => {
     mount(<MarkdownField label="Content" value="" />);
     await screen.findByRole('textbox', { name: 'Content' });

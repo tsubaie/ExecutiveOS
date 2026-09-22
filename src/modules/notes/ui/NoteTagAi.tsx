@@ -1,21 +1,20 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Sparkles } from 'lucide-react';
-import { AiWorking, reviewReady } from '@/ui/ai/AiReviewStatus';
-import { AiRequestError } from '@/ui/ai/AiRequestError';
+import { LoaderCircle, WandSparkles } from 'lucide-react';
+import { reviewReady } from '@/ui/ai/AiReviewStatus';
 import { useAiReview, type AiReview } from '@/ui/ai/queries';
 import { Button } from '@/ui/primitives/button';
 import { Popover, PopoverTrigger, PopoverContent } from '@/ui/primitives/popover';
 import { type NoteDetail } from '../schema/validation';
 import { TagOutput } from '../schema/validation';
+import { NoteAiStartError } from './NoteAiRow';
 import { SuggestedTags } from './NoteRefineParts';
 // NOTES-B22: tag suggestions sit on the Tags label row as a single icon, and the whole exchange
 // happens in a popover hanging off it, so the field the tags land in never leaves the reader's
-// sight. An icon carries this one where it would not carry Refine: the label beside it already
-// supplies the noun, so the mark only has to mean "suggest", and the action is additive and
-// reversible — the reader ticks what they keep — where refining rewrites their own prose. Weight
-// tracks consequence, so the heavier action keeps its words and this one does not.
+// sight. The popover is one small card: what it is, the tags to tick, and one action that says
+// how many it adds. Suggestions the note does not carry yet start ticked; existing ones are
+// marked and stay unticked, since adding them changes nothing.
 export function NoteTagAi({ note }: { note: NoteDetail }) {
   const t = useTranslations('ai');
   const review = useAiReview(
@@ -30,13 +29,18 @@ export function NoteTagAi({ note }: { note: NoteDetail }) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={<Button variant="ghost" size="icon-sm" aria-label={t('suggestTags')} />}
+        title={t('suggestTags')}
         onClick={() => {
           if (!review.job && !review.pending) review.start.mutate();
         }}
       >
-        <Sparkles className="size-4 text-accent" />
+        <WandSparkles className="size-4 text-accent" />
       </PopoverTrigger>
-      <PopoverContent align="end" className="grid gap-3">
+      <PopoverContent align="end" className="grid w-80 gap-3">
+        <h3 className="flex items-center gap-2 text-sm font-medium">
+          <WandSparkles className="size-4 text-accent" aria-hidden />
+          {t('suggestedTags')}
+        </h3>
         <TagState review={review} note={note} close={() => setOpen(false)} />
       </PopoverContent>
     </Popover>
@@ -52,13 +56,35 @@ function TagState({
   close: () => void;
 }) {
   const t = useTranslations('ai');
+  const c = useTranslations('common');
   const proposal = TagOutput.safeParse(review.job?.result?.output);
-  if (review.pending) return <AiWorking review={review} />;
-  if (review.error) return <AiRequestError error={review.error} />;
+  if (review.pending)
+    return (
+      <p role="status" className="flex items-center gap-2 text-sm text-text-muted">
+        <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden />
+        {review.cancelling ? t('cancelling') : t('suggesting')}
+        {!review.cancelling && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ms-auto h-7 px-2"
+            onClick={review.requestCancel}
+          >
+            {c('cancel')}
+          </Button>
+        )}
+      </p>
+    );
+  if (review.error) return <NoteAiStartError error={review.error} />;
   if (!reviewReady(review) || !proposal.success)
     return (
-      <Button variant="outline" size="sm" onClick={() => review.start.mutate()}>
-        {t('generate')}
+      <Button
+        variant="outline"
+        size="sm"
+        className="justify-self-start"
+        onClick={() => review.start.mutate()}
+      >
+        {t('suggestTags')}
       </Button>
     );
   return (
@@ -83,7 +109,11 @@ function TagProposal({
   close: () => void;
 }) {
   const t = useTranslations('ai');
-  const [indexes, setIndexes] = useState<number[]>([]);
+  const fresh = (tag: string) =>
+    !currentTags.some((current) => current.toLowerCase() === tag.toLowerCase());
+  const [indexes, setIndexes] = useState<number[]>(() =>
+    tags.map((tag, index) => (fresh(tag) ? index : -1)).filter((index) => index >= 0),
+  );
   const busy = review.apply.isPending || review.discard.isPending;
   const apply = () =>
     review.apply
@@ -94,33 +124,64 @@ function TagProposal({
         tagIndexes: indexes,
       })
       .then(close);
+  if (!tags.length) return <p className="text-sm text-text-muted">{t('noTags')}</p>;
   return (
     <>
-      {review.stale && (
-        <p role="alert" className="text-sm text-danger">
-          {t('stale')}
-        </p>
-      )}
+      <p className="text-sm text-text-muted">{review.stale ? t('stale') : t('tickToAdd')}</p>
       <SuggestedTags
         tags={tags}
         currentTags={currentTags}
         selected={indexes}
         setSelected={setIndexes}
-        disabled={busy}
+        disabled={busy || review.stale}
+        bare
       />
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" disabled={busy || review.stale || !indexes.length} onClick={() => void apply()}>
-          {t('applySelected')}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => void review.discard.mutateAsync().then(close)}
-        >
-          {t('discard')}
-        </Button>
-      </div>
+      <ProposalActions
+        review={review}
+        busy={busy}
+        count={indexes.length}
+        apply={() => void apply()}
+        close={close}
+      />
     </>
+  );
+}
+// Dismiss at the start; at the end, the one action that says how many tags it adds, or the way
+// to a fresh suggestion once the note moved on.
+function ProposalActions({
+  review,
+  busy,
+  count,
+  apply,
+  close,
+}: {
+  review: AiReview;
+  busy: boolean;
+  count: number;
+  apply: () => void;
+  close: () => void;
+}) {
+  const t = useTranslations('ai');
+  return (
+    <div className="flex items-center gap-2 border-t pt-3">
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={busy}
+        onClick={() => void review.discard.mutateAsync().then(close)}
+      >
+        {t('dismiss')}
+      </Button>
+      <span className="ms-auto" />
+      {review.stale ? (
+        <Button variant="outline" size="sm" disabled={busy} onClick={() => review.start.mutate()}>
+          {t('suggestAgain')}
+        </Button>
+      ) : (
+        <Button size="sm" className="tabular-nums" disabled={busy || !count} onClick={apply}>
+          {t('addTags', { count })}
+        </Button>
+      )}
+    </div>
   );
 }

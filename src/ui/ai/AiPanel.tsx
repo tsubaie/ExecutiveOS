@@ -1,7 +1,7 @@
 'use client';
 import { type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { Sparkles } from 'lucide-react';
+import { WandSparkles } from 'lucide-react';
 import { Button } from '@/ui/primitives/button';
 import { type AiReview } from './queries';
 import { AiWorking, AiOutcome, reviewReady } from './AiReviewStatus';
@@ -20,7 +20,7 @@ export function AiPanel({
   return (
     <section className="my-5 space-y-4 rounded-lg border p-4">
       <h3 className="flex items-center gap-2 font-medium">
-        <Sparkles className="size-4 text-accent" />
+        <WandSparkles className="size-4 text-accent" />
         {title}
       </h3>
       <AiState review={review}>{children}</AiState>
@@ -29,11 +29,9 @@ export function AiPanel({
 }
 function AiState({ review, children }: { review: AiReview; children: ReactNode }) {
   const t = useTranslations('ai');
-  if (review.pending)
-    return <AiWorking review={review} />;
+  if (review.pending) return <AiWorking review={review} />;
   const result = review.job?.result;
-  if (!reviewReady(review) || !result)
-    return <AiStart review={review} />;
+  if (!reviewReady(review) || !result) return <AiStart review={review} />;
   return (
     <>
       {review.stale && (
