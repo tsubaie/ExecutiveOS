@@ -40,6 +40,8 @@ const Environment = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   NEXT_RUNTIME: optionalText,
   NEXT_PHASE: optionalText,
+  // Set in the production image so the job drain, not Next, decides when the process exits.
+  NEXT_MANUAL_SIG_HANDLE: optionalText,
 });
 
 // ADMIN-B17: a deployment typo must not silently downgrade the session cookie. Loopback is the one

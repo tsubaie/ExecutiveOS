@@ -128,7 +128,7 @@ Browser ──HTTP──▶ src/app/api/v1/tasks/route.ts
 Contract in ADR 0010; schema in `03-data-model.md` § jobs.
 
 - Single `jobs` table. Producers insert `{ kind, payload, dedup_key?, entity_type?, entity_id?, run_after?, deadline_at? }`. `dedup_key` is unique among non-terminal jobs; an insert that collides returns the existing job.
-- Runner: `src/instrumentation.ts` `register()` starts the runner and scheduler once when `NEXT_RUNTIME === "nodejs"`, `JOBS_ENABLED !== "false"`, and not during build or test. It does not await the loop. On `SIGTERM` it stops claiming, signals running handlers through `AbortSignal`, waits up to `JOBS_DRAIN_SECONDS` (default 25), then exits.
+- Runner: `src/instrumentation.ts` `register()` starts the runner and scheduler once when `NEXT_RUNTIME === "nodejs"`, `JOBS_ENABLED !== "false"`, and not during build or test. It does not await the loop. On `SIGTERM` or `SIGINT` it stops claiming, lets running handlers finish for up to `JOBS_DRAIN_SECONDS` (default 25), then signals the rest through `AbortSignal` and gives them five seconds to record the attempt before the process exits (`ADMIN-B33`, ADR 0024). The production image sets `NEXT_MANUAL_SIG_HANDLE=true` so the drain, not Next's server shutdown, decides when the process exits; Compose's 35-second stop grace period covers the drain plus that grace.
 - Claiming: `UPDATE jobs SET status='running', attempt=attempt+1, lease_owner=$w, lease_expires_at=now()+lease WHERE id = (SELECT id … FOR UPDATE SKIP LOCKED)`. Lease is 2 minutes; the runner renews every 30 seconds while the handler runs. A job whose lease expired is claimable again.
 - Fencing: every write a handler makes to `jobs` (heartbeat, result, failure) is conditional on `attempt = $myAttempt AND lease_owner = $w AND status = 'running'`. A handler whose renewal fails receives an abort signal and must stop; any result it produces afterwards is discarded (zero rows updated) and logged.
 - Result publication is atomic with the job's own side effects: handlers write their outputs inside one transaction that also performs the fenced status update. If the fence fails, the transaction rolls back.
@@ -146,7 +146,7 @@ All model calls go through `core/ai` and all run as jobs; there is no inline mod
 
 - `core/links`: the `entity_links` table (contextual edges only), the relation registry (allowed endpoint pairs, direction, inverse labels), the `entity_edges` view that unions contextual edges with structural projections, and the context query. Spec: `features/links.md`, ADR 0009.
 - `core/files`: upload streaming to a temp path, hashing, atomic move to the content-addressed key, DB insert in a transaction after the move, orphan sweep, availability states, purge. Spec: `features/meetings.md`, ADR 0007.
-- `core/backup`: `pg_dump` (custom format) then tar of `FILES_DIR`, a `manifest.json` with checksums, schema version, and app version; restore enters maintenance mode, `pg_restore`, files, verifies checksums. Consistency: files are immutable and written before their DB row, and the dump is taken first, so every file referenced by the dump exists in the tar. ADR 0008.
+- `core/backup`: `pg_dump` (custom format) then tar of `FILES_DIR`, a `manifest.json` with checksums, schema version, and app version; restore verifies sizes and checksums, enters maintenance mode, extracts `files.tar` into a staging directory inside `FILES_DIR` under entry, byte and deadline limits, runs `pg_restore` in one transaction, then swaps the staged files into place, and always clears maintenance mode and staging (`ADMIN-B31`–`B33`, ADR 0024). Consistency: files are immutable and written before their DB row, and the dump is taken first, so every file referenced by the dump exists in the tar. ADR 0008.
 - `core/search`: generated `search_text` columns per table (declared in each schema), normalization for Arabic (remove tashkeel, unify alef and ya forms) and case folding, wildcard escaping, trigram indexes.
 
 ## Resource limits (runtime-enforced)
@@ -162,6 +162,8 @@ All model calls go through `core/ai` and all run as jobs; there is no inline mod
 | Password hashing | 2 concurrent | auth semaphore |
 | Job queue depth per kind | 100 (429 beyond) | enqueue |
 | Storage quota | `FILES_QUOTA_GB` (default 20) | upload |
+| Backup extraction | 200 000 entries; expanded bytes ≤ `FILES_QUOTA_GB` and the archive's size; one-hour deadline | restore |
+| Job drain on shutdown | `JOBS_DRAIN_SECONDS` (default 25), then abort with 5 s grace | runner |
 
 Overload responses are 429 with `retryAfterSeconds`. Interactive requests never wait on job capacity.
 

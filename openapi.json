@@ -435,7 +435,9 @@
                     "additionalProperties": false,
                     "properties": {
                       "bytes": {
-                        "type": "number"
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
                       },
                       "sha256": {
                         "type": "string"

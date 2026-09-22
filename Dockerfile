@@ -39,7 +39,7 @@ COPY --from=builder --chown=executiveos:executiveos /app/tsconfig.json /app/pack
 COPY --from=deps --chown=executiveos:executiveos /app/node_modules ./node_modules
 RUN mkdir -p /var/lib/executiveos/files /var/lib/executiveos/backups && chown -R executiveos:executiveos /var/lib/executiveos
 USER executiveos
-ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000 COREPACK_HOME=/opt/corepack
+ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000 COREPACK_HOME=/opt/corepack NEXT_MANUAL_SIG_HANDLE=true
 EXPOSE 3000
 ENTRYPOINT []
 CMD ["node", "server.js"]
