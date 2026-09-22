@@ -112,6 +112,61 @@ export function pasteLink(text: string, start: number, end: number, pasted: stri
   const caret = end + url.length + 4;
   return { text: next, start: caret, end: caret };
 }
+// Toolbar (NOTES-B28): every line of the selection becomes a bullet or a checklist item, or, when
+// every line already is one of that kind, the markers come off. Other markers are replaced.
+// A line's leading room may carry a bidi mark, which Arabic keyboards insert before a marker.
+const LINE =
+  /^([ \t\u200e\u200f]*)(?:#{1,6}[ \t]+)?(?:(?:[-*+]|\d+[.)])[ \t]+)?(\[[ xX]\][ \t]+)?(.*)$/u;
+// The lines the selection touches, rewritten one by one; the selection then covers the block.
+function rewriteLines(
+  text: string,
+  start: number,
+  end: number,
+  rewrite: (lines: string[]) => string[],
+): Edit {
+  const first = lineAt(text, start);
+  const last = lineAt(text, end);
+  const next = rewrite(text.slice(first.start, last.end).split('\n')).join('\n');
+  return {
+    text: text.slice(0, first.start) + next + text.slice(last.end),
+    start: first.start,
+    end: first.start + next.length,
+  };
+}
+export function toggleLines(
+  text: string,
+  start: number,
+  end: number,
+  kind: 'bullet' | 'checklist',
+): Edit {
+  const prefix = kind === 'checklist' ? '- [ ] ' : '- ';
+  return rewriteLines(text, start, end, (lines) => {
+    const parsed = lines.map((line) => {
+      const [, indent = '', box, rest = ''] = LINE.exec(line) ?? [];
+      const bullet = /^[ \t\u200e\u200f]*(?:[-*+]|\d+[.)])[ \t]+/u.test(line);
+      const marked = line.trim() ? (kind === 'checklist' ? Boolean(box) : bullet && !box) : null;
+      return { indent, rest, marked };
+    });
+    const all = parsed.every((line) => line.marked !== false);
+    return parsed.map((line) =>
+      line.marked === null || all ? line.indent + line.rest : line.indent + prefix + line.rest,
+    );
+  });
+}
+// Toolbar (NOTES-B28): every line of the selection becomes a heading of the level, or, when every
+// line already is one, the headings come off. Title is `##` and subtitle `###`, the levels refined
+// content uses (B26), so a hand-written note and a refined one look the same. A heading and a
+// list marker never share a line: applying one takes the other off.
+export function toggleHeading(text: string, start: number, end: number, level: 2 | 3): Edit {
+  const mark = '#'.repeat(level) + ' ';
+  return rewriteLines(text, start, end, (lines) => {
+    const all = lines.every((line) => line.replace(/^[ \t\u200e\u200f]*/u, '').startsWith(mark));
+    return lines.map((line) => {
+      const [, indent = '', , rest = ''] = LINE.exec(line) ?? [];
+      return all ? indent + rest : indent + mark + rest;
+    });
+  });
+}
 // The edit a key asks for, if any. The modifier is Ctrl or Command; Alt is left alone because
 // with Ctrl it types characters on some layouts.
 export function editForKey(text: string, start: number, end: number, key: Key): Edit | null {

@@ -20,7 +20,11 @@ type Props<T extends Entity, P extends object, C> = {
   close: () => void;
   move: (direction: number) => void;
   neighbors: Neighbors;
+  // EP-B44: the expanded field, carried in the URL by the page; a nested panel has neither.
+  focus?: string;
+  setFocus?: (key: string | null) => void;
 };
+const noFocus = () => undefined;
 export function EntityPanel<T extends Entity, P extends object, C>(props: Props<T, P, C>) {
   const t = useTranslations('common');
   const root = useRef<HTMLDivElement>(null);
@@ -56,6 +60,7 @@ export function EntityPanel<T extends Entity, P extends object, C>(props: Props<
           next: guarded(() => props.move(1)),
           prev: guarded(() => props.move(-1)),
           neighbors: props.neighbors,
+          focus: { key: props.focus ?? '', set: props.setFocus ?? noFocus },
         })}
       </div>
       <UnsavedEntityDialog
@@ -184,9 +189,7 @@ function PanelToolbar({
         {t('back')}
       </Button>
       <div className="flex min-w-0 flex-1 items-center gap-2 ps-1 text-xs text-text-muted">
-        {name && (
-          <bdi className="min-w-0 truncate text-sm font-medium text-text">{name}</bdi>
-        )}
+        {name && <bdi className="min-w-0 truncate text-sm font-medium text-text">{name}</bdi>}
       </div>
       {state === 'idle' ? (
         <PanelPosition neighbors={neighbors} move={move} />
@@ -206,7 +209,13 @@ function PanelToolbar({
   );
 }
 // The position states where the reader is in the loaded list and moves them through it.
-export function PanelPosition({ neighbors, move }: { neighbors: Neighbors; move: (d: number) => void }) {
+export function PanelPosition({
+  neighbors,
+  move,
+}: {
+  neighbors: Neighbors;
+  move: (d: number) => void;
+}) {
   const t = useTranslations('common');
   if (neighbors.position <= 0) return null;
   return (

@@ -31,13 +31,18 @@ export function NoteDetail({ note, api }: { note: Detail; api: DetailApi<Patch> 
             <NoteFields
               note={note}
               save={api.save}
+              focus={api.focus}
               contentAction={slots.content}
               tagsAction={slots.tags}
             />
           )}
         </NoteAi>
       )}
-      {note.committeeId && <div className="mt-3"><CommitteeBadge id={note.committeeId} /></div>}
+      {note.committeeId && (
+        <div className="mt-3">
+          <CommitteeBadge id={note.committeeId} />
+        </div>
+      )}
       <NoteTasks note={note} />
       <NoteFooter note={note} remove={api.remove} />
     </div>

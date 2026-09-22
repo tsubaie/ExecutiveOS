@@ -9,7 +9,9 @@ import {
 } from 'react';
 import { Textarea } from '@/ui/primitives/textarea';
 import { MentionMenu } from './MentionMenu';
-import { editForKey, pasteLink, type Edit } from './keys';
+import { editForKey, pasteLink } from './keys';
+import { applyEdit } from './apply';
+import { EditorToolbar } from './EditorToolbar';
 import {
   activeMention,
   insertMention,
@@ -27,6 +29,8 @@ type EditorProps = {
   // Where the caret lands on mount: the source position of the click that opened the editor, or
   // null for the end of the text.
   caret?: number | null | undefined;
+  // NOTES-B28: the expanded view adds the formatting toolbar above the text.
+  toolbar?: boolean | undefined;
   onChange: (draft: string) => void;
   onLeave: () => void;
 };
@@ -38,6 +42,7 @@ export default function MarkdownEditor({
   maxLength,
   mentions,
   caret,
+  toolbar = false,
   onChange,
   onLeave,
 }: EditorProps) {
@@ -52,7 +57,8 @@ export default function MarkdownEditor({
   }, [caret]);
   const menu = useMentionMenu(mentions, box, onChange);
   return (
-    <div className="relative">
+    <div className="relative grid gap-2">
+      {toolbar && <EditorToolbar box={box} onChange={onChange} />}
       <Textarea
         ref={box}
         id={id}
@@ -89,15 +95,6 @@ export default function MarkdownEditor({
     </div>
   );
 }
-// Writes an edit into the textarea before reporting it, so React finds the value it is about to
-// set already there and leaves the selection where the edit put it.
-function apply(element: HTMLTextAreaElement, edit: Edit | null, onChange: (draft: string) => void) {
-  if (!edit) return false;
-  element.value = edit.text;
-  element.setSelectionRange(edit.start, edit.end);
-  onChange(edit.text);
-  return true;
-}
 // NOTES-B23: Enter continues a list, Tab and Shift+Tab nest and unnest a list line, Ctrl or
 // Command with B, I and K format the selection, and with Enter leave the field, which commits.
 function editorKey(event: KeyboardEvent<HTMLTextAreaElement>, onChange: (draft: string) => void) {
@@ -114,7 +111,7 @@ function editorKey(event: KeyboardEvent<HTMLTextAreaElement>, onChange: (draft: 
     mod,
     shift: event.shiftKey,
   });
-  if (apply(element, edit, onChange)) event.preventDefault();
+  if (applyEdit(element, edit, onChange)) event.preventDefault();
 }
 // NOTES-B23: an address pasted over a selection links the selection instead of replacing it.
 function editorPaste(
@@ -124,7 +121,7 @@ function editorPaste(
   const element = event.currentTarget;
   const pasted = event.clipboardData.getData('text/plain');
   const edit = pasteLink(element.value, element.selectionStart, element.selectionEnd, pasted);
-  if (apply(element, edit, onChange)) event.preventDefault();
+  if (applyEdit(element, edit, onChange)) event.preventDefault();
 }
 // Tracks the "@" token at the caret, filters people and inserts the chosen name in place.
 function useMentionMenu(

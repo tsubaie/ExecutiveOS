@@ -10,6 +10,8 @@ import {
   linkSelection,
   pasteLink,
   shiftList,
+  toggleHeading,
+  toggleLines,
   wrapSelection,
 } from '@/ui/markdown/keys';
 import { toggleChecklistItem } from '@/ui/markdown/checklist';
@@ -95,6 +97,40 @@ describe('editor keys (pure)', () => {
     });
     expect(pasteLink('see docs now', 4, 4, 'https://a.test')).toBeNull();
     expect(pasteLink('see docs now', 4, 8, 'plain words')).toBeNull();
+  });
+  it('NOTES-B28 the list toggles mark every selected line, replace other markers, and unmark when all carry the kind', () => {
+    expect(toggleLines('one\ntwo', 0, 7, 'bullet')).toEqual({
+      text: '- one\n- two',
+      start: 0,
+      end: 11,
+    });
+    expect(toggleLines('- one\n- two', 0, 11, 'bullet')).toEqual({
+      text: 'one\ntwo',
+      start: 0,
+      end: 7,
+    });
+    expect(toggleLines('- one\ntwo', 0, 9, 'bullet').text).toBe('- one\n- two');
+    expect(toggleLines('1. one\n- [x] two', 0, 16, 'bullet').text).toBe('- one\n- two');
+    expect(toggleLines('one\n\ntwo', 0, 8, 'checklist').text).toBe('- [ ] one\n\n- [ ] two');
+    expect(toggleLines('- [ ] one\n- [x] two', 0, 19, 'checklist').text).toBe('one\ntwo');
+    expect(toggleLines('- one', 2, 2, 'checklist').text).toBe('- [ ] one');
+    expect(toggleLines('  - one', 3, 3, 'checklist').text).toBe('  - [ ] one');
+  });
+  it('NOTES-B28 the heading toggles set the level on every selected line, replace another level, and unmark when all carry it', () => {
+    expect(toggleHeading('Agenda', 0, 6, 2)).toEqual({ text: '## Agenda', start: 0, end: 9 });
+    expect(toggleHeading('## Agenda', 3, 3, 2).text).toBe('Agenda');
+    expect(toggleHeading('# Agenda', 0, 0, 2).text).toBe('## Agenda');
+    expect(toggleHeading('## Agenda', 0, 0, 3).text).toBe('### Agenda');
+    expect(toggleHeading('one\ntwo', 0, 7, 3).text).toBe('### one\n### two');
+    expect(toggleHeading('### one\ntwo', 0, 11, 3).text).toBe('### one\n### two');
+    expect(toggleHeading('', 0, 0, 2).text).toBe('## ');
+    // A bidi mark before the marker, which Arabic keyboards insert, is part of the room before it.
+    expect(toggleHeading('\u200f# كيف', 0, 0, 2).text).toBe('\u200f## كيف');
+    expect(toggleHeading('\u200f## كيف', 0, 0, 2).text).toBe('\u200fكيف');
+    // Headings and lists never share a line.
+    expect(toggleHeading('- item', 0, 0, 2).text).toBe('## item');
+    expect(toggleLines('## Agenda', 0, 0, 'bullet').text).toBe('- Agenda');
+    expect(toggleLines('## Agenda', 0, 0, 'checklist').text).toBe('- [ ] Agenda');
   });
   it('NOTES-B23 keys dispatch: modifier letters format, Enter continues, Tab shifts, the rest pass', () => {
     const key = (k: string, mod = false, shift = false) => ({ key: k, mod, shift });

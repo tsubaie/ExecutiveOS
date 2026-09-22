@@ -344,3 +344,30 @@ test('NOTES-A13 NOTES-B27 ADMIN-B30 a note created from the Meeting template ope
     /## الهدف/,
   );
 });
+test('NOTES-A14 NOTES-B28 EP-B44 Expand opens the content in the expanded view and Escape closes it, record still open', async ({
+  page,
+}) => {
+  await loginAs(page, 'en');
+  const title = `Expanded ${crypto.randomUUID()}`;
+  const created = await note(page, title);
+  await api(page, 'notes', `/${created.id}`, 'PATCH', {
+    revision: created.revision,
+    content: '## Agenda\n- one\n- two',
+  });
+  await page.goto(`/notes?view=all&id=${created.id}`);
+  await detail(page).getByRole('button', { name: en.common.expandContent, exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: title });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/focus=content/);
+  await dialog.getByRole('button', { name: en.notes.content, exact: true }).click();
+  const box = dialog.getByRole('textbox', { name: en.notes.content, exact: true });
+  await expect(box).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(page).not.toHaveURL(/focus=/);
+  await expect(page).toHaveURL(new RegExp(`id=${created.id}`));
+});

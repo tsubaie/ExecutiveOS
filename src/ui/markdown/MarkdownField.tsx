@@ -13,6 +13,7 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/ui/cn';
 import type { Mentions } from './mentions';
 import { toggleChecklistItem } from './checklist';
+import { FieldFrame, FieldLabel, type Expand } from './ExpandedField';
 // Both halves load on demand: the renderer only when there is content to show, the editor only
 // when the field is entered, so neither weighs on a route's initial bundle.
 const Markdown = lazy(() => import('./Markdown').then((m) => ({ default: m.Markdown })));
@@ -31,6 +32,9 @@ type Props = {
   // Rendered on the label row: an action that transforms this field, or the notice standing in for
   // one that is unavailable.
   action?: ReactNode;
+  // EP-B44: the field can move into the expanded view. `title` heads that view; the labels name
+  // the control both ways; `open` is owned by the caller, who carries it in the URL.
+  expand?: Expand;
 };
 type Commit = ((value: string) => void) | undefined;
 // What the field has committed and is still waiting to see come back. A saved value that returns
@@ -103,18 +107,6 @@ function useDraft(value: string, onCommit: Commit) {
   };
   return { editing, draft, setDraft, leave, toggle, enter: () => setEditing(true) };
 }
-// An action that transforms this field belongs on its label row, not in a header above the record:
-// it changes one field, and a reader reaches for it while looking at that field.
-function FieldLabel({ id, label, action }: { id: string; label: string; action?: ReactNode }) {
-  return (
-    <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      {action}
-    </div>
-  );
-}
 // Markdown editing (ADR 0015): the field shows the rendered preview and becomes a textarea when
 // entered; leaving it commits a changed draft and shows the preview again, and while it is being
 // edited a moved draft is also committed every five seconds (NOTES-B24). Empty content stays a
@@ -131,13 +123,14 @@ export function MarkdownField({
   className,
   mentions,
   action,
+  expand,
 }: Props) {
   const id = useId();
   const [caret, setCaret] = useState<number | null>(null);
   const { editing, draft, setDraft, leave, toggle, enter } = useDraft(value, onCommit);
-  return (
+  const body = (
     <div className={cn('grid gap-2', className)}>
-      <FieldLabel id={id} label={label} action={action} />
+      <FieldLabel id={id} label={label} action={action} expand={expand} />
       {editing ? (
         <Suspense
           fallback={
@@ -151,6 +144,7 @@ export function MarkdownField({
             maxLength={maxLength}
             mentions={mentions}
             caret={caret}
+            toolbar={Boolean(expand?.open)}
             onChange={setDraft}
             onLeave={leave}
           />
@@ -169,6 +163,11 @@ export function MarkdownField({
         />
       )}
     </div>
+  );
+  return (
+    <FieldFrame id={id} label={label} className={className} expand={expand}>
+      {body}
+    </FieldFrame>
   );
 }
 // The rendered content over a button that opens the textarea. The content lets pointer events

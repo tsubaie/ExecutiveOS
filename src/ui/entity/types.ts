@@ -83,6 +83,8 @@ export type DetailApi<P> = {
   next: () => void;
   prev: () => void;
   neighbors: Neighbors;
+  // EP-B44: which field of the record is shown in the expanded view, carried in the URL.
+  focus: { key: string; set: (key: string | null) => void };
 };
 export type CreateApi<C, T> = {
   submit: (input: C) => Promise<T | null>;

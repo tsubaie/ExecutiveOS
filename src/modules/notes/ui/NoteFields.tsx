@@ -1,21 +1,20 @@
 'use client';
 import { useRef, useState, type FocusEvent, type ReactNode } from 'react';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Textarea } from '@/ui/primitives/textarea';
 import { Property } from '@/ui/layout/Property';
 import { DatePicker } from '@/ui/layout/DatePicker';
-import { Avatar } from '@/ui/layout/Avatar';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { MarkdownField } from '@/ui/markdown/MarkdownField';
 import { NEW_MENTION, type MentionItem } from '@/ui/markdown/mentions';
 import { derivedParticipants } from '../schema/validation';
-import { routes } from '@/core/routes';
-import type { NoteDetail, NotePatch, Participant } from '../schema/validation';
+import type { NoteDetail, NotePatch } from '../schema/validation';
+import type { DetailApi } from '@/ui/entity/types';
 import { useAllPeople, useNoteMutations } from './queries';
 import { TemplateSelect, TypeSelect } from './NoteSelects';
 import { CommitteePicker } from '@/modules/committees/ui';
 import { TagsEditor } from './TagsEditor';
+import { ParticipantLinks } from './ParticipantLinks';
 export type Patch = Omit<NotePatch, 'revision'>;
 type Save = (patch: Patch) => void;
 // The detail panel: the title is the heading, then type and date rows, the participants (people
@@ -24,17 +23,21 @@ type Save = (patch: Patch) => void;
 export function NoteFields({
   note,
   save,
+  focus,
   contentAction,
   tagsAction,
 }: {
   note: NoteDetail;
   save: Save;
+  // EP-B44 / NOTES-B28: which field is in the expanded view, carried in the URL by the page.
+  focus: DetailApi<Patch>['focus'];
   // The AI actions belong to the fields they transform, so they arrive as slots rather than
   // floating in a row above the record (NOTES-B22).
   contentAction?: ReactNode;
   tagsAction?: ReactNode;
 }) {
   const t = useTranslations('notes');
+  const c = useTranslations('common');
   const committees = useTranslations('committees');
   const { draft, change } = useDraftProperties(note, save);
   const mentions = useMentions(note, save);
@@ -72,6 +75,7 @@ export function NoteFields({
         mentions={mentions.mentions}
         onCommit={mentions.commit}
         action={<ContentActions note={note} save={save} action={contentAction} />}
+        expand={expandFor(note, focus, c)}
       />
     </fieldset>
   );
@@ -99,6 +103,24 @@ function ContentActions({
       {action}
     </>
   );
+}
+// EP-B44 / NOTES-B28: the content's expanded view, keyed `content` in the URL and headed by the
+// note's title.
+function expandFor(
+  note: NoteDetail,
+  focus: DetailApi<Patch>['focus'],
+  c: ReturnType<typeof useTranslations<'common'>>,
+) {
+  return {
+    title: note.title,
+    open: focus.key === 'content',
+    setOpen: (open: boolean) => focus.set(open ? 'content' : null),
+    labels: {
+      expand: c('expandContent'),
+      collapse: c('collapseContent'),
+      description: c('expandedDescription'),
+    },
+  };
 }
 // NOTES-B08: "@" lists the workspace's people and offers to add an unknown name; the participants
 // saved with the content are the candidates whose mention appears in it. A commit waits for any
@@ -145,28 +167,6 @@ function useMentions(note: NoteDetail, save: Save) {
     });
   };
   return { mentions: { items: directory, onPick, allowCreate: true }, commit, error };
-}
-// Read-only: each participant links to their page, like the owner link on a task.
-function ParticipantLinks({ participants }: { participants: Participant[] }) {
-  const t = useTranslations('notes');
-  if (!participants.length) return null;
-  return (
-    <div className="grid gap-2">
-      <span className="text-sm font-medium">{t('participants')}</span>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {participants.map((person) => (
-          <Link
-            key={person.id}
-            href={routes.person(person.id)}
-            className="inline-flex items-center gap-1 rounded-full bg-surface-raised py-0.5 ps-0.5 pe-2 text-xs text-accent hover:bg-accent-soft"
-          >
-            <Avatar name={person.name} className="size-5 text-[9px]" />
-            <bdi>{person.name}</bdi>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
 }
 type Properties = { type: string; noteDate: string | null };
 // Pickers are controlled from a draft re-based on the saved note whenever it changes, without
