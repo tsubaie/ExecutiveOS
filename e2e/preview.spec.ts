@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs, credentials } from './fixtures/auth';
-import { selectView } from './fixtures/views';
+import { findRow, selectView } from './fixtures/views';
 import { z } from 'zod';
 import en from '../src/core/i18n/messages/en.json' with { type: 'json' };
 import ar from '../src/core/i18n/messages/ar.json' with { type: 'json' };
@@ -47,17 +47,17 @@ for (const locale of ['en', 'ar'])
       .getByRole('button', { name: new RegExp(`^(${m.common.close}|${m.common.back})$`, 'u') })
       .first()
       .click();
-    await page.getByRole('button').filter({ hasText: name }).click();
+    await (await findRow(page, m.people.searchList, name)).click();
     // EP-B36: no confirmation in front of a reversible delete; the receipt carries the way back.
     await page.getByRole('button', { name: m.common.delete, exact: true }).click();
     await expect(page.getByRole('button', { name: m.common.undo, exact: true })).toBeVisible();
     await expect(page).not.toHaveURL(/id=/);
     await selectView(page, locale, new RegExp(m.common.trash));
-    await page.getByRole('button').filter({ hasText: name }).click();
+    await (await findRow(page, m.people.searchList, name)).click();
     await page.getByRole('button', { name: m.common.restore, exact: true }).click();
     await expect(page).not.toHaveURL(/id=/);
     await selectView(page, locale, new RegExp(m.common.all));
-    await expect(page.getByRole('button').filter({ hasText: name })).toBeVisible();
+    await expect(await findRow(page, m.people.searchList, name)).toBeVisible();
     // Leave nothing behind after the walkthrough: restored people would accumulate run after run.
     const restored = await page.evaluate(async (fullName) => {
       const list = await (await fetch('/api/v1/people?view=all&limit=200')).json();
@@ -84,7 +84,7 @@ for (const locale of ['en', 'ar'])
         () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
       ),
     ).toBe(true);
-    await page.getByRole('button').filter({ hasText: name }).click();
+    await (await findRow(page, m.people.searchList, name)).click();
     await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
     expect(
       await page.evaluate(

@@ -22,3 +22,13 @@ export async function selectView(page: Page, locale: string, name: RegExp) {
   await dialog.getByRole('button', { name }).click();
   await expect(dialog).toBeHidden();
 }
+// Finds a record the way a reader would in a long list: through the list's own search field.
+// A click on a row by name alone depends on the row being on the first loaded page, which stops
+// being true once earlier runs have left enough records behind.
+export async function findRow(page: Page, searchLabel: string, text: string) {
+  await page.getByRole('textbox', { name: searchLabel, exact: true }).fill(text);
+  // The field commits after a debounce; clicking before that lets the list re-render under the
+  // record the click opened.
+  await expect(page).toHaveURL(/[?&]q=/u);
+  return page.getByRole('button').filter({ hasText: text });
+}
