@@ -115,7 +115,7 @@ Browser ──HTTP──▶ src/app/api/v1/tasks/route.ts
 
 ## Authentication and authorization
 
-- Cookie session (`eos_session`, httpOnly, `SameSite=Lax`, Secure in production). Session rows store a token hash. Sliding 30-day expiry, absolute 90-day expiry. ADR 0005.
+- Cookie session (`eos_session`, httpOnly, `SameSite=Lax`, Secure in production). Session rows store a token hash. Sliding 30-day expiry, absolute 90-day expiry. ADR 0005. The expiry slides on API requests, which re-issue the cookie with the remaining lifetime (`ACCT-B09`).
 - Roles: `admin`, `member`. All members read and write shared module data. Admin additionally manages users, settings, backups, jobs, AI, and learnings.
 - **Private data** is stored in per-user tables (`meeting_private_notes`, user preferences) and never on shared rows. Services take `ctx` and filter private tables by `ctx.user.id` on every read path, including server components, jobs that build AI inputs (private notes are never sent to AI), audit diffs (private tables are not audited), and backups (included; backup operators are admins by definition).
 - `core/auth/guards.ts` exposes `session` and `admin` guards. `defineHandler` refuses a route without a guard.

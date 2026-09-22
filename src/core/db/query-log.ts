@@ -4,7 +4,9 @@ type Listener = (query: string) => void;
 const listeners = new Set<Listener>();
 export const queryLogger = {
   logQuery(query: string) {
-    if (/^(?:begin|commit|rollback)\b/iu.test(query.trim())) return;
+    // Transaction control, including the savepoints nested service transactions open, is not a
+    // data query and does not count against the per-request budget.
+    if (/^(?:begin|commit|rollback|savepoint|release savepoint)\b/iu.test(query.trim())) return;
     for (const listener of listeners) listener(query);
   },
 };

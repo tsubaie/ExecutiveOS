@@ -51,7 +51,7 @@ Generated primitives (`src/ui/primitives`) and test files are exempt from the si
 
 - **[static]** SQL only in `repo.ts` and `core/db`, `core/links`, `core/search`, `core/backup`. `sql` fragments allowed for expressions the builder cannot express, never whole statements outside custom migrations.
 - **[runtime]** Every list query filters `deleted_at is null` unless `includeDeleted` (repo tests assert).
-- **[review]** Multi-statement writes run in `db.transaction`; the service opens it; repos accept the handle.
+- **[runtime]** Multi-statement writes run in a transaction the service opens: every public service method that writes is wrapped in `transactional` (`core/db/transaction.ts`), which opens a transaction when called directly and a savepoint inside the handler's (`ADMIN-B36`, enforced by a test over every module's exports). Repos accept the handle.
 - **[runtime]** Updates go through the repo update helper, a one-line wrapper over `core/db/entity.ts` (`updateEntity`, `softDeleteEntity`, `restoreEntity`) that applies the revision predicate and bumps `revision` and `updated_at`. Services compose them through `core/entity/service.ts` (`requireRevision`, `applyUpdate`, `restoreByOp`) so conflicts carry the current row and every write is audited.
 - **[review]** Lists page with `core/db/keyset.ts`: one `SortSpec` per sort drives ORDER BY, the cursor tuple and the continuation predicate; view counts use `filteredCounts` in one statement.
 - **[runtime]** Query count per request ≤ 6 on module golden paths (test asserts with the query logger).

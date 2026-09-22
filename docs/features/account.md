@@ -72,6 +72,7 @@ No new tables. The account is a view over two that exist:
   administrator cannot be removed (`features/admin.md`).
 - ACCT-B08 The page is reachable at `/account` from the avatar menu and nowhere else in the nav; it
   is a destination a reader visits rarely and not a module.
+- ACCT-B09 **The login cookie slides with the session.** Each API request that extends the session's database expiry (at most once a minute) re-issues the session cookie with exactly the remaining lifetime, never past the 90-day absolute expiry. The browser therefore keeps an active reader signed in instead of dropping the cookie 30 days after sign-in. Page renders read the session without extending it, because a server-rendered page cannot set cookies; the API requests every page makes do the extending.
 
 ## API
 

@@ -1,5 +1,6 @@
 /** TASKS-I01–I06, B01–B12, B16: bounded hierarchy, completion, provenance, fenced edits, source note. */
 import 'server-only';
+import { transactional } from '@/core/db/transaction';
 import { requireCommittee } from '@/modules/committees';
 import { userIdsForPeople } from '@/modules/people';
 import { z } from 'zod';
@@ -124,7 +125,7 @@ function update(
     ...(action === 'delete' || action === 'restore' ? { diff: {} } : {}),
   });
 }
-export async function createTask(ctx: Context, input: TaskCreate) {
+export const createTask = transactional(async function createTask(ctx: Context, input: TaskCreate) {
   await requireCommittee(ctx, input.committeeId);
   await repo.lockTasks(ctx.db);
   await owner(ctx, input.ownerId);
@@ -143,8 +144,12 @@ export async function createTask(ctx: Context, input: TaskCreate) {
   await writeAudit(ctx.db, ctx.user.id, 'create', 'task', row.id, toJson(input));
   await notifyAssigned(ctx, row.id, input.title, null, input.ownerId ?? null);
   return getTask(ctx, row.id);
-}
-export async function patchTask(ctx: Context, taskId: string, input: TaskPatch) {
+});
+export const patchTask = transactional(async function patchTask(
+  ctx: Context,
+  taskId: string,
+  input: TaskPatch,
+) {
   if (input.status === 'completed') throw new AppError('rule_violation', { rule: 'TASKS-B02' });
   const task = await current(ctx, taskId, input.revision);
   await requireCommittee(ctx, input.committeeId, task.committeeId);
@@ -156,7 +161,7 @@ export async function patchTask(ctx: Context, taskId: string, input: TaskPatch) 
   if (fields.ownerId !== undefined)
     await notifyAssigned(ctx, taskId, task.title, task.ownerId, fields.ownerId);
   return getTask(ctx, taskId);
-}
+});
 // NOTIF-B04 `task.assigned`: emitted when a task comes to rest with an owner who is not the person
 // doing the assigning, in the same transaction as the change (NOTIF-B01). Unassigning notifies
 // nobody -- there is no one to tell -- and re-assigning to the same person is not an event.
@@ -180,7 +185,12 @@ async function notifyAssigned(
 // state it held beforehand, so Undo restores each of them exactly rather than guessing a status.
 // `reopenTask` stays the reader's own command and keeps writing `next_action`; it is not Undo, and
 // using it as one would lose the inbox, waiting or someday a task was completed from.
-export async function completeTask(ctx: Context, taskId: string, revision: number, force = false) {
+export const completeTask = transactional(async function completeTask(
+  ctx: Context,
+  taskId: string,
+  revision: number,
+  force = false,
+) {
   const task = await current(ctx, taskId, revision);
   const open = task.subtasks.filter((child) => child.status !== 'completed');
   if (open.length && !force)
@@ -194,7 +204,7 @@ export async function completeTask(ctx: Context, taskId: string, revision: numbe
   items.push(await completeRow(ctx, task, fields, opId));
   await repo.insertCompletionItems(ctx.db, items);
   return { task: await getTask(ctx, taskId), opId };
-}
+});
 async function completeRow(
   ctx: Context,
   task: { id: string; revision: number; status: string; completedAt: string | null },
@@ -210,7 +220,11 @@ async function completeRow(
     completedRevision: row.revision,
   };
 }
-export async function undoCompleteTask(ctx: Context, taskId: string, opId: string) {
+export const undoCompleteTask = transactional(async function undoCompleteTask(
+  ctx: Context,
+  taskId: string,
+  opId: string,
+) {
   await repo.lockTasks(ctx.db);
   const operation = await repo.lockCompletion(ctx.db, opId);
   if (!operation || operation.rootTaskId !== taskId)
@@ -229,25 +243,37 @@ export async function undoCompleteTask(ctx: Context, taskId: string, opId: strin
   for (const { item, row } of plan) await update(ctx, row, patchOf(item), 'undo_complete', opId);
   await repo.markCompletionUndone(ctx.db, opId);
   return getTask(ctx, taskId);
-}
+});
 const patchOf = (item: { previousStatus: string; previousCompletedAt: Date | null }) => ({
   status: item.previousStatus,
   completedAt: item.previousCompletedAt,
 });
-export async function reopenTask(ctx: Context, taskId: string, revision: number) {
+export const reopenTask = transactional(async function reopenTask(
+  ctx: Context,
+  taskId: string,
+  revision: number,
+) {
   const task = await current(ctx, taskId, revision);
   await update(ctx, task, { status: 'next_action', completedAt: null }, 'reopen');
   return getTask(ctx, taskId);
-}
-export async function removeTask(ctx: Context, taskId: string, revision: number) {
+});
+export const removeTask = transactional(async function removeTask(
+  ctx: Context,
+  taskId: string,
+  revision: number,
+) {
   const task = await current(ctx, taskId, revision);
   const opId = id();
   const fields = { deletedAt: new Date(), deletedOpId: opId };
   for (const child of task.subtasks) await update(ctx, child, fields, 'delete', opId);
   await update(ctx, task, fields, 'delete', opId);
   return { opId };
-}
-export async function restoreTask(ctx: Context, taskId: string, opId: string) {
+});
+export const restoreTask = transactional(async function restoreTask(
+  ctx: Context,
+  taskId: string,
+  opId: string,
+) {
   await repo.lockTasks(ctx.db);
   const task = await getTask(ctx, taskId, true);
   if (!task.deletedAt || task.deletedOpId !== opId)
@@ -271,8 +297,8 @@ export async function restoreTask(ctx: Context, taskId: string, opId: string) {
       opId,
     );
   return getTask(ctx, taskId);
-}
-export async function moveTask(
+});
+export const moveTask = transactional(async function moveTask(
   ctx: Context,
   taskId: string,
   revision: number,
@@ -290,8 +316,11 @@ export async function moveTask(
   }
   await update(ctx, task, { parentId, sortOrder: await repo.nextOrder(ctx.db, parentId) });
   return getTask(ctx, taskId);
-}
-export async function groupTasks(ctx: Context, input: z.infer<typeof Group>) {
+});
+export const groupTasks = transactional(async function groupTasks(
+  ctx: Context,
+  input: z.infer<typeof Group>,
+) {
   await repo.lockTasks(ctx.db);
   const children: TaskDetail[] = [];
   const invalid: string[] = [];
@@ -323,8 +352,11 @@ export async function groupTasks(ctx: Context, input: z.infer<typeof Group>) {
   for (const [sortOrder, child] of children.entries())
     await update(ctx, child, { parentId: parent.id, sortOrder });
   return getTask(ctx, parent.id);
-}
-export async function reorderTasks(ctx: Context, input: z.infer<typeof Reorder>) {
+});
+export const reorderTasks = transactional(async function reorderTasks(
+  ctx: Context,
+  input: z.infer<typeof Reorder>,
+) {
   await repo.lockTasks(ctx.db);
   const rows = input.parentId
     ? await repo.selectChildren(ctx.db, input.parentId, personNameSql)
@@ -342,7 +374,7 @@ export async function reorderTasks(ctx: Context, input: z.infer<typeof Reorder>)
     orderedIds: input.orderedIds,
   });
   return getTask(ctx, input.parentId);
-}
+});
 export function peopleForAi(ctx: Context) {
   return aiPeople(ctx);
 }

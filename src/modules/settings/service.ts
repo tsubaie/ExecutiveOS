@@ -1,5 +1,6 @@
 /** ADMIN-B07: registry validation and workspace role allowlists. */
 import 'server-only';
+import { transactional } from '@/core/db/transaction';
 import { z } from 'zod';
 import { settingsRegistry, isSettingKey, type SettingKey } from '@/core/config/settings';
 import { readSettings, writeSetting } from '@/core/db/settings-repo';
@@ -25,7 +26,7 @@ export async function listSettings(ctx: Context) {
       type: item.schema.def.type,
     }));
 }
-export async function updateSetting(
+export const updateSetting = transactional(async function updateSetting(
   ctx: Context,
   key: string,
   value: z.infer<ReturnType<typeof z.json>>,
@@ -39,7 +40,7 @@ export async function updateSetting(
   await writeWorkspaceSetting(ctx, key, parsed);
   await writeAudit(ctx.db, ctx.user.id, 'update', 'setting', null, { key, value: parsed });
   return { key, value: parsed, default: z.json().parse(item.default), type: item.schema.def.type };
-}
+});
 // The registry already validated `value`; this narrows the generic write for a runtime key.
 function writeWorkspaceSetting(
   ctx: Context,

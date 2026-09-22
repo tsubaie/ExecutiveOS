@@ -5,7 +5,11 @@ import { migrateDatabase } from '@/core/db/migrate';
 import { insertUser, lockWorkspace } from '@/core/db/auth-repo';
 import { User } from '@/core/http/user-schema';
 import { id } from '@/core/db/ids';
-import { listUsers, patchUser } from '../service';
+import { listUsers, patchUser, createUser } from '../service';
+import { auditLog } from '@/core/db/system-schema';
+import { verifyPassword } from '@/core/auth/password';
+import { users } from '@/core/db/system-schema';
+import { eq } from 'drizzle-orm';
 const run = <T>(
   user: User,
   action: (ctx: { db: Database; user: User; requestId: string }) => Promise<T>,
@@ -55,4 +59,33 @@ it('ADMIN-B03 members cannot list or edit users and stale revisions conflict', a
     'admin@example.test',
     'member@example.test',
   ]);
+});
+it('ADMIN-B03 creating a user returns a one-time password and writes an audit record without secrets', async () => {
+  const admin = await addUser('admin', 'admin@example.test');
+  const { user, temporaryPassword } = await createUser(
+    { db: db(), user: admin, requestId: id() },
+    { name: 'New Member', email: 'new@example.test', role: 'member' },
+  );
+  expect(user).not.toHaveProperty('passwordHash');
+  const [stored] = await db().select().from(users).where(eq(users.id, user.id));
+  expect(stored && (await verifyPassword(stored.passwordHash, temporaryPassword))).toBe(true);
+  const entries = await db().select().from(auditLog).where(eq(auditLog.entityId, user.id));
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toMatchObject({ actorId: admin.id, action: 'create', entityType: 'user' });
+  expect(entries[0]?.diff).toEqual({
+    name: 'New Member',
+    email: 'new@example.test',
+    role: 'member',
+  });
+  expect(JSON.stringify(entries[0]?.diff)).not.toContain(temporaryPassword);
+});
+it('ADMIN-B03 members cannot create users', async () => {
+  const member = await addUser('member', 'member@example.test');
+  await expect(
+    createUser(
+      { db: db(), user: member, requestId: id() },
+      { name: 'X', email: 'x@example.test', role: 'member' },
+    ),
+  ).rejects.toMatchObject({ code: 'forbidden' });
+  expect(await db().select().from(users).where(eq(users.email, 'x@example.test'))).toEqual([]);
 });

@@ -6,6 +6,7 @@ import { addDays } from '@/core/time/days';
 import { periodOf, periodRange, shiftPeriod } from '@/core/time/kpis';
 import { KpiListQuery } from '../schema/validation';
 import * as service from '../service';
+import { homeSummary } from '../home';
 import { harness, workspaceToday } from './fixtures';
 const run = harness.run;
 const list = (query: Partial<KpiListQuery> = {}) =>
@@ -269,7 +270,7 @@ it('KPIS-B12 HOME-B01 the home section carries the KPIs that need attention, wor
   await harness.targets(failing.id, [{ ...current, targetValue: 100 }]);
   const stale = await harness.kpi('Stale');
   await harness.reading(stale.id, addDays(today, -400), 1);
-  const [section] = await run((ctx) => service.homeSummary(ctx, today));
+  const [section] = await run((ctx) => homeSummary(ctx, today));
   expect(section).toMatchObject({ key: 'kpis', enabled: true, count: 2, stale: 1 });
   expect(section?.items.map((item) => item.title)).toEqual(['Failing', 'Stale']);
   expect(section?.href).toContain('view=attention');

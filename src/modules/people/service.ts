@@ -1,5 +1,6 @@
 /** PEOPLE-I01–I04: required identity, confirmed homonyms, admin-only member linking, principal protection. */
 import 'server-only';
+import { transactional } from '@/core/db/transaction';
 import { z } from 'zod';
 import { type Context } from '@/core/auth/session';
 import { id } from '@/core/db/ids';
@@ -70,7 +71,10 @@ function memberLink(ctx: Context, userId?: string | null) {
   if (userId !== undefined && ctx.user.role !== 'admin')
     throw new AppError('forbidden', { reason: 'role' });
 }
-export async function createPerson(ctx: Context, input: PersonCreate) {
+export const createPerson = transactional(async function createPerson(
+  ctx: Context,
+  input: PersonCreate,
+) {
   if (input.userId) memberLink(ctx, input.userId);
   await repo.lockPeopleCreate(ctx.db, input.fullName);
   const duplicates = (await repo.possibleDuplicates(ctx.db, input.fullName)).map((row) =>
@@ -90,14 +94,22 @@ export async function createPerson(ctx: Context, input: PersonCreate) {
   );
   await writeAudit(ctx.db, ctx.user.id, 'create', 'person', person.id, toJson(fields));
   return { data: person, meta: { possibleDuplicates: [] } };
-}
-export async function patchPerson(ctx: Context, personId: string, input: PersonPatch) {
+});
+export const patchPerson = transactional(async function patchPerson(
+  ctx: Context,
+  personId: string,
+  input: PersonPatch,
+) {
   memberLink(ctx, input.userId);
   const { revision, ...fields } = input;
   const current = await requireRevision(ctx, ops, personId, revision);
   return Person.parse(await applyUpdate(ctx, ops, current, fields));
-}
-export async function removePerson(ctx: Context, personId: string, revision: number) {
+});
+export const removePerson = transactional(async function removePerson(
+  ctx: Context,
+  personId: string,
+  revision: number,
+) {
   const principal = await getSetting(ctx.db, 'workspace.principal_person_id');
   if (principal === personId) throw new AppError('rule_violation', { rule: 'PEOPLE-I04' });
   const current = await requireRevision(ctx, ops, personId, revision);
@@ -110,11 +122,15 @@ export async function removePerson(ctx: Context, personId: string, revision: num
     { action: 'delete', opId, diff: {} },
   );
   return { opId };
-}
-export async function restorePerson(ctx: Context, personId: string, opId: string) {
+});
+export const restorePerson = transactional(async function restorePerson(
+  ctx: Context,
+  personId: string,
+  opId: string,
+) {
   await getPerson(ctx, personId, true);
   return Person.parse(await restoreByOp(ctx, ops, personId, opId));
-}
+});
 
 export async function aiPeople(ctx: Context) {
   return repo.selectAiPeople(ctx.db);

@@ -39,6 +39,7 @@ export const backupCreate = defineHandler({
   response: z.object({ data: z.object({ id: z.uuid() }) }),
   status: 202,
   idempotent: true,
+  enqueues: true,
   handler: async (_, ctx) => ({
     data: await enqueue(
       ctx.db,
@@ -79,6 +80,7 @@ export const jobAction = defineHandler({
   input: z.strictObject({ action: z.enum(['retry', 'cancel']) }),
   response: z.object({ data: z.object({ id: z.uuid() }) }),
   idempotent: true,
+  enqueues: true,
   handler: async (input, ctx, params) => {
     const job = await readJob(ctx.db, z.uuid().parse(params.id));
     if (!job) throw new AppError('not_found');

@@ -14,3 +14,4 @@ export const UserCreate = z.strictObject({
   role: Role,
   password: Password.optional(),
 });
+export type UserCreate = z.infer<typeof UserCreate>;

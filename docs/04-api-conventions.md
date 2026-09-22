@@ -46,7 +46,7 @@ Rules:
 | 404 | `not_found` | `{ entityType }` |
 | 409 | `conflict` | `{ reason: "revision" \| "unique" \| "state" \| "duplicate", current?: entity, existing?: { id } }` |
 | 422 | `rule_violation` | `{ rule: "<MODULE>-B<nn>" }` naming the requirement |
-| 429 | `rate_limited` | `{ retryAfterSeconds, scope: "login" \| "ai" \| "upload" \| "queue" }` |
+| 429 | `rate_limited` | `{ retryAfterSeconds, scope: "login" \| "ai" \| "upload" \| "queue" }`; the response also carries `Retry-After` in whole seconds |
 | 503 | `ai_unavailable` | `{ reason: "disabled" \| "not_configured" \| "budget" \| "provider" }` |
 | 502 | `ai_failed` | `{ reason: "refused" \| "invalid_output" \| "timeout" }` (job results; surfaced through the job endpoint) |
 | 500 | `internal` | none; log by request id |

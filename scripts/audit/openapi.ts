@@ -10,10 +10,11 @@ const Meta = z.object({
   status: z.number(),
   source: z.enum(['body', 'query']),
   idempotent: z.boolean(),
+  enqueues: z.boolean().default(false),
   input: z.instanceof(z.ZodType),
   response: z.instanceof(z.ZodType),
 });
-export type Meta = z.infer<typeof Meta>;
+export type Meta = z.input<typeof Meta>;
 const methods = ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'];
 const components = new Map<z.ZodType, { name: string; schema: Json }>();
 function component(schema: z.ZodType, name: string, io: 'input' | 'output') {
@@ -61,7 +62,8 @@ export function errorCodes(method: string, path: string, meta: Meta): ErrorCode[
   if (path.includes('{id}')) codes.push('not_found');
   if (meta.idempotent || ['PATCH', 'DELETE'].includes(method)) codes.push('conflict');
   if (method !== 'GET') codes.push('rule_violation');
-  if (path.endsWith('/auth/login') || path.endsWith('/setup')) codes.push('rate_limited');
+  if (path.endsWith('/auth/login') || path.endsWith('/setup') || meta.enqueues)
+    codes.push('rate_limited');
   return codes;
 }
 function successResponse(meta: Meta, name: string): Json {
