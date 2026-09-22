@@ -69,7 +69,8 @@ Audits keep an agent-built codebase honest. Script audits run in `pnpm audit:all
 - [ ] AI: content framed as data; no tools; two-stage validation; nothing auto-applied; learnings require activation; disclosure list accurate.
 - [ ] Files: signature check; size and page limits; path containment; download headers; storage quota; orphan sweep; purge respects references.
 - [ ] Parsers (PDF page count, DOCX via mammoth) run with size limits and a timeout; ZIP expansion bounded.
-- [ ] CSP set (`default-src 'self'`, no remote images in AI markdown); service worker excludes API and downloads.
+- [ ] CSP set (nonce-based `script-src`, `default-src 'self'`, `frame-ancestors 'none'`, no remote images in AI markdown) and the other `ADMIN-B34` headers present on pages and API responses; any new CSP exception recorded in ADR 0025's successor; service worker excludes API and downloads.
+- [ ] Database TLS: a remote `DATABASE_URL` uses `sslmode=verify-full` with a readable CA or the system trust store; the pool and `pg_dump`/`pg_restore` share the policy (`ADMIN-B35`).
 - [ ] Logs redact secrets, tokens, prompt bodies, private notes; audit diffs exclude sensitive fields.
 - [ ] Dependencies: `pnpm audit` policy; `gitleaks` clean.
 - [ ] Docker: non-root; DB password required in `.env` (compose fails without it); DB port not published by default.

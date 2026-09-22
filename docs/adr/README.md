@@ -27,5 +27,6 @@ One decision per file. Format: **Status**, **Context**, **Decision**, **Conseque
 | 0021 | Global search fans out over module providers | accepted |
 | 0022 | Notifications are a stored, per-user, pull-only feed | accepted |
 | 0023 | The route bundle budget is 272 KB | accepted |
+| 0025 | Security headers from the app, and verified TLS for remote databases | accepted |
 
 Open decisions awaiting an ADR: license (see roadmap); chart library confirmation (`recharts`).

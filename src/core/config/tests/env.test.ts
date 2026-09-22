@@ -44,6 +44,22 @@ describe('environment', () => {
     expect(() => attempt('not-an-address')).toThrow(z.ZodError);
     expect(() => attempt('10.0.0.0/8, nonsense')).toThrow(z.ZodError);
   });
+  it('ADMIN-B35 startup refuses a remote database URL without verified TLS', () => {
+    const attempt = (DATABASE_URL: string) => parseEnvironment({ ...base, DATABASE_URL });
+    expect(() =>
+      attempt('postgresql://user:pass@db.example.test:5432/app?sslmode=require'),
+    ).toThrow(z.ZodError);
+    try {
+      attempt('postgresql://user:pass@db.example.test:5432/app');
+    } catch (error) {
+      expect(error instanceof z.ZodError && error.issues[0]?.path).toEqual(['DATABASE_URL']);
+      expect(error instanceof z.ZodError && error.issues[0]?.message).toContain('verify-full');
+    }
+    expect(
+      attempt('postgresql://user:pass@db.example.test:5432/app?sslmode=verify-full').DATABASE_URL,
+    ).toContain('verify-full');
+    expect(attempt('postgresql://user:pass@db:5432/app').DATABASE_URL).toContain('@db:');
+  });
   it('ADMIN-B22 a configured recovery token must carry real entropy', () => {
     const attempt = (RECOVERY_TOKEN: string) => parseEnvironment({ ...base, RECOVERY_TOKEN });
     expect(attempt('').RECOVERY_TOKEN).toBeUndefined();

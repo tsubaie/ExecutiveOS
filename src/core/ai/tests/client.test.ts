@@ -6,7 +6,6 @@ const config = vi.hoisted(() => ({
   DATABASE_URL: 'postgresql://user:pass@db:5432/app',
   SESSION_SECRET: 'a'.repeat(32),
   OPENROUTER_API_KEY: 'fixture-openrouter-key',
-  ANTHROPIC_API_KEY: 'fixture-anthropic-key',
 }));
 vi.mock('@/core/config/env', async (original) => {
   const actual = await original<typeof import('@/core/config/env')>();
@@ -62,7 +61,12 @@ it('ADMIN-B23 maps a network failure to a safe connection error', async () => {
 });
 it('ADMIN-B23 accepts namespaced OpenRouter model IDs and rejects unqualified model IDs', () => {
   const schema = settingsRegistry['ai.model.default'].schema;
-  for (const value of ['anthropic/claude-sonnet-4.5', 'openai/gpt-5', 'vendor/model:free', '~anthropic/claude-sonnet-latest'])
+  for (const value of [
+    'anthropic/claude-sonnet-4.5',
+    'openai/gpt-5',
+    'vendor/model:free',
+    '~anthropic/claude-sonnet-latest',
+  ])
     expect(schema.safeParse(value).success).toBe(true);
   for (const value of [
     'gpt-5',
