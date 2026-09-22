@@ -1,7 +1,7 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
-import { Database, ShieldCheck, Sparkles } from 'lucide-react';
+import { Database, ShieldCheck, WandSparkles } from 'lucide-react';
 import { useAdminResource, useAdminAction } from './queries';
 import { Button } from '@/ui/primitives/button';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
@@ -59,7 +59,7 @@ function AiPanel({
       <AiModels />
       <AiControls />
       <div className="rounded-xl border bg-surface p-6">
-        <Sparkles className="mb-5 size-7 text-accent" />
+        <WandSparkles className="mb-5 size-7 text-accent" />
         <h2 className="text-lg font-medium">
           {connection.state === 'enabled'
             ? t('connected')

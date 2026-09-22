@@ -33,6 +33,7 @@ export function NoteDetail({ note, api }: { note: Detail; api: DetailApi<Patch> 
               save={api.save}
               focus={api.focus}
               contentAction={slots.content}
+              contentNotice={slots.contentNotice}
               tagsAction={slots.tags}
               review={slots.review}
             />

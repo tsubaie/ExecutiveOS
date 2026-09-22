@@ -13,7 +13,7 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/ui/cn';
 import type { Mentions } from './mentions';
 import { toggleChecklistItem } from './checklist';
-import { FieldFrame, FieldLabel, type Expand } from './ExpandedField';
+import { ExpandToggle, FieldFrame, FieldLabel, type Expand } from './ExpandedField';
 // Both halves load on demand: the renderer only when there is content to show, the editor only
 // when the field is entered, so neither weighs on a route's initial bundle.
 const Markdown = lazy(() => import('./Markdown').then((m) => ({ default: m.Markdown })));
@@ -32,6 +32,8 @@ type Props = {
   // Rendered on the label row: an action that transforms this field, or the notice standing in for
   // one that is unavailable.
   action?: ReactNode;
+  // Rendered between the label row and the text: a notice about this field (a rewrite waiting).
+  notice?: ReactNode;
   // EP-B44: the field can move into the expanded view. `title` heads that view; the labels name
   // the control both ways; `open` is owned by the caller, who carries it in the URL.
   expand?: Expand;
@@ -80,6 +82,7 @@ class Commits {
 // (B25).
 function useDraft(value: string, onCommit: Commit) {
   const [editing, setEditing] = useState(!value.trim());
+  const [caret, setCaret] = useState<number | null>(null);
   const [draft, setDraft] = useState(value);
   const [seen, setSeen] = useState(value);
   const [commits] = useState(() => new Commits(value));
@@ -105,7 +108,11 @@ function useDraft(value: string, onCommit: Commit) {
     setDraft(next);
     commits.commit(next, onCommit);
   };
-  return { editing, draft, setDraft, leave, toggle, enter: () => setEditing(true) };
+  const enter = (at: number | null) => {
+    setCaret(at);
+    setEditing(true);
+  };
+  return { editing, caret, draft, setDraft, leave, toggle, enter };
 }
 // Markdown editing (ADR 0015): the field shows the rendered preview and becomes a textarea when
 // entered; leaving it commits a changed draft and shows the preview again, and while it is being
@@ -123,45 +130,39 @@ export function MarkdownField({
   className,
   mentions,
   action,
+  notice,
   expand,
 }: Props) {
   const id = useId();
-  const [caret, setCaret] = useState<number | null>(null);
-  const { editing, draft, setDraft, leave, toggle, enter } = useDraft(value, onCommit);
+  const { editing, caret, draft, setDraft, leave, toggle, enter } = useDraft(value, onCommit);
   const body = (
     <div className={cn('grid gap-2', className)}>
-      <FieldLabel id={id} label={label} action={action} expand={expand} />
-      {editing ? (
-        <Suspense
-          fallback={
-            <div className={cn('rounded-lg border', draft.trim() ? 'min-h-40' : 'min-h-20')} />
-          }
-        >
-          <Editor
-            id={id}
-            name={name}
-            draft={draft}
-            maxLength={maxLength}
-            mentions={mentions}
-            caret={caret}
-            toolbar={Boolean(expand?.open)}
-            onChange={setDraft}
-            onLeave={leave}
-          />
-        </Suspense>
-      ) : (
-        <Preview
-          id={id}
-          label={label}
-          draft={draft}
-          name={name}
-          toggle={toggle}
-          edit={(at) => {
-            setCaret(at);
-            enter();
-          }}
-        />
-      )}
+      <FieldLabel id={id} label={label} action={action} />
+      {notice}
+      <div className="relative">
+        {expand && !expand.open && <ExpandToggle expand={expand} />}
+        {editing ? (
+          <Suspense
+            fallback={
+              <div className={cn('rounded-lg border', draft.trim() ? 'min-h-40' : 'min-h-20')} />
+            }
+          >
+            <Editor
+              id={id}
+              name={name}
+              draft={draft}
+              maxLength={maxLength}
+              mentions={mentions}
+              caret={caret}
+              toolbar={Boolean(expand?.open)}
+              onChange={setDraft}
+              onLeave={leave}
+            />
+          </Suspense>
+        ) : (
+          <Preview id={id} label={label} draft={draft} name={name} toggle={toggle} edit={enter} />
+        )}
+      </div>
     </div>
   );
   return (

@@ -5,19 +5,42 @@ import en from '@/core/i18n/messages/en.json';
 import { TagsEditor } from '../../ui/TagsEditor';
 import { mount } from './harness';
 const input = () => screen.getByLabelText(en.notes.addTagLabel);
+const options = () => screen.queryAllByRole('option').map((option) => option.textContent);
 const refetchTags = vi.hoisted(() => vi.fn());
 vi.mock('../../ui/queries', () => ({
-  useTags: () => ({ data: { data: [
-    { tag: 'budget', count: 1 }, { tag: 'Risk', count: 2 }, { tag: 'Removed', count: 0 },
-  ] }, refetch: refetchTags }),
+  useTags: () => ({
+    data: {
+      data: [
+        { tag: 'budget', count: 1 },
+        { tag: 'Risk', count: 2 },
+        { tag: 'Removed', count: 0 },
+      ],
+    },
+    refetch: refetchTags,
+  }),
 }));
 describe('tags editor', () => {
-  it('NOTES-B13 suggests only used unselected tags and refreshes without browser history', () => {
-    const view = mount(<TagsEditor tags={['Budget']} save={vi.fn()} />);
-    expect(Array.from(view.container.querySelectorAll('option'), (option) => option.value)).toEqual(['Risk']);
+  it('NOTES-B13 lists only used unselected tags on focus and refreshes without browser history', () => {
+    mount(<TagsEditor tags={['Budget']} save={vi.fn()} />);
     expect(input().getAttribute('autocomplete')).toBe('off');
+    expect(screen.queryByRole('listbox')).toBeNull();
     fireEvent.focus(input());
     expect(refetchTags).toHaveBeenCalled();
+    expect(options()).toEqual(['Risk']);
+    expect(input().getAttribute('aria-expanded')).toBe('true');
+  });
+  it('NOTES-B13 filters as typed, offers a new name, and adds a picked row with no Enter', () => {
+    const save = vi.fn();
+    mount(<TagsEditor tags={[]} save={save} />);
+    fireEvent.change(input(), { target: { value: 'ri' } });
+    expect(options()).toEqual(['Risk', 'Add "ri"']);
+    fireEvent.keyDown(input(), { key: 'ArrowDown' });
+    expect(input().getAttribute('aria-activedescendant')).toBe(
+      screen.getAllByRole('option')[1]?.id,
+    );
+    fireEvent.mouseDown(screen.getAllByRole('option')[0] as Element);
+    expect(save).toHaveBeenLastCalledWith(['Risk']);
+    expect((input() as HTMLInputElement).value).toBe('');
   });
   it('NOTES-I03 adds on Enter, ignores a duplicate spelling, and removes through the chip', () => {
     const save = vi.fn();

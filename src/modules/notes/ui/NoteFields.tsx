@@ -6,6 +6,7 @@ import { Property } from '@/ui/layout/Property';
 import { DatePicker } from '@/ui/layout/DatePicker';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
 import { MarkdownField } from '@/ui/markdown/MarkdownField';
+import type { ExpandReview } from '@/ui/markdown/ExpandedField';
 import type { NoteDetail, NotePatch } from '../schema/validation';
 import type { DetailApi } from '@/ui/entity/types';
 import { useMentions } from './use-mentions';
@@ -15,14 +16,11 @@ import { TagsEditor } from './TagsEditor';
 import { ParticipantLinks } from './ParticipantLinks';
 export type Patch = Omit<NotePatch, 'revision'>;
 // NOTES-B18: a proposal under review takes the content field's place in the expanded view: its
-// draft is what the field shows and commits, and the band and the original ride along.
+// draft is what the field shows and commits, and the review surface rides along.
 export type ReviewSlot = {
   value: string;
   onCommit: (value: string) => void;
-  banner: ReactNode;
-  aside: ReactNode;
-  asideTitle: string;
-  footer: ReactNode;
+  review: ExpandReview;
 };
 type Save = (patch: Patch) => void;
 // The detail panel: the title is the heading, then type and date rows, the participants (people
@@ -33,6 +31,7 @@ export function NoteFields({
   save,
   focus,
   contentAction,
+  contentNotice,
   tagsAction,
   review = null,
 }: {
@@ -43,6 +42,8 @@ export function NoteFields({
   // The AI actions belong to the fields they transform, so they arrive as slots rather than
   // floating in a row above the record (NOTES-B22).
   contentAction?: ReactNode;
+  // A notice about the content, shown between its label and its text (a rewrite waiting).
+  contentNotice?: ReactNode;
   tagsAction?: ReactNode;
   review?: ReviewSlot | null;
 }) {
@@ -67,6 +68,7 @@ export function NoteFields({
         focus={focus}
         review={review}
         mentions={mentions}
+        notice={contentNotice}
         action={<ContentActions note={note} save={save} action={contentAction} />}
       />
     </fieldset>
@@ -109,29 +111,26 @@ function ContentField({
   review,
   mentions,
   action,
+  notice,
 }: {
   note: NoteDetail;
   focus: DetailApi<Patch>['focus'];
   review: ReviewSlot | null;
   mentions: ReturnType<typeof useMentions>;
   action: ReactNode;
+  notice: ReactNode;
 }) {
   const t = useTranslations('notes');
   const c = useTranslations('common');
   return (
     <MarkdownField
       label={t('content')}
+      notice={notice}
       value={review?.value ?? note.content}
       mentions={mentions.mentions}
       onCommit={review?.onCommit ?? mentions.commit}
       action={action}
-      expand={{
-        ...expandFor(note, focus, c),
-        banner: review?.banner,
-        aside: review?.aside,
-        asideTitle: review?.asideTitle,
-        footer: review?.footer,
-      }}
+      expand={{ ...expandFor(note, focus, c), review: review?.review }}
     />
   );
 }
@@ -174,6 +173,7 @@ function expandFor(
       expand: c('expandContent'),
       collapse: c('collapseContent'),
       description: c('expandedDescription'),
+      away: c('inExpandedView'),
     },
   };
 }
