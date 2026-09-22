@@ -73,7 +73,7 @@ export async function admitAi(
     model,
     locale,
     capabilityVersion: 1,
-    promptVersion: capability === 'notes.refine' ? 2 : 1,
+    promptVersion: capability === 'notes.refine' ? 3 : 1,
     contentHash: contentHash(input),
     maxOutputTokens,
     reservedTokens: 2 * (estimate + maxOutputTokens),

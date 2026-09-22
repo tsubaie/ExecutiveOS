@@ -6,15 +6,15 @@ import { AiPayload, AiOutput } from '@/core/ai/job-schema';
 import { id } from '@/core/db/ids';
 import { RefinementOutput, TagOutput } from './schema/validation';
 import { Tags } from './schema/validation';
-import { REFINE_PROMPT as REFINE_PROMPT_V1, TAG_PROMPT } from './ai/prompts/refine.v1';
-import { REFINE_PROMPT } from './ai/prompts/refine.v2';
+import { TAG_PROMPT } from './ai/prompts/refine.v1';
+import { refinePrompt } from './ai/prompts/select';
 import { lockNote, insertRefinement } from './repo';
 export const noteJobs: Record<string, JobHandler> = {
   'ai.notes.refine': {
     concurrency: 2,
     schema: AiPayload,
     run: async (job, signal) => {
-      const prompt = AiPayload.parse(job.payload).promptVersion === 2 ? REFINE_PROMPT : REFINE_PROMPT_V1;
+      const prompt = refinePrompt(AiPayload.parse(job.payload).promptVersion);
       const output = await executeAi(job, prompt, RefinementOutput, signal);
       const input = z
         .object({ assignablePeople: z.array(z.string()), content: z.string() })
