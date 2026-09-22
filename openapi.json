@@ -7133,25 +7133,29 @@
             "type": "boolean"
           },
           "__schema2": {
+            "maxLength": 50000,
+            "type": "string"
+          },
+          "__schema3": {
             "items": {
-              "$ref": "#/$defs/__schema3"
+              "$ref": "#/$defs/__schema4"
             },
             "maxItems": 15,
             "type": "array"
           },
-          "__schema3": {
+          "__schema4": {
             "maximum": 14,
             "minimum": 0,
             "type": "integer"
           },
-          "__schema4": {
+          "__schema5": {
             "items": {
-              "$ref": "#/$defs/__schema5"
+              "$ref": "#/$defs/__schema6"
             },
             "maxItems": 15,
             "type": "array"
           },
-          "__schema5": {
+          "__schema6": {
             "additionalProperties": false,
             "properties": {
               "index": {
@@ -7171,14 +7175,14 @@
             ],
             "type": "object"
           },
-          "__schema6": {
+          "__schema7": {
             "items": {
-              "$ref": "#/$defs/__schema7"
+              "$ref": "#/$defs/__schema8"
             },
             "maxItems": 5,
             "type": "array"
           },
-          "__schema7": {
+          "__schema8": {
             "maximum": 4,
             "minimum": 0,
             "type": "integer"
@@ -7190,17 +7194,20 @@
           "acceptContent": {
             "$ref": "#/$defs/__schema1"
           },
+          "content": {
+            "$ref": "#/$defs/__schema2"
+          },
           "jobId": {
             "$ref": "#/$defs/__schema0"
           },
           "tagIndexes": {
-            "$ref": "#/$defs/__schema6"
+            "$ref": "#/$defs/__schema7"
           },
           "taskIndexes": {
-            "$ref": "#/$defs/__schema2"
+            "$ref": "#/$defs/__schema3"
           },
           "taskTitles": {
-            "$ref": "#/$defs/__schema4"
+            "$ref": "#/$defs/__schema5"
           }
         },
         "required": [
@@ -7274,6 +7281,21 @@
         },
         "required": [
           "data"
+        ],
+        "type": "object"
+      },
+      "postNotesIdRefineRestoreBody": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "jobId"
         ],
         "type": "object"
       },
@@ -17169,6 +17191,130 @@
             "session": []
           }
         ]
+      }
+    },
+    "/api/v1/notes/{id}/refine/restore": {
+      "post": {
+        "operationId": "postNotesIdRefineRestore",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/postNotesIdRefineRestoreBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/postNotesIdRefineApplyResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "validation_failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthenticated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "not_found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "rule_violation"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "internal"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "ai_unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-idempotency-key": "required"
       }
     },
     "/api/v1/notes/{id}/restore": {

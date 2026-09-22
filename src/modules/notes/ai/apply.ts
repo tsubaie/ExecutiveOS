@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { type Context } from '@/core/auth/session';
 import { AppError } from '@/core/http/errors';
 import { applied, reviewJob } from '@/core/ai/review';
-import { updateAiResult } from '@/core/db/ai-jobs-repo';
+import { lockedAiJob, updateAiResult } from '@/core/db/ai-jobs-repo';
+import { AiOutput, AiPayload } from '@/core/ai/job-schema';
 import { peopleForAi } from '../service';
 import { getNote, patchNote } from '../service';
 import { Tags } from '../schema/validation';
@@ -33,7 +34,8 @@ export async function applyNoteAi(
   if (note.revision !== payload.revision) throw new AppError('conflict', { reason: 'revision' });
   const { refined, chosenTags, chosenTasks } = choices(result.output, capability, input);
   const people = await peopleForAi(ctx);
-  const content = input.acceptContent && refined ? refined.refined_content : note.content;
+  const content =
+    input.acceptContent && refined ? (input.content ?? refined.refined_content) : note.content;
   const mergedTags = [...note.tags, ...chosenTags].filter(
     (tag, index, all) =>
       all.findIndex((other) => other.toLowerCase() === tag.toLowerCase()) === index,
@@ -66,6 +68,27 @@ export async function discardNoteAi(
     await reviewRefinement(ctx.db, jobId, 'discarded', ctx.user.id);
   return { ids: [] };
 }
+// NOTES-B18: Discard is reversible for a moment. Restoring puts a discarded, unapplied proposal
+// back: pending when the note still stands at the job's revision, stale otherwise.
+export async function restoreNoteAi(ctx: Context, noteId: string, jobId: string) {
+  const job = await lockedAiJob(ctx.db, jobId);
+  if (!job || (job.createdBy !== ctx.user.id && ctx.user.role !== 'admin'))
+    throw new AppError('not_found');
+  const payload = AiPayload.parse(job.payload);
+  if (job.kind !== 'ai.notes.refine' || payload.entityId !== noteId || job.status !== 'succeeded')
+    throw new AppError('conflict', { reason: 'state' });
+  const result = AiOutput.parse(job.result);
+  if (result.appliedIds) throw new AppError('conflict', { reason: 'state' });
+  const note = await getNote(ctx, noteId);
+  await updateAiResult(ctx.db, jobId, { ...result, discarded: false });
+  await reviewRefinement(
+    ctx.db,
+    jobId,
+    note.revision === payload.revision ? 'pending' : 'stale',
+    ctx.user.id,
+  );
+  return { ids: [] };
+}
 
 function choices(
   output: z.infer<ReturnType<typeof z.json>>,
@@ -77,10 +100,14 @@ function choices(
   if (!refined && (input.acceptContent || input.taskIndexes.length))
     throw new AppError('validation_failed');
   const chosenTags = selected(tags, input.tagIndexes);
-  const chosenTasks = selected(refined?.suggested_tasks ?? [], input.taskIndexes).map((task, position) => ({
-    ...task,
-    title: input.taskTitles?.find((edit) => edit.index === input.taskIndexes[position])?.title ?? task.title,
-  }));
+  const chosenTasks = selected(refined?.suggested_tasks ?? [], input.taskIndexes).map(
+    (task, position) => ({
+      ...task,
+      title:
+        input.taskTitles?.find((edit) => edit.index === input.taskIndexes[position])?.title ??
+        task.title,
+    }),
+  );
   if (!input.acceptContent && !chosenTags.length && !chosenTasks.length)
     throw new AppError('validation_failed');
   return { refined, chosenTags, chosenTasks };

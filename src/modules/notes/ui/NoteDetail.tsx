@@ -26,7 +26,7 @@ export function NoteDetail({ note, api }: { note: Detail; api: DetailApi<Patch> 
           </Button>
         </>
       ) : (
-        <NoteAi key={note.id} note={note}>
+        <NoteAi key={note.id} note={note} focus={api.focus}>
           {(slots) => (
             <NoteFields
               note={note}
@@ -34,6 +34,7 @@ export function NoteDetail({ note, api }: { note: Detail; api: DetailApi<Patch> 
               focus={api.focus}
               contentAction={slots.content}
               tagsAction={slots.tags}
+              review={slots.review}
             />
           )}
         </NoteAi>

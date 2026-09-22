@@ -11,6 +11,10 @@ export type Expand = {
   open: boolean;
   setOpen: (open: boolean) => void;
   labels: { expand: string; collapse: string; description: string };
+  // A band above the text in the expanded view (a proposal under review, NOTES-B18) and a second
+  // column beside it (the original the proposal rewrote).
+  banner?: ReactNode;
+  aside?: ReactNode;
 };
 // An action that transforms this field belongs on its label row, not in a header above the record:
 // it changes one field, and a reader reaches for it while looking at that field.
@@ -89,6 +93,8 @@ export function FieldFrame({
         description={expand.labels.description}
         open={expand.open}
         onOpenChange={expand.setOpen}
+        banner={expand.banner}
+        aside={expand.aside}
       >
         {children}
       </ExpandedField>
@@ -106,12 +112,16 @@ export function ExpandedField({
   description,
   open,
   onOpenChange,
+  banner,
+  aside,
   children,
 }: {
   title: string;
   description: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  banner?: ReactNode | undefined;
+  aside?: ReactNode | undefined;
   children: ReactNode;
 }) {
   return (
@@ -127,8 +137,17 @@ export function ExpandedField({
           <DialogDescription className="sr-only">{description}</DialogDescription>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-8 sm:py-6">
-          <div className="mx-auto w-full max-w-[92ch] text-base leading-7 [&_textarea]:min-h-[calc(94dvh-13rem)] [&_textarea]:text-base [&_textarea]:leading-7 [&_[data-checklist]]:min-h-[calc(94dvh-13rem)] [&_[data-checklist]]:text-base [&_[data-checklist]]:leading-7">
-            {children}
+          <div
+            className={cn(
+              'mx-auto w-full text-base leading-7 [&_textarea]:min-h-[calc(94dvh-13rem)] [&_textarea]:text-base [&_textarea]:leading-7 [&_[data-checklist]]:min-h-[calc(94dvh-13rem)]',
+              aside ? 'grid max-w-[184ch] gap-6 lg:grid-cols-2' : 'max-w-[92ch]',
+            )}
+          >
+            <div className="min-w-0">
+              {banner}
+              {children}
+            </div>
+            {aside && <div className="min-w-0">{aside}</div>}
           </div>
         </div>
       </DialogContent>

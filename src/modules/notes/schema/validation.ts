@@ -186,6 +186,8 @@ export const NoteAiApply = z
   .strictObject({
     jobId: z.uuid(),
     acceptContent: z.boolean(),
+    // NOTES-B18: the rewrite as the reader left it after editing, in place of the job's own text.
+    content: Content.optional(),
     taskIndexes: z.array(z.number().int().min(0).max(14)).max(15),
     taskTitles: z
       .array(
@@ -204,8 +206,10 @@ export const NoteAiApply = z
         (input.taskTitles?.length ?? 0) &&
       (input.taskTitles ?? []).every((task) => input.taskIndexes.includes(task.index)) &&
       new Set(input.taskIndexes).size === input.taskIndexes.length &&
-      new Set(input.tagIndexes).size === input.tagIndexes.length,
+      new Set(input.tagIndexes).size === input.tagIndexes.length &&
+      (input.content === undefined || input.acceptContent),
   );
+export const NoteAiRestore = z.strictObject({ jobId: z.uuid() });
 
 // NOTES-B08: shared by manual editing and applying refined content.
 export function derivedParticipants(content: string, candidates: { id: string; name: string }[]) {

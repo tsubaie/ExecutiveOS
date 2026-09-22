@@ -41,23 +41,18 @@ export function useAiReview(
   });
   const refresh = () =>
     Promise.all(
-      ['ai', 'tasks', 'notes', 'home', 'committees'].map((key) => client.invalidateQueries({ queryKey: [key] })),
+      ['ai', 'tasks', 'notes', 'home', 'committees'].map((key) =>
+        client.invalidateQueries({ queryKey: [key] }),
+      ),
     );
   const current = job.data?.data ?? null;
-  const { start, cancel, waiting, requestCancel } = useAiStart(path, revision, ['ai', capability, entityId], current?.id);
-  const apply = useMutation({
-    mutationFn: (body: z.infer<ReturnType<typeof z.json>>) =>
-      request(`${path}/apply`, applyResponse, { method: 'POST', body }),
-    onSuccess: refresh,
-  });
-  const discard = useMutation({
-    mutationFn: () =>
-      request(`${path}/discard`, applyResponse, {
-        method: 'POST',
-        body: { jobId: current?.id ?? '' },
-      }),
-    onSuccess: refresh,
-  });
+  const { start, cancel, waiting, requestCancel } = useAiStart(
+    path,
+    revision,
+    ['ai', capability, entityId],
+    current?.id,
+  );
+  const { apply, discard, restore } = useReviewMutations(path, current?.id ?? '', refresh);
   return {
     capability,
     ...availabilityOf(availability.data?.data, capability),
@@ -73,8 +68,35 @@ export function useAiReview(
     start,
     apply,
     discard,
-    error: [start.error, apply.error, discard.error, job.error, availability.error].find(Boolean) ?? null,
+    restore,
+    error:
+      [start.error, apply.error, discard.error, job.error, availability.error].find(Boolean) ??
+      null,
   };
+}
+// Apply, Discard and Restore, each refreshing what the record's queries show afterwards.
+// Restore is Undo on the discard toast (NOTES-B18); the job id travels with it, since the query
+// may have moved on by the time the toast is pressed.
+function useReviewMutations(path: string, jobId: string, refresh: () => Promise<void[]>) {
+  const apply = useMutation({
+    mutationFn: (body: z.infer<ReturnType<typeof z.json>>) =>
+      request(`${path}/apply`, applyResponse, { method: 'POST', body }),
+    onSuccess: refresh,
+  });
+  const discard = useMutation({
+    mutationFn: () =>
+      request(`${path}/discard`, applyResponse, {
+        method: 'POST',
+        body: { jobId: jobId },
+      }),
+    onSuccess: refresh,
+  });
+  const restore = useMutation({
+    mutationFn: (id: string) =>
+      request(`${path}/restore`, applyResponse, { method: 'POST', body: { jobId: id } }),
+    onSuccess: refresh,
+  });
+  return { apply, discard, restore };
 }
 export type AiReview = ReturnType<typeof useAiReview>;
 
