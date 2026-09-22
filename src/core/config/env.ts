@@ -2,11 +2,13 @@ import 'server-only';
 import { z } from 'zod';
 import { defaults } from './defaults';
 import { validProxyCidrs } from './cidr';
+import { databaseTlsIssue } from './database-tls';
 
 const optionalText = z.preprocess((v) => (v === '' ? undefined : v), z.string().optional());
 const Environment = z.object({
   DATABASE_URL: z.string().url(),
   DATABASE_URL_TEST: optionalText,
+  DATABASE_SSL_ROOT_CERT: optionalText,
   SESSION_SECRET: z.string().min(32),
   APP_URL: z.string().url().default(defaults.appUrl),
   TRUSTED_PROXY_CIDRS: z.string().default('').refine(validProxyCidrs, {
@@ -14,7 +16,10 @@ const Environment = z.object({
       'TRUSTED_PROXY_CIDRS must be a comma-separated list of IP addresses or CIDR blocks, for example "10.0.0.0/8, fd00::/8"',
   }),
   OPENROUTER_API_KEY: optionalText,
-  AI_RATE_LIMIT_ENABLED: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
+  AI_RATE_LIMIT_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
   FILES_DIR: z.string().default(defaults.filesDir),
   BACKUP_DIR: z.string().default(defaults.backupDir),
   FILES_QUOTA_GB: z.coerce.number().positive().default(20),
@@ -49,6 +54,8 @@ function loopback(url: string) {
   return loopbackHosts.has(new URL(url).hostname);
 }
 const Configuration = Environment.superRefine((value, ctx) => {
+  const tls = databaseTlsIssue(value.DATABASE_URL);
+  if (tls) ctx.addIssue({ code: 'custom', path: ['DATABASE_URL'], message: tls });
   if (value.NODE_ENV !== 'production') return;
   if (value.APP_URL.startsWith('https:') || loopback(value.APP_URL)) return;
   ctx.addIssue({

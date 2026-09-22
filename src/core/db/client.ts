@@ -3,10 +3,14 @@ import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { env } from '@/core/config/env';
 import { queryLogger } from './query-log';
+import { poolConnection } from '@/core/config/database-tls';
 
 let connection: pg.Pool | undefined;
 export function pool() {
-  connection ??= new pg.Pool({ connectionString: env().DATABASE_URL, max: env().DB_POOL_MAX });
+  connection ??= new pg.Pool({
+    ...poolConnection(env().DATABASE_URL, env().DATABASE_SSL_ROOT_CERT),
+    max: env().DB_POOL_MAX,
+  });
   return connection;
 }
 // A separate pool for audits that rebuild the disposable *_test database from migrations.

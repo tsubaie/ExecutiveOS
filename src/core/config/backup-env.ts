@@ -1,5 +1,6 @@
 import 'server-only';
 import { env } from './env';
+import { libpqTls } from './database-tls';
 export function postgresConnection() {
   const url = new URL(env().DATABASE_URL);
   return {
@@ -16,7 +17,7 @@ export function postgresConnection() {
     environment: {
       NODE_ENV: env().NODE_ENV,
       PGPASSWORD: decodeURIComponent(url.password),
-      PGSSLMODE: url.searchParams.get('sslmode') ?? 'prefer',
+      ...libpqTls(env().DATABASE_URL, env().DATABASE_SSL_ROOT_CERT),
     },
   };
 }

@@ -24,6 +24,8 @@
 - Local file storage on a volume (`FILES_DIR`). Files are immutable and content-addressed.
 - Migrations run on container start under a Postgres advisory lock before the HTTP server accepts requests.
 - The reverse proxy terminates TLS; the app trusts `X-Forwarded-*` only from `TRUSTED_PROXY_CIDRS`, taking the first hop outside that list (`ADMIN-B20`).
+- The app sets its own security headers in `src/proxy.ts`, so they do not depend on the reverse proxy: a nonce-based CSP on every page (which keeps every page dynamically rendered), `nosniff`, framing denial, referrer and permissions policies, `no-store` on the API, and HSTS when production is served over HTTPS (`ADMIN-B34`, ADR 0025).
+- The database runs on the Compose network, where `DATABASE_URL`'s `sslmode` applies unchanged. A database on any other host must be reached with `sslmode=verify-full`; `DATABASE_SSL_ROOT_CERT` names the provider's CA file when the system trust store does not cover it, and the pool and the backup commands share that policy (`ADMIN-B35`, ADR 0025).
 
 ## Repository layout
 
