@@ -79,7 +79,8 @@ See `03-data-model.md`. Invariants:
   of which suppresses the grouping (EP-B14).
 - KPIS-B26 **Comparison period**: one reading applies to the whole page, chosen from a segmented
   control in the toolbar (EP-B28) and carried in the URL as `period=previous|next`, empty being the
-  effective one. It is not a filter: it removes no measure from the list, it changes what every one
+  effective one. The three segments read Previous, Next and The one after (السابق، التالي، الذي يليه):
+  the effective period is the one whose target is being pursued next, so it is named as such. It is not a filter: it removes no measure from the list, it changes what every one
   of them says. Everything downstream of a status follows it — each tile's arc, target and period,
   the statuses themselves, the counts in the strip and the rail, and the default order — because a
   scorecard read half against one quarter and half against another is not a scorecard. A shifted
