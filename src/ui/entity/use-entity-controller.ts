@@ -6,6 +6,7 @@ import type { Entity, EntityPageProps, FiltersDef } from './types';
 import { useEntityNavigation } from './navigation';
 import { useEntityNeighbors } from './use-entity-neighbors';
 import { useEntityKeyboard } from './use-entity-keyboard';
+import { usePointerAway } from './use-pointer-away';
 import { useEntityLayout } from './use-layout';
 import { setSearchScope } from '@/ui/layout/search-palette-store';
 export function useEntityController<T extends Entity, P extends object, C>(
@@ -104,6 +105,7 @@ function useControllerKeyboard<T extends Entity>(
   root: RefObject<HTMLElement | null>,
   args: KeyboardArgs<T>,
 ) {
+  usePointerAway(root, { panel: args.panel, close: args.close });
   useEntityKeyboard(root, {
     items: args.list.items,
     focused: args.focused,
