@@ -28,6 +28,7 @@ See `03-data-model.md` § notes, note_people, note_refinements. Invariants:
 - NOTES-B24 **Timed commit while editing.** While the content textarea is being edited, a draft that differs from the last commit is committed five seconds after it first differs, whatever is typed meanwhile, so a long writing session is saved as it goes; leaving still commits a moved draft and never repeats the same text. A saved value that comes back equal to one of the field's own commits leaves the draft, which may have moved on, alone; any other change to the saved value re-bases the draft on it.
 - NOTES-B25 **Checklist items toggle in the preview.** Each `- [ ]` or `- [x]` item renders as a real checkbox, named after its item text, that can be toggled from the preview without entering the textarea; toggling flips exactly that marker in the source and commits at once. The rendered preview and the button that opens the textarea are siblings so the checkboxes are not nested inside a control; clicking anywhere else still opens the textarea at the clicked text. Outside a preview (the standalone renderer) the checkboxes stay inert.
 - NOTES-B26 **Refinement writes for this renderer and keeps action items out of the content.** New refine jobs are admitted with prompt v3, which adds formatting rules to v2's structure guidance: sections start at `##`; only plain bullets and numbered lists, never a checklist marker (`- [ ]` or `- [x]`), because action items are proposed as suggested tasks that become linked tasks when accepted rather than checkboxes in the note; checklist markers already present in the source are kept exactly, including their checked state; plain markdown only, with no HTML, no images and links only to `http(s)` or `mailto`; every `@Name` mention stays on one line with its sentence; single line breaks in prose are kept and not padded. A job runs with the prompt version it was admitted with, so v1 and v2 jobs remain executable.
+- NOTES-B27 **Templates.** `notes.templates` holds the templates a note can start from (identifier, label per locale, body per locale, enabled); while it is empty the two built-in templates apply: Meeting (Attendees with an `@` cue, Agenda, Discussion, Decisions, Actions, Open questions) and One-on-one (Objective, Talking points as a checklist, Their updates, Feedback, Agreed actions, Next time), each in English and Arabic with sections at `##`. `GET /notes/templates` returns the enabled ones. The create form offers a Template choice ("No template" by default) whose body, in the reader's locale falling back to English, becomes the new note's content; a note whose content is empty offers Insert template on the Content label row, which saves the chosen body as the content. Templates are administered on Administration → Notes (`ADMIN-B30`).
 - NOTES-I07 Archive and delete are independent: an archived note can be trashed and is restored still archived.
 
 ## Behaviors
@@ -71,7 +72,7 @@ List on the entity framework. Row (NOTES-B02): compact full-width horizontal car
 
 Detail: the title is the editable heading (labelled "Note title"), then type and date as label/value rows, participants as a read-only row of avatar chips that link to the person's page (like the owner link on a task), tags as chips with an autocomplete input (overflow beyond ten is blocked with a count), content shown as the rendered markdown (`src/ui/markdown`, ADR 0015) that turns into a textarea when entered (a click places the caret at the clicked text; keyboard entry at the end) and back into the preview when left, with `@` mentions, the writing keys (B23), a timed commit every five seconds while editing (B24), checklist boxes that toggle from the preview (B25), the tasks panel (B09) with completed tasks collapsed under a count, the shared entity footer (EP-B37) with relative "Updated", Archive and Move to trash. Autosave through the framework save queue; `revision` conflicts keep the draft.
 
-Create: title, type ("No type" unless `notes.default_type` is set), date (today). Mobile: the panel bar reads Back · save state; tags below the title.
+Create: title, type ("No type" unless `notes.default_type` is set), date (today), template ("No template"; B27). Mobile: the panel bar reads Back · save state; tags below the title.
 
 ## AI
 
@@ -106,16 +107,17 @@ Type labels come from `notes.types` per locale; the six defaults have catalog en
 - NOTES-A10 With AI disabled, Refine and Suggest tags are absent and their routes return 503. (en)
 - NOTES-A11 Home shows Recent notes with the note created today; with no recent notes the section collapses. (en)
 - NOTES-A12 An administrator adds a note type with English and Arabic labels and sets it as the default; the new type appears in the rail and the create form. (en)
+- NOTES-A13 Creating a note with the Meeting template opens it with the template's sections as its content; the administration page lists the built-in templates. (en)
 
 ## Required scenarios
 
 - schema: I01, I03, bulk payload shapes.
-- service: I02 (disabled type on create and change), I04 (duplicate participant, deleted person hidden), I06, I07; B01 defaults; B07 participant replacement; B12 four cases (plain, stale revision, tag overflow, already archived or tagged).
+- service: I02 (disabled type on create and change), B27 (built-in templates, configured and disabled ones), I04 (duplicate participant, deleted person hidden), I06, I07; B01 defaults; B07 participant replacement; B12 four cases (plain, stale revision, tag overflow, already archived or tagged).
 - constraints: title CHECK, tags cardinality CHECK, participant uniqueness, `tasks.source_note_id` set null on purge.
 - repo: each view equals its count under facets; archived-in-search rule; participant name search; sort tuples; cursor continuation; one statement for the list with counts.
 - api: all endpoints per `08` item 4; bulk 409 and 422 leave nothing changed; refine and suggest-tags 503.
-- ui: row, bands, detail edits, mention menu (filter, arrows, insert, dismissal, quick-create), derived participants, tag overflow block, tasks panel create/attach/detach/complete, editor enter and leave, writing keys (B23), timed commit and own round trip (B24), checklist toggle (B25), note types editor.
-- e2e `notes.spec.ts`: A01–A12 in the listed locales.
+- ui: row, bands, detail edits, mention menu (filter, arrows, insert, dismissal, quick-create), derived participants, tag overflow block, tasks panel create/attach/detach/complete, editor enter and leave, writing keys (B23), timed commit and own round trip (B24), checklist toggle (B25), template select and locale fallback (B27), note types editor.
+- e2e `notes.spec.ts`: A01–A13 in the listed locales.
 - Mutation targets: `bandOf`, `bulkArchive`, `attachTask` (in tasks: `TASKS-B16` rule).
 
 ## Audit items

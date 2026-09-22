@@ -60,6 +60,18 @@ export const settingsRegistry = {
     [],
   ),
   'notes.default_type': entry(z.string().nullable(), null),
+  // NOTES-B27: an empty list means the built-in templates, as with `notes.types`.
+  'notes.templates': entry(
+    z.array(
+      z.object({
+        id: z.string(),
+        labels: z.record(Locale, z.string()),
+        body: z.record(Locale, z.string()),
+        enabled: z.boolean(),
+      }),
+    ),
+    [],
+  ),
   'kpis.status_thresholds': entry(StatusThresholds, {
     higher: { on: 0.99, near: 0.85 },
     lower: { on: 1.01, near: 1.18 },

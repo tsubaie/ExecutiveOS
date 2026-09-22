@@ -29,6 +29,7 @@ import {
   type NoteListQuery,
   type BulkItems,
   type BulkTag,
+  type NoteTemplate,
 } from './schema/validation';
 import * as repo from './repo';
 type NoteRow = NonNullable<Awaited<ReturnType<typeof repo.updateNote>>>;
@@ -242,6 +243,71 @@ export function bulkTag(ctx: Context, input: BulkTag) {
 export async function listTypes(ctx: Context) {
   const types = await noteTypes(ctx);
   return { data: types, meta: { defaultType: await defaultType(ctx, types) } };
+}
+// NOTES-B27: the built-in templates, used while `notes.templates` is empty. Each section is a
+// `##` heading like refined content (B26) over its starter line: an `@` cue for attendees, a
+// plain bullet elsewhere so real to-dos become linked tasks, and a checklist for the one-on-one's
+// talking points.
+const sections = (items: [string, string][]) =>
+  items.map(([heading, starter]) => `## ${heading}\n${starter}`).join('\n\n');
+const meeting = {
+  en: sections([
+    ['Attendees', '@'],
+    ['Agenda', '- '],
+    ['Discussion', '- '],
+    ['Decisions', '- '],
+    ['Actions', '- '],
+    ['Open questions', '- '],
+  ]),
+  ar: sections([
+    ['الحضور', '@'],
+    ['جدول الأعمال', '- '],
+    ['النقاش', '- '],
+    ['القرارات', '- '],
+    ['الإجراءات', '- '],
+    ['أسئلة مفتوحة', '- '],
+  ]),
+};
+const oneOnOne = {
+  en: sections([
+    ['Objective', ''],
+    ['Talking points', '- [ ] '],
+    ['Their updates', '- '],
+    ['Feedback', '- '],
+    ['Agreed actions', '- '],
+    ['Next time', '- '],
+  ]),
+  ar: sections([
+    ['الهدف', ''],
+    ['نقاط الحديث', '- [ ] '],
+    ['مستجداتهم', '- '],
+    ['ملاحظات', '- '],
+    ['الإجراءات المتفق عليها', '- '],
+    ['المرة القادمة', '- '],
+  ]),
+};
+const defaultTemplates: NoteTemplate[] = [
+  {
+    id: 'meeting',
+    labels: { en: en.notes.templateMeeting, ar: ar.notes.templateMeeting },
+    body: meeting,
+    enabled: true,
+  },
+  {
+    id: 'one_on_one',
+    labels: { en: en.notes.templateOneOnOne, ar: ar.notes.templateOneOnOne },
+    body: oneOnOne,
+    enabled: true,
+  },
+];
+// NOTES-B27: the configured templates, or the built-in ones while nothing is configured; only
+// enabled templates are offered.
+export async function noteTemplates(ctx: Context): Promise<NoteTemplate[]> {
+  const configured = await getSetting(ctx.db, 'notes.templates');
+  return configured.length ? configured : defaultTemplates;
+}
+export async function listTemplates(ctx: Context) {
+  return { data: (await noteTemplates(ctx)).filter((template) => template.enabled) };
 }
 export async function listTags(ctx: Context) {
   return { data: await repo.selectTags(ctx.db) };

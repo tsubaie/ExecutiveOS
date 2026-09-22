@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Textarea } from '@/ui/primitives/textarea';
 import { Property } from '@/ui/layout/Property';
-import { ChoiceSelect, type Choice } from '@/ui/layout/ChoiceSelect';
 import { DatePicker } from '@/ui/layout/DatePicker';
 import { Avatar } from '@/ui/layout/Avatar';
 import { ErrorPanel } from '@/ui/layout/ErrorPanel';
@@ -13,8 +12,8 @@ import { NEW_MENTION, type MentionItem } from '@/ui/markdown/mentions';
 import { derivedParticipants } from '../schema/validation';
 import { routes } from '@/core/routes';
 import type { NoteDetail, NotePatch, Participant } from '../schema/validation';
-import { useAllPeople, useNoteMutations, useNoteTypes } from './queries';
-import { useTypeLabel } from './use-note-labels';
+import { useAllPeople, useNoteMutations } from './queries';
+import { TemplateSelect, TypeSelect } from './NoteSelects';
 import { CommitteePicker } from '@/modules/committees/ui';
 import { TagsEditor } from './TagsEditor';
 export type Patch = Omit<NotePatch, 'revision'>;
@@ -58,8 +57,11 @@ export function NoteFields({
           />
         </Property>
       </div>
-<Property label={committees('committee')} quiet empty={!note.committeeId}>
-        <CommitteePicker value={note.committeeId} onChange={(committeeId) => save({ committeeId })} />
+      <Property label={committees('committee')} quiet empty={!note.committeeId}>
+        <CommitteePicker
+          value={note.committeeId}
+          onChange={(committeeId) => save({ committeeId })}
+        />
       </Property>
       <ParticipantLinks participants={note.participants} />
       <TagsEditor tags={note.tags} save={(tags) => save({ tags })} action={tagsAction} />
@@ -69,9 +71,33 @@ export function NoteFields({
         value={note.content}
         mentions={mentions.mentions}
         onCommit={mentions.commit}
-        action={contentAction}
+        action={<ContentActions note={note} save={save} action={contentAction} />}
       />
     </fieldset>
+  );
+}
+// NOTES-B27: an empty note offers a template to insert, beside whatever the AI slot holds.
+function ContentActions({
+  note,
+  save,
+  action,
+}: {
+  note: NoteDetail;
+  save: Save;
+  action: ReactNode;
+}) {
+  const t = useTranslations('notes');
+  return (
+    <>
+      {!note.content.trim() && (
+        <TemplateSelect
+          value=""
+          label={t('insertTemplate')}
+          onPick={(_id, body) => body && save({ content: body })}
+        />
+      )}
+      {action}
+    </>
   );
 }
 // NOTES-B08: "@" lists the workspace's people and offers to add an unknown name; the participants
@@ -167,40 +193,6 @@ function useDraftProperties(note: NoteDetail, save: Save) {
     });
   };
   return { draft, change };
-}
-// "No type" first, then the enabled types, plus the note's current type when it has since been
-// disabled (NOTES-I02).
-export function TypeSelect({
-  value,
-  current,
-  onChange,
-  name,
-}: {
-  value: string;
-  current?: string;
-  onChange: (value: string) => void;
-  name?: string;
-}) {
-  const t = useTranslations('notes');
-  const types = useNoteTypes();
-  const label = useTypeLabel(types.data?.data);
-  const ids = (types.data?.data ?? []).filter((type) => type.enabled).map((type) => type.id);
-  if (current && !ids.includes(current)) ids.unshift(current);
-  if (value && !ids.includes(value)) ids.unshift(value);
-  const items: Choice[] = [
-    { value: '', text: t('noType'), label: t('noType') },
-    ...ids.map((id) => ({ value: id, text: label(id), label: label(id) })),
-  ];
-  return (
-    <ChoiceSelect
-      items={items}
-      value={value}
-      label={t('type')}
-      disabled={types.isPending || Boolean(types.error)}
-      {...(name ? { name } : {})}
-      onChange={onChange}
-    />
-  );
 }
 // The title is the heading itself: Enter commits, the accessible label stays "Note title".
 function NoteTitle({ title, save }: { title: string; save: Save }) {

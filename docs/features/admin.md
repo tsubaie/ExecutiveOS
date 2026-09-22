@@ -25,6 +25,7 @@ Everything an administrator needs to run the installation from the browser: setu
 
 - ADMIN-B07 Settings pages render from the registry: each key with its schema-driven control, default, description, and reset. Workspace keys are admin-only; user keys appear in the profile. Values validated on save; invalid → field errors.
 - ADMIN-B08 Notes types editor (`notes.types`, `notes.default_type`) on `/admin/notes`: add, rename label per locale, disable (existing notes keep the identifier), choose the default (`NOTES-B20`).
+- ADMIN-B30 Note templates editor (`notes.templates`) on `/admin/notes`: edit each template's label and body per locale, disable, add a template by identifier; an empty setting shows the built-in templates as the starting point (`NOTES-B27`).
 - ADMIN-B09 KPI thresholds editor with validation and a preview of how many KPIs change status.
 
 ## AI

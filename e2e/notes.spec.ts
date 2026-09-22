@@ -322,3 +322,25 @@ test('NOTES-A12 NOTES-B20 ADMIN-B08 an administrator adds a note type and makes 
     });
   }
 });
+test('NOTES-A13 NOTES-B27 ADMIN-B30 a note created from the Meeting template opens with its sections; administration lists the built-in templates', async ({
+  page,
+}) => {
+  await loginAs(page, 'en');
+  const title = `Template ${crypto.randomUUID()}`;
+  await page.goto(`/notes?view=all&q=${encodeURIComponent(title)}`);
+  await page.getByRole('button', { name: en.common.create, exact: true }).click();
+  await page.getByLabel(en.notes.title, { exact: true }).fill(title);
+  await page.getByLabel(en.notes.template, { exact: true }).click();
+  await page.getByRole('option', { name: en.notes.templateMeeting, exact: true }).click();
+  await page.getByRole('button', { name: en.common.create, exact: true }).last().click();
+  await expect(page).toHaveURL(/id=/);
+  await expect(detail(page).getByRole('heading', { name: 'Attendees', exact: true })).toBeVisible();
+  await expect(detail(page).getByRole('heading', { name: 'Decisions', exact: true })).toBeVisible();
+  await page.goto('/admin/notes');
+  await expect(page.getByLabel(`${en.admin.bodyEn} meeting`, { exact: true })).toHaveValue(
+    /## Attendees/,
+  );
+  await expect(page.getByLabel(`${en.admin.bodyAr} one_on_one`, { exact: true })).toHaveValue(
+    /## الهدف/,
+  );
+});

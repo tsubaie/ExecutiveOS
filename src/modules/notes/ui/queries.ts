@@ -1,5 +1,10 @@
 'use client';
-import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '@/core/http/client';
 import { PersonList, PersonCreated, personDraft } from '@/modules/people/schema/validation';
@@ -9,6 +14,7 @@ import {
   NoteDetail,
   NoteList,
   NoteTypes,
+  NoteTemplates,
   TagList,
   BulkResult,
   type NoteCreate,
@@ -46,6 +52,12 @@ export function useNoteTypes() {
   return useQuery({
     queryKey: ['notes', 'types'],
     queryFn: () => request('/notes/types', NoteTypes),
+  });
+}
+export function useNoteTemplates() {
+  return useQuery({
+    queryKey: ['notes', 'templates'],
+    queryFn: () => request('/notes/templates', NoteTemplates),
   });
 }
 export function useTags() {

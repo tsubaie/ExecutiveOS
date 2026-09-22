@@ -18,16 +18,22 @@ import {
   BulkResult,
   TagList,
   NoteTypes,
+  NoteTemplates,
 } from './schema/validation';
 import * as service from './service';
 import { listManagedTags, manageTags } from './service';
 import { ManageTags, ManageTagsResult } from './schema/validation';
 export const managedTags = defineHandler({
-  guard: 'admin', input: z.strictObject({}), response: TagList,
+  guard: 'admin',
+  input: z.strictObject({}),
+  response: TagList,
   handler: (_, ctx) => listManagedTags(authenticated(ctx)),
 });
 export const manageTagSelection = defineHandler({
-  guard: 'admin', input: ManageTags, response: ManageTagsResult, idempotent: true,
+  guard: 'admin',
+  input: ManageTags,
+  response: ManageTagsResult,
+  idempotent: true,
   handler: (input, ctx) => manageTags(authenticated(ctx), input),
 });
 const noteId = (params: Record<string, string>) => z.uuid().parse(params.id);
@@ -122,6 +128,12 @@ export const types = defineHandler({
   response: NoteTypes,
   handler: (_input, ctx) => service.listTypes(authenticated(ctx)),
 });
+export const templates = defineHandler({
+  guard: 'session',
+  input: z.strictObject({}),
+  response: NoteTemplates,
+  handler: (_input, ctx) => service.listTemplates(authenticated(ctx)),
+});
 export const tags = defineHandler({
   guard: 'session',
   input: z.strictObject({}),
@@ -146,8 +158,23 @@ export const tagsApply = noteAiApplyHandler('notes.suggest_tags', createSuggeste
 export const refineDiscard = noteAiDiscardHandler('notes.refine');
 export const tagsDiscard = noteAiDiscardHandler('notes.suggest_tags');
 
-async function createSuggestedTask(ctx: Context, noteId: string, task: z.infer<typeof SuggestedTask>, ownerId: string | null) {
-  const row = await createTask(ctx, TaskCreate.parse({ title: task.title, description: task.description,
-    status: task.status, priority: task.priority, dueDate: task.due_date, sourceNoteId: noteId, ownerId }));
+async function createSuggestedTask(
+  ctx: Context,
+  noteId: string,
+  task: z.infer<typeof SuggestedTask>,
+  ownerId: string | null,
+) {
+  const row = await createTask(
+    ctx,
+    TaskCreate.parse({
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      dueDate: task.due_date,
+      sourceNoteId: noteId,
+      ownerId,
+    }),
+  );
   return row.id;
 }
