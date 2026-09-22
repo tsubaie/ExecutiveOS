@@ -1,6 +1,7 @@
 /** KPIS-I01–I04: one reading per date, one target per quarter, children hidden with their KPI's
  * operation id, and thresholds validated before any status is read from them. */
 import 'server-only';
+import { transactional } from '@/core/db/transaction';
 import type { Context } from '@/core/auth/session';
 import { id } from '@/core/db/ids';
 import { writeAudit, toJson } from '@/core/db/audit-repo';
@@ -17,8 +18,6 @@ import {
   type Tuple,
 } from '@/core/db/keyset';
 import { AppError } from '@/core/http/errors';
-import { routes } from '@/core/routes';
-import type { HomeSection } from '@/core/modules/server-manifest';
 import { assignablePeople, getPerson } from '@/modules/people';
 import {
   Kpi,
@@ -41,19 +40,19 @@ import {
 } from './schema/validation';
 import * as repo from './repo';
 type Row = Awaited<ReturnType<typeof repo.selectKpi>>;
-type Scope = { today: string; thresholds: StatusThresholds; offset?: number };
+export type Scope = { today: string; thresholds: StatusThresholds; offset?: number };
 type Keyed = { item: Kpi; key: Tuple };
 async function scope(ctx: Context): Promise<Scope> {
   const today = dayAt(await getSetting(ctx.db, 'workspace.timezone'));
   return { today, thresholds: await getSetting(ctx.db, 'kpis.status_thresholds') };
 }
-const toKpi = (row: NonNullable<Row>, at: Scope) =>
+export const toKpi = (row: NonNullable<Row>, at: Scope) =>
   Kpi.parse({ ...row, meta: deriveMeta(row, at) });
 // KPIS-B07: the sort keys are the cursor tuple. The default files the scorecard under its
 // objectives, alphabetically, severity first inside each, unfiled last; `status` ranks severity
 // across all of them, against the compared period. `rank` holds severity to today's reading so a
 // comparison never reshuffles the default order (KPIS-B26).
-function keyOf(item: Kpi, sort: string, rank?: number): Tuple {
+export function keyOf(item: Kpi, sort: string, rank?: number): Tuple {
   const name = item.name.toLocaleLowerCase();
   if (sort === 'name') return [name, item.id];
   if (sort === 'status') return [severityRank[item.meta.status], name, item.id];
@@ -160,7 +159,7 @@ async function requireOwner(ctx: Context, ownerId: string | null | undefined) {
 }
 const rejected = (field: string, reason: string) =>
   new AppError('rule_violation', { rule: 'KPIS-B06', fieldErrors: { [field]: [reason] } });
-export async function createKpi(ctx: Context, input: KpiCreate) {
+async function createKpiInTransaction(ctx: Context, input: KpiCreate) {
   await requireObjective(ctx, input.objectiveId);
   await requireOwner(ctx, input.ownerId);
   const row = await repo.insertKpi(ctx.db, {
@@ -172,7 +171,7 @@ export async function createKpi(ctx: Context, input: KpiCreate) {
   await writeAudit(ctx.db, ctx.user.id, 'create', 'kpi', row.id, toJson(input));
   return getKpiDetail(ctx, row.id);
 }
-export async function patchKpi(ctx: Context, kpiId: string, input: KpiPatch) {
+async function patchKpiInTransaction(ctx: Context, kpiId: string, input: KpiPatch) {
   if (input.objectiveId !== undefined) await requireObjective(ctx, input.objectiveId);
   if (input.ownerId !== undefined) await requireOwner(ctx, input.ownerId);
   const row = await requireRevision(ctx, kpiOps, kpiId, input.revision);
@@ -181,7 +180,7 @@ export async function patchKpi(ctx: Context, kpiId: string, input: KpiPatch) {
   await applyUpdate(ctx, kpiOps, row, fields);
   return getKpiDetail(ctx, kpiId);
 }
-export async function removeKpi(ctx: Context, kpiId: string, revision: number) {
+async function removeKpiInTransaction(ctx: Context, kpiId: string, revision: number) {
   const row = await requireRevision(ctx, kpiOps, kpiId, revision);
   const opId = id();
   await applyUpdate(
@@ -194,7 +193,7 @@ export async function removeKpi(ctx: Context, kpiId: string, revision: number) {
   await repo.hideChildren(ctx.db, kpiId, opId);
   return { opId };
 }
-export async function restoreKpi(ctx: Context, kpiId: string, opId: string) {
+async function restoreKpiInTransaction(ctx: Context, kpiId: string, opId: string) {
   await getKpi(ctx, kpiId, true);
   await restoreByOp(ctx, kpiOps, kpiId, opId);
   await repo.revealChildren(ctx.db, kpiId, opId);
@@ -228,7 +227,7 @@ export async function getObjective(ctx: Context, objectiveId: string, includeDel
   if (!row || (row.deletedAt && !includeDeleted)) throw new AppError('not_found');
   return Objective.parse(row);
 }
-export async function createObjective(ctx: Context, input: ObjectiveCreate) {
+async function createObjectiveInTransaction(ctx: Context, input: ObjectiveCreate) {
   const row = await repo.insertObjective(ctx.db, {
     ...input,
     id: id(),
@@ -238,14 +237,18 @@ export async function createObjective(ctx: Context, input: ObjectiveCreate) {
   await writeAudit(ctx.db, ctx.user.id, 'create', 'objective', row.id, toJson(input));
   return getObjective(ctx, row.id);
 }
-export async function patchObjective(ctx: Context, objectiveId: string, input: ObjectivePatch) {
+async function patchObjectiveInTransaction(
+  ctx: Context,
+  objectiveId: string,
+  input: ObjectivePatch,
+) {
   const row = await requireRevision(ctx, objectiveOps, objectiveId, input.revision);
   const { revision, ...fields } = input;
   void revision;
   await applyUpdate(ctx, objectiveOps, row, fields);
   return getObjective(ctx, objectiveId);
 }
-export async function removeObjective(ctx: Context, objectiveId: string, revision: number) {
+async function removeObjectiveInTransaction(ctx: Context, objectiveId: string, revision: number) {
   const row = await requireRevision(ctx, objectiveOps, objectiveId, revision);
   const opId = id();
   await applyUpdate(
@@ -257,12 +260,15 @@ export async function removeObjective(ctx: Context, objectiveId: string, revisio
   );
   return { opId };
 }
-export async function restoreObjective(ctx: Context, objectiveId: string, opId: string) {
+async function restoreObjectiveInTransaction(ctx: Context, objectiveId: string, opId: string) {
   await getObjective(ctx, objectiveId, true);
   await restoreByOp(ctx, objectiveOps, objectiveId, opId);
   return getObjective(ctx, objectiveId);
 }
-export async function reorderObjectives(ctx: Context, items: { id: string; revision: number }[]) {
+async function reorderObjectivesInTransaction(
+  ctx: Context,
+  items: { id: string; revision: number }[],
+) {
   await repo.lockObjectives(ctx.db);
   for (const [sortOrder, item] of items.entries()) {
     const row = await requireRevision(ctx, objectiveOps, item.id, item.revision);
@@ -277,7 +283,7 @@ export async function listReadings(ctx: Context, kpiId: string) {
 }
 // KPIS-B09: a duplicate date is a 409 that names the row to overwrite, so the client can offer the
 // overwrite rather than silently replacing a reading somebody else entered.
-export async function addReading(ctx: Context, kpiId: string, input: ReadingCreate) {
+async function addReadingInTransaction(ctx: Context, kpiId: string, input: ReadingCreate) {
   await getKpi(ctx, kpiId);
   await repo.lockKpi(ctx.db, kpiId);
   const existing = await repo.selectReadingOn(ctx.db, kpiId, input.readingDate);
@@ -292,7 +298,7 @@ export async function addReading(ctx: Context, kpiId: string, input: ReadingCrea
   await writeAudit(ctx.db, ctx.user.id, 'create', 'kpi_reading', row.id, toJson(input));
   return getKpiDetail(ctx, kpiId);
 }
-export async function overwriteReading(
+async function overwriteReadingInTransaction(
   ctx: Context,
   kpiId: string,
   day: string,
@@ -313,7 +319,7 @@ async function requireReading(ctx: Context, kpiId: string, readingId: string) {
   if (!row || row.deletedAt || row.kpiId !== kpiId) throw new AppError('not_found');
   return row;
 }
-export async function patchReading(
+async function patchReadingInTransaction(
   ctx: Context,
   kpiId: string,
   readingId: string,
@@ -329,7 +335,7 @@ export async function patchReading(
   await writeAudit(ctx.db, ctx.user.id, 'update', 'kpi_reading', readingId, toJson(fields));
   return getKpiDetail(ctx, kpiId);
 }
-export async function removeReading(ctx: Context, kpiId: string, readingId: string) {
+async function removeReadingInTransaction(ctx: Context, kpiId: string, readingId: string) {
   await getKpi(ctx, kpiId);
   const current = await requireReading(ctx, kpiId, readingId);
   const opId = id();
@@ -348,7 +354,7 @@ export async function listTargets(ctx: Context, kpiId: string) {
   await getKpi(ctx, kpiId, true);
   return { data: await repo.selectTargets(ctx.db, kpiId) };
 }
-export async function putTargets(ctx: Context, kpiId: string, input: TargetsPut) {
+async function putTargetsInTransaction(ctx: Context, kpiId: string, input: TargetsPut) {
   await getKpi(ctx, kpiId);
   await repo.lockKpi(ctx.db, kpiId);
   await repo.upsertTargets(
@@ -360,7 +366,7 @@ export async function putTargets(ctx: Context, kpiId: string, input: TargetsPut)
   await writeAudit(ctx.db, ctx.user.id, 'update', 'kpi_targets', kpiId, toJson(input));
   return getKpiDetail(ctx, kpiId);
 }
-export async function removeTarget(ctx: Context, kpiId: string, targetId: string) {
+async function removeTargetInTransaction(ctx: Context, kpiId: string, targetId: string) {
   await getKpi(ctx, kpiId);
   const opId = id();
   const row = await repo.deleteTarget(ctx.db, targetId, opId);
@@ -368,31 +374,20 @@ export async function removeTarget(ctx: Context, kpiId: string, targetId: string
   await writeAudit(ctx.db, ctx.user.id, 'delete', 'kpi_target', targetId, {}, opId);
   return { opId };
 }
-// HOME-B01 § Attention KPIs: the page consumes this through the module's server manifest.
-export async function homeSummary(ctx: Context, day: string): Promise<HomeSection[]> {
-  const at: Scope = { today: day, thresholds: await getSetting(ctx.db, 'kpis.status_thresholds') };
-  const span = { today: day, fromYear: Number(day.slice(0, 4)) - 1 };
-  const rows = await repo.selectKpis(ctx.db, KpiListQuery.parse({ view: 'attention' }), span);
-  const attention = rows
-    .map((row) => toKpi(row, at))
-    .filter((item) => !item.deletedAt && attentionStatuses.includes(item.meta.status))
-    .sort((left, right) => compareTuples(keyOf(left, 'default'), keyOf(right, 'default')));
-  return [
-    {
-      key: 'kpis',
-      enabled: true,
-      count: attention.length,
-      href: routes.kpis({ view: 'attention' }),
-      stale: attention.filter((item) => item.meta.status === 'stale').length,
-      items: attention.slice(0, 5).map((item) => ({
-        id: item.id,
-        title: item.name,
-        href: routes.kpis({ view: 'all', id: item.id }),
-        committee: item.objectiveName,
-        date: item.meta.currentDate,
-        status: item.meta.status,
-        ratio: item.meta.achievement,
-      })),
-    },
-  ];
-}
+// ADMIN-B36: the public surface. Each call opens its own transaction, or a savepoint inside the
+// caller's, so every write it makes lands together or not at all.
+export const createKpi = transactional(createKpiInTransaction);
+export const patchKpi = transactional(patchKpiInTransaction);
+export const removeKpi = transactional(removeKpiInTransaction);
+export const restoreKpi = transactional(restoreKpiInTransaction);
+export const createObjective = transactional(createObjectiveInTransaction);
+export const patchObjective = transactional(patchObjectiveInTransaction);
+export const removeObjective = transactional(removeObjectiveInTransaction);
+export const restoreObjective = transactional(restoreObjectiveInTransaction);
+export const reorderObjectives = transactional(reorderObjectivesInTransaction);
+export const addReading = transactional(addReadingInTransaction);
+export const overwriteReading = transactional(overwriteReadingInTransaction);
+export const patchReading = transactional(patchReadingInTransaction);
+export const removeReading = transactional(removeReadingInTransaction);
+export const putTargets = transactional(putTargetsInTransaction);
+export const removeTarget = transactional(removeTargetInTransaction);

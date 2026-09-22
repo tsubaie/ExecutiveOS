@@ -147,6 +147,7 @@ export const breakdown = defineHandler({
   input: Revision,
   response: z.object({ data: z.object({ id: z.uuid() }) }),
   status: 202,
+  enqueues: true,
   handler: async (input, ctx, params) => ({
     data: await startBreakdown(authenticated(ctx), taskId(params), input.revision),
   }),

@@ -14,13 +14,16 @@ export async function lockWorkspace(database: Database) {
   if (!row) throw new Error('Workspace singleton missing');
   return row;
 }
-export async function setSetupToken(database: Database, setupTokenHash: string) {
+export async function setSetupToken(database: Database, setupTokenHash: string | null) {
   await database.update(workspace).set({ setupTokenHash }).where(eq(workspace.id, 1));
 }
-export async function finishSetup(database: Database) {
+// ADMIN-B01: the spent token is replaced by a fingerprint of the whole submission for the replay
+// window. It can only sign the new administrator back in, never create another, and bootstrap
+// clears it on the next start.
+export async function finishSetup(database: Database, replayHash: string) {
   await database
     .update(workspace)
-    .set({ setupCompletedAt: new Date(), setupTokenHash: null })
+    .set({ setupCompletedAt: new Date(), setupTokenHash: replayHash })
     .where(eq(workspace.id, 1));
 }
 export async function userByEmail(database: Database, email: string) {

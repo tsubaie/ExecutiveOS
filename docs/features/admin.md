@@ -11,12 +11,12 @@ Everything an administrator needs to run the installation from the browser: setu
 
 ## Setup and recovery
 
-- ADMIN-B01 First boot prints `SETUP_TOKEN` (random, 32 bytes) to the log; `/setup` requires it, creates the admin, the principal person (linked to the admin unless "the principal is someone else" is chosen), workspace name, default locale, timezone; runs in a transaction locking `workspace`; a second submission after completion → 409.
+- ADMIN-B01 First boot prints `SETUP_TOKEN` (random, 32 bytes) to the log; `/setup` requires it, creates the admin, the principal person (linked to the admin unless "the principal is someone else" is chosen), workspace name, default locale, timezone; runs in one transaction locking `workspace` (the request's own, so a setup that fails to commit leaves nothing behind); a second submission after completion → 409. The exception is a retry after a lost response: for 15 minutes after completion, and until the next restart, the identical submission (same setup token, same fields, the new administrator's password) signs in as that administrator and returns the same user instead of failing. Concurrent identical submissions therefore both succeed with one administrator; any other submission after completion is still 409.
 - ADMIN-B02 `/recovery` exists only when `RECOVERY_TOKEN` is set; accepts the token once, lets the operator set a new password for a chosen admin, then records the token hash as used (a restart with the same token is refused).
 
 ## Users
 
-- ADMIN-B03 List, invite (create with a temporary password shown once), edit name and role, deactivate/reactivate, reset password (temporary, shown once), view sessions and revoke. Deactivation and password reset revoke all sessions of that user.
+- ADMIN-B03 List, invite (create with a temporary password shown once), edit name and role, deactivate/reactivate, reset password (temporary, shown once), view sessions and revoke. Creating a user runs in the users service, which generates and hashes the temporary password and writes a `create` audit record naming the user's name, email and role, never a password or hash. Deactivation and password reset revoke all sessions of that user.
 - ADMIN-B04 Last-admin protection: demoting or deactivating the last active admin → 422 `ADMIN-B04`.
 - ADMIN-B05 Each member manages their own profile: name, password, locale, timezone, theme, numerals; changing password revokes other sessions.
 - ADMIN-B06 Linking a user to a person (`people.user_id`) is done from the user page; one-to-one.
@@ -47,6 +47,11 @@ Everything an administrator needs to run the installation from the browser: setu
 - ADMIN-B12 Backups page: schedule (from `schedules`), retention (`retention.backup_count`, default 14), list of backups with size, manifest status, Create now (enqueues `system.backup`), Download (admin, streamed), Delete, Verify (checks manifest checksums).
 - ADMIN-B13 Restore is a command (`pnpm backup:restore <file>`) documented on the page; it puts the app in maintenance mode, restores DB and files, verifies, and exits maintenance. Maintenance mode returns 503 for all routes except health.
 - ADMIN-B14 Export `POST /admin/export` enqueues `system.export` producing a zip: `manifest.json`, one JSON file per table (excluding sessions, login_attempts, idempotency_keys, private notes of other users), markdown renders of notes and briefs, original documents that are available. The requesting admin's own private notes are included under their user id. Download when ready.
+
+## Service guarantees
+
+- ADMIN-B36 **Every save is all or nothing.** Each public service method that writes owns its transaction: called directly (a script, another module, a test) it opens one; inside the request handler's transaction it runs as a savepoint. A failure at any step undoes every write that method made. A test fails if any writing export of any module loses this. Savepoint statements are transaction control and do not count against the per-request query budget.
+- ADMIN-B37 **A full job queue is a retryable refusal.** When a job kind already has 100 queued or running jobs, enqueueing answers 429 `rate_limited` with `{ scope: "queue", kind, retryAfterSeconds: 30 }` and a `Retry-After` header, never 500. Routes that enqueue declare it, and OpenAPI lists the 429 for them.
 
 ## Shell placement
 

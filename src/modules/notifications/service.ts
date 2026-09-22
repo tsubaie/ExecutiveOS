@@ -1,13 +1,9 @@
 import 'server-only';
+import { transactional } from '@/core/db/transaction';
 import type { Context } from '@/core/auth/session';
 import { AppError } from '@/core/http/errors';
 import { notificationContributors } from '@/core/modules/registry';
-import {
-  selectFeed,
-  countUnread,
-  markRead,
-  markManyRead,
-} from '@/core/db/notifications-repo';
+import { selectFeed, countUnread, markRead, markManyRead } from '@/core/db/notifications-repo';
 import { z } from 'zod';
 import type { FeedRow } from '@/core/db/notifications-repo';
 import { NotificationKind, type Notification } from './schema/validation';
@@ -81,15 +77,15 @@ const Payload = z.object({ actorName: z.string() }).partial().catch({});
 function actorName(payload: unknown) {
   return Payload.parse(payload).actorName ?? null;
 }
-export async function readOne(ctx: Context, notificationId: string) {
+export const readOne = transactional(async function readOne(ctx: Context, notificationId: string) {
   const row = await markRead(ctx.db, ctx.user.id, notificationId);
   if (!row) throw new AppError('not_found');
   return { id: row.id, readAt: row.readAt?.toISOString() ?? null };
-}
+});
 // NOTIF-B07: exactly the rows the reader could see. A notification whose subject has gone is not
 // something they were shown, so it is not something "mark all as read" answers for.
-export async function readAll(ctx: Context) {
+export const readAll = transactional(async function readAll(ctx: Context) {
   const page = await feed(ctx, 200, null);
   const unread = page.items.filter((item) => !item.readAt).map((item) => item.id);
   return { marked: await markManyRead(ctx.db, ctx.user.id, unread) };
-}
+});

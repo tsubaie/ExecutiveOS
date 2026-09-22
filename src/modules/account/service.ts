@@ -1,4 +1,5 @@
 import 'server-only';
+import { transactional } from '@/core/db/transaction';
 import { currentSessionHash, type Context } from '@/core/auth/session';
 import { AppError } from '@/core/http/errors';
 import { hashPassword, verifyPassword } from '@/core/auth/password';
@@ -73,7 +74,10 @@ async function sessions(ctx: Context) {
 }
 // ACCT-B01/B04: the name and the four preferences. A preference set to the empty string clears the
 // reader's row so the workspace default reaches them again (ACCT-I03); it is never copied.
-export async function patchAccount(ctx: Context, patch: AccountPatch) {
+export const patchAccount = transactional(async function patchAccount(
+  ctx: Context,
+  patch: AccountPatch,
+) {
   const user = await userById(ctx.db, ctx.user.id);
   if (!user) throw new AppError('not_found');
   checkRevision(user.revision, patch.revision);
@@ -98,10 +102,14 @@ export async function patchAccount(ctx: Context, patch: AccountPatch) {
     );
   }
   return getAccount(ctx);
-}
+});
 // ACCT-B01: the address is lowercased by the schema and the unique index is the real guard; this
 // check exists so the reader gets a field error instead of a constraint violation.
-export async function changeEmail(ctx: Context, revision: number, email: string) {
+export const changeEmail = transactional(async function changeEmail(
+  ctx: Context,
+  revision: number,
+  email: string,
+) {
   const user = await userById(ctx.db, ctx.user.id);
   if (!user) throw new AppError('not_found');
   checkRevision(user.revision, revision);
@@ -118,12 +126,16 @@ export async function changeEmail(ctx: Context, revision: number, email: string)
     toJson({ email: { from: user.email, to: email } }),
   );
   return getAccount(ctx);
-}
+});
 // ACCT-B02: the current password is required, and on success every other session is revoked while
 // the one making the request survives. Signing the reader out of the tab they just used to change
 // their password would be a punishment for doing the right thing; leaving the other devices signed
 // in would defeat the point of changing it.
-export async function changePassword(ctx: Context, current: string, next: string) {
+export const changePassword = transactional(async function changePassword(
+  ctx: Context,
+  current: string,
+  next: string,
+) {
   const user = await userById(ctx.db, ctx.user.id);
   if (!user) throw new AppError('not_found');
   if (!(await verifyPassword(user.passwordHash, current)))
@@ -133,7 +145,11 @@ export async function changePassword(ctx: Context, current: string, next: string
     passwordChangedAt: new Date(),
     revision: user.revision + 1,
   });
-  const revoked = await revokeOtherSessions(ctx.db, ctx.user.id, (await currentSessionHash()) ?? '');
+  const revoked = await revokeOtherSessions(
+    ctx.db,
+    ctx.user.id,
+    (await currentSessionHash()) ?? '',
+  );
   // The diff records that sessions were ended and how many; it never records either password.
   await writeAudit(
     ctx.db,
@@ -144,15 +160,22 @@ export async function changePassword(ctx: Context, current: string, next: string
     toJson({ sessionsRevoked: revoked }),
   );
   return { revoked };
-}
-export async function signOutOthers(ctx: Context) {
-  const revoked = await revokeOtherSessions(ctx.db, ctx.user.id, (await currentSessionHash()) ?? '');
+});
+export const signOutOthers = transactional(async function signOutOthers(ctx: Context) {
+  const revoked = await revokeOtherSessions(
+    ctx.db,
+    ctx.user.id,
+    (await currentSessionHash()) ?? '',
+  );
   return { revoked };
-}
+});
 // The session id is the reader's own or it revokes nothing: the update is scoped by user id, so an
 // id lifted from somewhere else matches no row rather than matching someone else's.
-export async function revokeSessionById(ctx: Context, sessionId: string) {
+export const revokeSessionById = transactional(async function revokeSessionById(
+  ctx: Context,
+  sessionId: string,
+) {
   const done = await revokeOwnSession(ctx.db, ctx.user.id, sessionId);
   if (!done) throw new AppError('not_found');
   return { id: sessionId };
-}
+});

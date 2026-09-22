@@ -1,5 +1,6 @@
 /** NOTES-I01–I07, B01–B16: standalone notes with participants, tags, linked tasks and archive. */
 import 'server-only';
+import { transactional } from '@/core/db/transaction';
 import { requireCommittee } from '@/modules/committees';
 import { z } from 'zod';
 import type { Context } from '@/core/auth/session';
@@ -112,7 +113,7 @@ export async function getNote(ctx: Context, noteId: string, deleted = false) {
   if (!row || (!deleted && row.deletedAt)) throw new AppError('not_found', { entityType: 'note' });
   return NoteDetail.parse({ ...row, tasks: await repo.selectNoteTasks(ctx.db, noteId) });
 }
-export async function createNote(ctx: Context, input: NoteCreate) {
+export const createNote = transactional(async function createNote(ctx: Context, input: NoteCreate) {
   await requireCommittee(ctx, input.committeeId);
   const types = await noteTypes(ctx);
   const type = input.type ?? (await defaultType(ctx, types));
@@ -131,7 +132,7 @@ export async function createNote(ctx: Context, input: NoteCreate) {
   await notifyMentioned(ctx, row.id, participantIds);
   await writeAudit(ctx.db, ctx.user.id, 'create', 'note', row.id, toJson(input));
   return getNote(ctx, row.id);
-}
+});
 // NOTES-B07: `participantIds` replaces the set; rows removed are soft-deleted under one op id.
 async function setParticipants(ctx: Context, noteId: string, personIds: string[]) {
   await requirePeople(ctx, personIds);
@@ -157,7 +158,11 @@ async function notifyMentioned(ctx: Context, noteId: string, added: readonly str
     to: await userIdsForPeople(ctx, added),
   });
 }
-export async function patchNote(ctx: Context, noteId: string, input: NotePatch) {
+export const patchNote = transactional(async function patchNote(
+  ctx: Context,
+  noteId: string,
+  input: NotePatch,
+) {
   const note = await requireRevision(ctx, ops, noteId, input.revision);
   await requireCommittee(ctx, input.committeeId, note.committeeId);
   if (input.type !== undefined) requireType(await noteTypes(ctx), input.type);
@@ -166,7 +171,7 @@ export async function patchNote(ctx: Context, noteId: string, input: NotePatch) 
   if (participantIds) await setParticipants(ctx, noteId, participantIds);
   await applyUpdate(ctx, ops, note, fields, { diff: toJson({ ...fields, participantIds }) });
   return getNote(ctx, noteId);
-}
+});
 async function setArchived(ctx: Context, noteId: string, revision: number, archived: boolean) {
   const note = await requireRevision(ctx, ops, noteId, revision);
   if (Boolean(note.archivedAt) !== archived)
@@ -179,11 +184,17 @@ async function setArchived(ctx: Context, noteId: string, revision: number, archi
     );
   return getNote(ctx, noteId);
 }
-export const archiveNote = (ctx: Context, noteId: string, revision: number) =>
-  setArchived(ctx, noteId, revision, true);
-export const unarchiveNote = (ctx: Context, noteId: string, revision: number) =>
-  setArchived(ctx, noteId, revision, false);
-export async function removeNote(ctx: Context, noteId: string, revision: number) {
+export const archiveNote = transactional((ctx: Context, noteId: string, revision: number) =>
+  setArchived(ctx, noteId, revision, true),
+);
+export const unarchiveNote = transactional((ctx: Context, noteId: string, revision: number) =>
+  setArchived(ctx, noteId, revision, false),
+);
+export const removeNote = transactional(async function removeNote(
+  ctx: Context,
+  noteId: string,
+  revision: number,
+) {
   const note = await requireRevision(ctx, ops, noteId, revision);
   const opId = id();
   await applyUpdate(
@@ -194,11 +205,15 @@ export async function removeNote(ctx: Context, noteId: string, revision: number)
     { action: 'delete', opId, diff: {} },
   );
   return { opId };
-}
-export async function restoreNote(ctx: Context, noteId: string, opId: string) {
+});
+export const restoreNote = transactional(async function restoreNote(
+  ctx: Context,
+  noteId: string,
+  opId: string,
+) {
   await restoreByOp(ctx, ops, noteId, opId);
   return getNote(ctx, noteId);
-}
+});
 // NOTES-B12: every item is checked before anything changes; a throw rolls the transaction back.
 async function bulkNotes(
   ctx: Context,
@@ -218,15 +233,15 @@ async function bulkNotes(
   }
   return { data: { updatedIds } };
 }
-export function bulkArchive(ctx: Context, input: BulkItems) {
+export const bulkArchive = transactional(function bulkArchive(ctx: Context, input: BulkItems) {
   return bulkNotes(
     ctx,
     input,
     (note) => (note.archivedAt ? null : { archivedAt: new Date() }),
     'archive',
   );
-}
-export function bulkTag(ctx: Context, input: BulkTag) {
+});
+export const bulkTag = transactional(function bulkTag(ctx: Context, input: BulkTag) {
   const lower = input.tag.toLowerCase();
   return bulkNotes(
     ctx,
@@ -239,7 +254,7 @@ export function bulkTag(ctx: Context, input: BulkTag) {
     },
     'tag',
   );
-}
+});
 export async function listTypes(ctx: Context) {
   const types = await noteTypes(ctx);
   return { data: types, meta: { defaultType: await defaultType(ctx, types) } };

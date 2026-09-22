@@ -146,6 +146,7 @@ function noteAiStart(capability: 'notes.refine' | 'notes.suggest_tags') {
     input: Revision,
     response: z.object({ data: z.object({ id: z.uuid() }) }),
     status: 202,
+    enqueues: true,
     handler: async (input, ctx, params) => ({
       data: await startNoteAi(authenticated(ctx), noteId(params), input.revision, capability),
     }),

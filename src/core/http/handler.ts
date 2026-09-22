@@ -29,6 +29,7 @@ export type HandlerMeta = {
   status: number;
   source: 'body' | 'query';
   idempotent: boolean;
+  enqueues: boolean;
 };
 type Options<I extends z.ZodType, O extends z.ZodType> = {
   guard: 'public' | 'session' | 'admin';
@@ -37,6 +38,8 @@ type Options<I extends z.ZodType, O extends z.ZodType> = {
   source?: 'body' | 'query';
   status?: number;
   idempotent?: boolean;
+  // The route may enqueue a job, so a full queue answers 429 (OpenAPI lists it).
+  enqueues?: boolean;
   handler: (
     input: z.output<I>,
     ctx: HandlerContext,
@@ -65,7 +68,7 @@ export function defineHandler<I extends z.ZodType, O extends z.ZodType>(options:
     try {
       if (await inMaintenance())
         return Response.json({ error: { code: 'maintenance', requestId } }, { status: 503 });
-      const user = await currentUser();
+      const user = await currentUser({ slide: true });
       if (options.guard !== 'public' && !user) throw new AppError('unauthenticated');
       if (options.guard === 'admin' && user?.role !== 'admin')
         throw new AppError('forbidden', { reason: 'role' });
@@ -99,6 +102,7 @@ function metaOf<I extends z.ZodType, O extends z.ZodType>(options: Options<I, O>
     status: options.status ?? 200,
     source: options.source ?? 'body',
     idempotent: options.idempotent ?? false,
+    enqueues: options.enqueues ?? false,
   };
 }
 async function execute<I extends z.ZodType, O extends z.ZodType>(
@@ -139,8 +143,17 @@ async function errorResponse(error: unknown, requestId: string) {
         : new AppError('internal');
   if (parsed.code === 'internal') logger.error({ requestId, err: error }, 'Request failed');
   const t = await getTranslations('errors');
+  const retry = z.object({ retryAfterSeconds: z.number() }).safeParse(parsed.details);
   return Response.json(
     { error: { code: parsed.code, message: t(parsed.code), details: parsed.details, requestId } },
-    { status: statuses[parsed.code], headers: { 'Cache-Control': 'no-store' } },
+    {
+      status: statuses[parsed.code],
+      headers: {
+        'Cache-Control': 'no-store',
+        ...(retry.success
+          ? { 'Retry-After': String(Math.ceil(retry.data.retryAfterSeconds)) }
+          : {}),
+      },
+    },
   );
 }

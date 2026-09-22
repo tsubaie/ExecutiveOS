@@ -23,14 +23,22 @@ export async function newSession(database: Database, userId: string) {
   });
   return raw;
 }
-export async function setSessionCookie(raw: string) {
+// ACCT-B09: the cookie lives exactly as long as the session row, so it never outlasts a revoked or
+// expired session and never lapses while the session is still being extended.
+export async function setSessionCookie(raw: string, expiresAt?: Date) {
+  const seconds = expiresAt
+    ? Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000))
+    : sessionDays * 86400;
   (await cookies()).set(defaults.cookieName, raw, {
     httpOnly: true,
     sameSite: 'lax',
     secure: secureCookies(),
     path: '/',
-    maxAge: sessionDays * 86400,
+    maxAge: seconds,
   });
+}
+export function slidingExpiry(absoluteExpiresAt: Date, now = Date.now()) {
+  return new Date(Math.min(now + sessionDays * 86400000, absoluteExpiresAt.getTime()));
 }
 export async function setLocaleCookie(locale: string) {
   (await cookies()).set('eos_locale', Locale.parse(locale), {
@@ -39,18 +47,22 @@ export async function setLocaleCookie(locale: string) {
     maxAge: 31536000,
   });
 }
-export async function currentUser() {
+/**
+ * ACCT-B09 the session slides only where the response can carry the new cookie: API requests
+ * pass `slide`, and each extension of the row's expiry re-issues the cookie with the same
+ * lifetime, capped by the absolute expiry. Page renders read the session without changing it,
+ * because a Server Component cannot set cookies.
+ */
+export async function currentUser(options: { slide?: boolean } = {}) {
   const raw = (await cookies()).get(defaults.cookieName)?.value;
   if (!raw) return null;
   const found = await sessionByHash(digest(raw));
   if (!found) return null;
-  if (Date.now() - found.session.lastSeenAt.getTime() > 60000)
-    await refreshSession(
-      found.session.id,
-      new Date(
-        Math.min(Date.now() + sessionDays * 86400000, found.session.absoluteExpiresAt.getTime()),
-      ),
-    );
+  if (options.slide && Date.now() - found.session.lastSeenAt.getTime() > 60000) {
+    const expiry = slidingExpiry(found.session.absoluteExpiresAt);
+    await refreshSession(found.session.id, expiry);
+    await setSessionCookie(raw, expiry);
+  }
   return User.parse(found.user);
 }
 // ACCT-B02/B03: which session is making this request. The cookie is the only thing a request knows

@@ -11480,6 +11480,16 @@
             },
             "description": "rule_violation"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "rate_limited"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -11676,6 +11686,16 @@
               }
             },
             "description": "rule_violation"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "rate_limited"
           },
           "500": {
             "content": {
@@ -16928,6 +16948,16 @@
             },
             "description": "rule_violation"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "rate_limited"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -17525,6 +17555,16 @@
               }
             },
             "description": "rule_violation"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "rate_limited"
           },
           "500": {
             "content": {
@@ -21280,6 +21320,16 @@
               }
             },
             "description": "rule_violation"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "rate_limited"
           },
           "500": {
             "content": {

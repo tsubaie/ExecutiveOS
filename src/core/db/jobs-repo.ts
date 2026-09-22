@@ -11,7 +11,9 @@ import {
 import { db, type Database } from './client';
 import { id } from './ids';
 import type { z } from 'zod';
+import { AppError } from '@/core/http/errors';
 export type Claimed = typeof jobs.$inferSelect;
+export const queueCapacity = 100;
 export async function enqueue(
   database: Database,
   kind: string,
@@ -31,7 +33,9 @@ export async function enqueue(
     .select({ count: count() })
     .from(jobs)
     .where(and(eq(jobs.kind, kind), inArray(jobs.status, ['queued', 'running'])));
-  if ((depth?.count ?? 0) >= 100) throw new Error('Queue capacity exceeded');
+  // Queue overload is the caller's to retry later, never a server fault (04-api-conventions § errors).
+  if ((depth?.count ?? 0) >= queueCapacity)
+    throw new AppError('rate_limited', { scope: 'queue', kind, retryAfterSeconds: 30 });
   const [row] = await database
     .insert(jobs)
     .values({ id: id(), kind, payload, dedupKey, createdBy: actorId })
@@ -240,6 +244,8 @@ export async function jobsHealth() {
 
 export async function requestedCancellations(activeIds: string[]) {
   if (!activeIds.length) return [];
-  return db().select({ id: jobs.id }).from(jobs)
+  return db()
+    .select({ id: jobs.id })
+    .from(jobs)
     .where(and(inArray(jobs.id, activeIds), eq(jobs.cancelRequested, true)));
 }

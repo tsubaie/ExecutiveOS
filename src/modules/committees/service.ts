@@ -1,5 +1,6 @@
 /** COMM-I01–I03: unique active names, revision/audit-safe mutations, preserve linked work. */
 import 'server-only';
+import { transactional } from '@/core/db/transaction';
 import { z } from 'zod';
 import type { Context } from '@/core/auth/session';
 import { id } from '@/core/db/ids';
@@ -66,7 +67,10 @@ async function uniqueName(ctx: Context, name: string, except?: string) {
   if (await repo.duplicateName(ctx.db, name, except))
     throw new AppError('conflict', { reason: 'unique', fieldErrors: { name: ['COMM-I01'] } });
 }
-export async function createCommittee(ctx: Context, input: CommitteeCreate) {
+export const createCommittee = transactional(async function createCommittee(
+  ctx: Context,
+  input: CommitteeCreate,
+) {
   await uniqueName(ctx, input.name);
   const row = await repo.insertCommittee(ctx.db, {
     ...input,
@@ -76,8 +80,12 @@ export async function createCommittee(ctx: Context, input: CommitteeCreate) {
   });
   await writeAudit(ctx.db, ctx.user.id, 'create', 'committee', row.id, toJson(input));
   return getCommittee(ctx, row.id);
-}
-export async function patchCommittee(ctx: Context, committeeId: string, input: CommitteePatch) {
+});
+export const patchCommittee = transactional(async function patchCommittee(
+  ctx: Context,
+  committeeId: string,
+  input: CommitteePatch,
+) {
   if (input.name !== undefined) await uniqueName(ctx, input.name, committeeId);
   const row = await requireRevision(ctx, ops, committeeId, input.revision);
   const { revision, ...fields } = input;
@@ -86,8 +94,12 @@ export async function patchCommittee(ctx: Context, committeeId: string, input: C
     action: fields.status ? (fields.status === 'archived' ? 'archive' : 'unarchive') : 'update',
   });
   return getCommittee(ctx, committeeId);
-}
-export async function removeCommittee(ctx: Context, committeeId: string, revision: number) {
+});
+export const removeCommittee = transactional(async function removeCommittee(
+  ctx: Context,
+  committeeId: string,
+  revision: number,
+) {
   const row = await requireRevision(ctx, ops, committeeId, revision);
   const opId = id();
   await applyUpdate(
@@ -98,13 +110,17 @@ export async function removeCommittee(ctx: Context, committeeId: string, revisio
     { action: 'delete', opId, diff: {} },
   );
   return { opId };
-}
-export async function restoreCommittee(ctx: Context, committeeId: string, opId: string) {
+});
+export const restoreCommittee = transactional(async function restoreCommittee(
+  ctx: Context,
+  committeeId: string,
+  opId: string,
+) {
   const row = await getCommittee(ctx, committeeId, true);
   await uniqueName(ctx, row.name, committeeId);
   await restoreByOp(ctx, ops, committeeId, opId);
   return getCommittee(ctx, committeeId);
-}
+});
 export async function requireCommittee(
   ctx: Context,
   committeeId: string | null | undefined,
@@ -138,14 +154,17 @@ export async function activity(ctx: Context, committeeId: string, cursor?: strin
     },
   };
 }
-export async function reorderCommittees(ctx: Context, input: z.infer<typeof Reorder>) {
+export const reorderCommittees = transactional(async function reorderCommittees(
+  ctx: Context,
+  input: z.infer<typeof Reorder>,
+) {
   await repo.lockCommittees(ctx.db);
   for (const [sortOrder, item] of input.items.entries()) {
     const row = await requireRevision(ctx, ops, item.id, item.revision);
     await applyUpdate(ctx, ops, row, { sortOrder }, { action: 'reorder' });
   }
   return { data: { updatedIds: input.items.map((item) => item.id) } };
-}
+});
 // HOME-B01: the home page consumes this through the module's server manifest (HOME-B03).
 export async function homeSummary(ctx: Context, day: string): Promise<HomeSection[]> {
   const row = await repo.selectHomeSummary(ctx.db, day);
