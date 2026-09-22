@@ -45,7 +45,8 @@
     "audit:perf": "node --conditions=react-server --import tsx scripts/audit/perf.ts",
     "audit:dupes": "tsx scripts/audit/dupes.ts",
     "audit:secrets": "tsx scripts/audit/secrets.ts",
-    "db:e2e-account": "node --conditions=react-server --import tsx scripts/db/e2e-account.ts"
+    "db:e2e-account": "node --conditions=react-server --import tsx scripts/db/e2e-account.ts",
+    "db:e2e-reset": "node --conditions=react-server --import tsx scripts/db/e2e-reset.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.124.0",
